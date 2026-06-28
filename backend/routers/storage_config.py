@@ -20,8 +20,9 @@ def get_storage_config(
     if not family:
         raise HTTPException(status_code=404, detail="Family record not found")
         
-    from routers.files import get_family_storage_config
-    config = get_family_storage_config(family, db)
+    from storage.storage_manager import StorageManager
+    manager = StorageManager()
+    config = manager.get_family_config(family, db)
     
     email = config.get("email") if family.storage_provider == "mega" else None
     folder_id = config.get("folder_id") if family.storage_provider == "google" else None
@@ -197,6 +198,8 @@ def setup_mega(
         # 2. Ensure vault folder exists
         vault_id = provider.ensure_vault_folder(family.id, config)
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Mega Configuration Error: {str(e)}"

@@ -4,8 +4,7 @@ from database import get_db
 import models
 import schemas
 import auth
-from storage import get_storage_provider
-from routers.files import get_family_storage_config, get_file_storage_config
+from storage.storage_manager import StorageManager
 from utils.audit import log_action
 
 router = APIRouter(prefix="/api/recycle-bin", tags=["Recycle Bin"])
@@ -52,17 +51,34 @@ def get_recycle_bin(
         ]
     }
 
-def restore_folder_recursive(folder_id: int, db: Session):
+def restore_folder_recursive(folder_id: int, batch_id: str, db: Session):
     # 1. Restore folder itself
-    db.query(models.Folder).filter(models.Folder.id == folder_id).update({"deleted_at": None}, synchronize_session=False)
+    db.query(models.Folder).filter(models.Folder.id == folder_id).update({"deleted_at": None, "deletion_batch_id": None}, synchronize_session=False)
     
-    # 2. Restore files in this folder
-    db.query(models.File).filter(models.File.folder_id == folder_id).update({"deleted_at": None}, synchronize_session=False)
-    
-    # 3. Recurse into subfolders
-    subfolders = db.query(models.Folder).filter(models.Folder.parent_id == folder_id).all()
+    # 2. Restore files in this folder matching the batch_id
+    if batch_id:
+        db.query(models.File).filter(
+            models.File.folder_id == folder_id,
+            models.File.deletion_batch_id == batch_id
+        ).update({"deleted_at": None, "deletion_batch_id": None}, synchronize_session=False)
+        
+        # 3. Recurse into subfolders matching the batch_id
+        subfolders = db.query(models.Folder).filter(
+            models.Folder.parent_id == folder_id,
+            models.Folder.deletion_batch_id == batch_id
+        ).all()
+    else:
+        # Fallback for legacy deleted folders: restore all deleted files/subfolders
+        db.query(models.File).filter(
+            models.File.folder_id == folder_id
+        ).update({"deleted_at": None, "deletion_batch_id": None}, synchronize_session=False)
+        
+        subfolders = db.query(models.Folder).filter(
+            models.Folder.parent_id == folder_id
+        ).all()
+        
     for sub in subfolders:
-        restore_folder_recursive(sub.id, db)
+        restore_folder_recursive(sub.id, batch_id, db)
 
 @router.post("/{item_type}/{item_id}/restore")
 def restore_item(
@@ -82,6 +98,7 @@ def restore_item(
             raise HTTPException(status_code=404, detail="Deleted file not found")
         
         file.deleted_at = None
+        file.deletion_batch_id = None
         db.commit()
         
         ip = request.client.host if request.client else "127.0.0.1"
@@ -97,7 +114,7 @@ def restore_item(
         if not folder:
             raise HTTPException(status_code=404, detail="Deleted folder not found")
         
-        restore_folder_recursive(item_id, db)
+        restore_folder_recursive(item_id, folder.deletion_batch_id, db)
         db.commit()
         
         ip = request.client.host if request.client else "127.0.0.1"
@@ -115,13 +132,15 @@ def purge_folder_recursive(folder_id: int, family: models.Family, db: Session):
         
     # 2. Delete files in this folder physically from cloud and DB
     files = db.query(models.File).filter(models.File.folder_id == folder_id).all()
+    manager = StorageManager()
+    family_config = manager.get_family_config(family, db)
     for file in files:
         try:
-            provider = get_storage_provider(file.storage_provider)
-            config = get_file_storage_config(file, family, db)
-            provider.delete_file(config, file.cloud_file_id)
+            provider = file.storage_provider or "local"
+            config = family_config.get(provider, {})
+            manager.providers[provider].delete_file(config, file.file_id)
         except Exception as e:
-            print(f"Warning: Failed to delete cloud file {file.cloud_file_id} on {file.storage_provider} during purge: {e}")
+            print(f"Warning: Failed to delete cloud file {file.file_id} on {file.storage_provider} during purge: {e}")
         db.delete(file)
             
     # 3. Delete folder record
@@ -157,11 +176,13 @@ def purge_item(
         
         # Delete from cloud
         try:
-            provider = get_storage_provider(file.storage_provider)
-            config = get_file_storage_config(file, family, db)
-            provider.delete_file(config, file.cloud_file_id)
+            manager = StorageManager()
+            family_config = manager.get_family_config(family, db)
+            provider = file.storage_provider or "local"
+            config = family_config.get(provider, {})
+            manager.providers[provider].delete_file(config, file.file_id)
         except Exception as e:
-            print(f"Warning: Failed to delete cloud file {file.cloud_file_id} during purge: {e}")
+            print(f"Warning: Failed to delete cloud file {file.file_id} during purge: {e}")
         
         db.delete(file)
         db.commit()

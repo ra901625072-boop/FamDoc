@@ -42,3 +42,8 @@ MEGA_PASSWORD = os.getenv("MEGA_PASSWORD", "")
 
 # VirusTotal Scanner Settings
 VIRUSTOTAL_API_KEY = os.getenv("VIRUSTOTAL_API_KEY", "")
+
+# Storage Sync Worker Settings
+SYNC_POLL_INTERVAL_SECONDS = int(os.getenv("SYNC_POLL_INTERVAL_SECONDS", "60"))
+SYNC_BATCH_SIZE = int(os.getenv("SYNC_BATCH_SIZE", "50"))
+HEALTH_CHECK_CACHE_TTL = int(os.getenv("HEALTH_CHECK_CACHE_TTL", "30"))

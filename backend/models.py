@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, JSON
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, JSON, Boolean
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import Base
@@ -40,8 +40,23 @@ class Family(Base):
     
     # Old storage fields kept for compatibility with other FDM features
     storage_provider = Column(String(50), nullable=True) # "google" or "mega"
-    storage_config = Column(JSON, nullable=True) # Config details (tokens or login)
+    _storage_config = Column("storage_config", String(2048), nullable=True) # Config details (tokens or login)
     vault_folder_id = Column(String(255), nullable=True) # Root folder ID in Google/Mega
+
+    @property
+    def storage_config(self) -> Optional[dict]:
+        if not self._storage_config:
+            return None
+        from utils.crypto import decrypt_config
+        return decrypt_config(self._storage_config)
+
+    @storage_config.setter
+    def storage_config(self, value: Optional[dict]):
+        if value is None:
+            self._storage_config = None
+        else:
+            from utils.crypto import encrypt_config
+            self._storage_config = encrypt_config(value)
 
     # Relationships
     admin = relationship("User", back_populates="families_administered")
@@ -82,6 +97,7 @@ class Folder(Base):
     family_id = Column(String(36), ForeignKey("families.id", ondelete="CASCADE"), nullable=False, index=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     deleted_at = Column(DateTime(timezone=True), nullable=True, index=True)
+    deletion_batch_id = Column(String(36), nullable=True, index=True)
 
     # Relationships
     family = relationship("Family", back_populates="folders")
@@ -101,9 +117,13 @@ class File(Base):
     family_id = Column(String(36), ForeignKey("families.id", ondelete="CASCADE"), nullable=False, index=True)
     upload_date = Column(DateTime(timezone=True), server_default=func.now())
     deleted_at = Column(DateTime(timezone=True), nullable=True, index=True)
-    storage_provider = Column(String(50), nullable=False) # "google" or "mega"
-    cloud_file_id = Column(String(255), nullable=False) # Unique ID from Google/Mega
+    deletion_batch_id = Column(String(36), nullable=True, index=True)
+    storage_provider = Column(String(50), default="local", nullable=False) # "local", "google", or "mega"
+    file_id = Column(String(255), nullable=False) # Unique ID from Google/Mega or local path
     cloud_link = Column(String(1024), nullable=True) # Direct preview/download web url
+    pending_sync = Column(Boolean, default=True, nullable=False) # True = awaiting cloud upload
+    pending_sync_at = Column(DateTime(timezone=True), nullable=True) # When the file was flagged for sync
+    synced_to = Column(String(50), nullable=True) # "google" or "mega" or None
 
     # Relationships
     family = relationship("Family", back_populates="files")
@@ -141,3 +161,10 @@ class SharedLink(Base):
     # Relationships
     file = relationship("File")
     creator = relationship("User")
+
+
+class RevokedToken(Base):
+    __tablename__ = "revoked_tokens"
+
+    jti = Column(String(64), primary_key=True, index=True)
+    revoked_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)

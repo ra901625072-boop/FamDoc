@@ -72,9 +72,18 @@ class FamilySetupResponse(BaseModel):
     max_members: int
 
 class FamilyLogin(BaseModel):
-    username: str
+    username: str = Field(..., min_length=3, max_length=20, pattern=r"^[a-zA-Z0-9_]+$")
     email: EmailStr
     secret_code: str = Field(..., min_length=9, max_length=9) # e.g. "XXXX-XXXX"
+    password: str = Field(..., min_length=8)
+
+    @field_validator('password')
+    def validate_password(cls, v):
+        if not any(char.isupper() for char in v):
+            raise ValueError('Password must contain at least one uppercase letter')
+        if not any(char.isdigit() for char in v):
+            raise ValueError('Password must contain at least one number')
+        return v
 
 class FamilyResponse(BaseModel):
     id: str

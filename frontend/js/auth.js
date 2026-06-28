@@ -100,8 +100,8 @@ function injectLayout(user) {
   mobileHeader.className = "mobile-header";
   mobileHeader.innerHTML = `
     <a href="/dashboard.html" class="sidebar-logo" style="margin-bottom: 0; font-size: 1.25rem;">
-      <i class="fas fa-box-archive"></i>
-      <span>FamDoc</span>
+      <img src="/img/logo.svg" alt="FamDoc Logo" class="famdoc-logo-img">
+      <span class="brand-text">Fam<span class="highlight">Doc</span></span>
     </a>
     <div style="display: flex; align-items: center; gap: 0.5rem;">
       <button class="theme-toggle-btn" id="mobileThemeToggle" aria-label="Toggle dark mode">
@@ -119,8 +119,8 @@ function injectLayout(user) {
   sidebar.id = "sidebarMenu";
   sidebar.innerHTML = `
     <a href="/dashboard.html" class="sidebar-logo">
-      <i class="fas fa-box-archive"></i>
-      <span>FamDoc</span>
+      <img src="/img/logo.svg" alt="FamDoc Logo" class="famdoc-logo-img">
+      <span class="brand-text">Fam<span class="highlight">Doc</span></span>
     </a>
     
     <div class="sidebar-nav">

@@ -1,29 +1,20 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
 # Environments
 .env
-.venv/
+.venv
+env/
 venv/
 ENV/
 env.bak/
 venv.bak/
 
-# Database files
+# Database
 *.db
 *.sqlite3
 
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-
-# App specific storage (local documents)
-backend/local_vault/
-backend/scratch/
-
-# IDEs
-.vscode/
-.idea/
-*.swp
-
-# Secrets and Archives
-service-account.json
-*.zip
+# Logs
+*.log

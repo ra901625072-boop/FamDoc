@@ -2,6 +2,15 @@ from abc import ABC, abstractmethod
 
 class StorageProvider(ABC):
     @abstractmethod
+    def health_check(self, config: dict) -> bool:
+        """
+        Perform a lightweight availability check for this storage provider.
+        Must complete within 3 seconds. Returns True if reachable, False otherwise.
+        Should NOT raise exceptions — always returns a boolean.
+        """
+        pass
+
+    @abstractmethod
     def verify_credentials(self, config: dict) -> bool:
         """
         Verify if the given storage configuration is valid and can authenticate.
@@ -71,15 +80,21 @@ class SimpleRetry:
             def __init__(self, parent, attempt_num):
                 self.parent = parent
                 self.attempt_num = attempt_num
+                self.success = True
             def __enter__(self): return self
             def __exit__(self, exc_type, exc_val, exc_tb):
                 if exc_type is not None:
+                    self.success = False
                     if self.attempt_num >= self.parent.attempts - 1:
                         return False
                     time.sleep(self.parent.wait)
                     return True
                 return False
         
+        self.current_attempt = None
         for i in range(self.attempts):
-            yield Attempt(self, i)
+            if self.current_attempt and getattr(self.current_attempt, 'success', False):
+                break
+            self.current_attempt = Attempt(self, i)
+            yield self.current_attempt
 

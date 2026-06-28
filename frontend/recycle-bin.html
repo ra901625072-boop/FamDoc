@@ -195,7 +195,7 @@
           row.innerHTML = `
             <i class="item-icon folder fas fa-folder-open" style="font-size: 1.75rem;"></i>
             <div class="item-details" style="grid-template-columns: 2fr 1fr 1fr; width: 100%; display: grid; align-items: center;">
-              <div class="item-name" style="font-weight: 600;" title="${folder.name}">${folder.name}</div>
+              <div class="item-name" style="font-weight: 600;" title="${FamDocAPI.utils.escapeHtml(folder.name)}">${FamDocAPI.utils.escapeHtml(folder.name)}</div>
               <div class="item-meta-date" style="font-size: 0.8rem; color: var(--warning-red);">Deleted: ${formattedDate.split(',')[0]}</div>
               <div class="item-meta-size" style="font-size: 0.8rem;">Folder</div>
             </div>
@@ -232,7 +232,7 @@
           row.innerHTML = `
             <i class="item-icon ${iconClass}" style="font-size: 1.75rem;"></i>
             <div class="item-details" style="grid-template-columns: 2fr 1fr 1fr; width: 100%; display: grid; align-items: center;">
-              <div class="item-name" style="font-weight: 600;" title="${file.filename}">${file.filename}</div>
+              <div class="item-name" style="font-weight: 600;" title="${FamDocAPI.utils.escapeHtml(file.filename)}">${FamDocAPI.utils.escapeHtml(file.filename)}</div>
               <div class="item-meta-date" style="font-size: 0.8rem; color: var(--warning-red);">Deleted: ${formattedDate.split(',')[0]}</div>
               <div class="item-meta-size" style="font-size: 0.8rem;">${formattedSize}</div>
             </div>

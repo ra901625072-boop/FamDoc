@@ -66,6 +66,23 @@ class GoogleDriveProvider(StorageProvider):
         service = build('drive', 'v3', credentials=creds)
         return service
 
+    def health_check(self, config: dict) -> bool:
+        """Lightweight ping: GET /drive/v3/about with 3s timeout."""
+        try:
+            # Ensure we have a valid access token (refresh if needed)
+            self._get_client(config)
+            access_token = config.get("access_token")
+            if not access_token:
+                return False
+            r = requests.get(
+                "https://www.googleapis.com/drive/v3/about?fields=user",
+                headers={"Authorization": f"Bearer {access_token}"},
+                timeout=3
+            )
+            return r.status_code == 200
+        except Exception:
+            return False
+
     def verify_credentials(self, config: dict) -> bool:
         try:
             service = self._get_client(config)

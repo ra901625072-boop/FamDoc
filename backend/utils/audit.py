@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
 import models
+from logging_config import logger
 
 def log_action(db: Session, action: str, user_id: int, family_id: str, ip_address: str, details: str = None):
     """
@@ -17,4 +18,4 @@ def log_action(db: Session, action: str, user_id: int, family_id: str, ip_addres
         db.commit()
     except Exception as e:
         db.rollback()
-        print(f"Warning: Failed to write audit log entry: {str(e)}")
+        logger.warning(f"Warning: Failed to write audit log entry: {str(e)}")

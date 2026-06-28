@@ -10,22 +10,91 @@ import models
 from routers import auth, family, storage_config, folders, files, recycle_bin, search, dashboard, share, views
 from config import CORS_ORIGINS, IS_DEFAULT_JWT_SECRET
 
+from logging_config import logger
+
 # Create database tables
 Base.metadata.create_all(bind=engine)
 run_migrations()
 
 # JWT Secret Key Security Validation
+APP_ENV = os.getenv("APP_ENV", "production")
 if IS_DEFAULT_JWT_SECRET:
-    if os.getenv("APP_ENV") == "production":
+    if APP_ENV != "development":
         raise RuntimeError("SECURITY CRITICAL: Default JWT_SECRET is used in a production environment! Server startup aborted.")
     else:
-        print("WARNING: Using default JWT secret key. This is unsafe for production deployment.")
+        logger.warning("WARNING: Using default JWT secret key. This is unsafe for production deployment.")
 
 app = FastAPI(
     title="Family Document Management System",
     description="Full-stack family vault powered by Google Drive or Mega storage",
     version="1.0.0"
 )
+
+import threading
+import time
+from utils.cleanup import purge_old_recycle_bin_items
+from database import SessionLocal
+
+def start_cleanup_worker():
+    def worker():
+        time.sleep(10)
+        while True:
+            logger.info("Background retention cleanup worker running...")
+            db = SessionLocal()
+            try:
+                purge_old_recycle_bin_items(db, retention_days=30)
+            except Exception as e:
+                logger.error(f"Error running background retention cleanup: {e}")
+            finally:
+                db.close()
+            time.sleep(24 * 3600)
+            
+    thread = threading.Thread(target=worker, daemon=True)
+    thread.start()
+
+
+_sync_manager = None
+
+def start_sync_worker():
+    global _sync_manager
+    def worker():
+        global _sync_manager
+        time.sleep(15)
+        from storage.storage_manager import StorageManager
+        _sync_manager = StorageManager()
+        logger.info("Sync worker started")
+        while True:
+            from config import SYNC_POLL_INTERVAL_SECONDS, SYNC_BATCH_SIZE
+            try:
+                db = SessionLocal()
+                try:
+                    from models import File, Family
+                    from sqlalchemy import distinct
+                    
+                    pending_family_ids = [
+                        row[0] for row in db.query(distinct(File.family_id)).filter(
+                            File.pending_sync == True, File.deleted_at == None
+                        ).all()
+                    ]
+                    if pending_family_ids:
+                        families = db.query(Family).filter(Family.id.in_(pending_family_ids)).all()
+                        family_configs = {f.id: _sync_manager.get_family_config(f, db) for f in families}
+                        result = _sync_manager.sync_pending_files(db, family_configs, batch_size=SYNC_BATCH_SIZE)
+                        if result["total"] > 0:
+                            logger.info(f"Sync worker completed: {result}")
+                finally:
+                    db.close()
+            except Exception as e:
+                logger.error(f"Sync worker unhandled error: {e}", exc_info=True)
+            time.sleep(SYNC_POLL_INTERVAL_SECONDS)
+    thread = threading.Thread(target=worker, daemon=True, name="storage-sync-worker")
+    thread.start()
+    logger.info("Sync worker thread launched")
+
+@app.on_event("startup")
+def on_startup():
+    start_cleanup_worker()
+    start_sync_worker()
 
 # CORS Configuration
 # Restricted to CORS_ORIGINS configured in config.py

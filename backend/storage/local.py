@@ -2,6 +2,10 @@ import os
 from storage.base import StorageProvider
 
 class LocalStorageProvider(StorageProvider):
+    def health_check(self, config: dict) -> bool:
+        """Local disk is always available."""
+        return True
+
     def verify_credentials(self, config: dict) -> bool:
         return True
 

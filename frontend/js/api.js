@@ -114,7 +114,10 @@ const FamDocAPI = {
       return user;
     },
 
-    logout() {
+    async logout() {
+      try {
+        await FamDocAPI.request("/api/auth/logout", { method: "POST" });
+      } catch (e) {}
       localStorage.removeItem("famdoc_token");
       localStorage.removeItem("famdoc_user");
       window.location.href = "/login.html";
@@ -417,6 +420,13 @@ const FamDocAPI = {
 
   // Global Helpers
   utils: {
+    escapeHtml(str) {
+      if (!str) return "";
+      const div = document.createElement("div");
+      div.textContent = str;
+      return div.innerHTML;
+    },
+
     formatBytes(bytes, decimals = 2) {
       if (bytes === 0) return "0 Bytes";
       const k = 1024;
@@ -490,8 +500,9 @@ const FamDocAPI = {
       
       toast.innerHTML = `
         <i class="fas ${icon}" style="margin-top: 2px;"></i>
-        <div>${message}</div>
+        <div class="toast-message-content"></div>
       `;
+      toast.querySelector(".toast-message-content").textContent = message;
 
       container.appendChild(toast);
 

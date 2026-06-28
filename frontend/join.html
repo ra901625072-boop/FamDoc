@@ -25,8 +25,8 @@
     <div id="auth-card" class="famdoc-card auth-card fd-pop-in">
       <div class="auth-header">
         <a href="/index.html" class="auth-logo">
-          <i class="fas fa-box-archive"></i>
-          <span>FamDoc</span>
+          <img src="/img/logo.svg" alt="FamDoc Logo" class="famdoc-logo-img">
+          <span class="brand-text">Fam<span class="highlight">Doc</span></span>
         </a>
         <p class="auth-subtitle">Join an existing family vault</p>
       </div>
@@ -51,6 +51,12 @@
           <label for="secret-code" class="form-label">Family Secret Code</label>
           <input type="text" id="secret-code" class="form-control" placeholder="XXXX-XXXX" maxlength="9" style="font-family: var(--font-mono); letter-spacing: 2px; text-transform: uppercase;" required>
           <span style="font-size: 0.75rem; color: var(--text-ink-muted);">Enter the 8-character invitation code from your family administrator</span>
+        </div>
+
+        <div class="form-group">
+          <label for="password" class="form-label">Create Password</label>
+          <input type="password" id="password" class="form-control" placeholder="Choose a strong password" required minlength="8">
+          <span style="font-size: 0.75rem; color: var(--text-ink-muted);">Must be at least 8 characters and contain at least one uppercase letter and one number</span>
         </div>
 
         <button type="submit" id="btn-submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
@@ -87,6 +93,7 @@
       
       const usernameInput = document.getElementById("username");
       const emailInput = document.getElementById("email");
+      const passwordInput = document.getElementById("password");
       const errorAlert = document.getElementById("error-alert");
       const errorMessage = document.getElementById("error-message");
       const submitBtn = document.getElementById("btn-submit");
@@ -96,8 +103,9 @@
       const username = usernameInput.value.trim();
       const email = emailInput.value.trim();
       const secretCode = codeInput.value.trim();
+      const password = passwordInput.value;
 
-      if (!username || !email || !secretCode) {
+      if (!username || !email || !secretCode || !password) {
         showError("Please fill in all fields.");
         return;
       }
@@ -107,12 +115,25 @@
         return;
       }
 
+      if (password.length < 8) {
+        showError("Password must be at least 8 characters long.");
+        return;
+      }
+      if (!/[A-Z]/.test(password)) {
+        showError("Password must contain at least one uppercase letter.");
+        return;
+      }
+      if (!/[0-9]/.test(password)) {
+        showError("Password must contain at least one number.");
+        return;
+      }
+
       try {
         submitBtn.disabled = true;
         submitBtn.querySelector("span").textContent = "Connecting to Vault...";
 
         // Join family vault
-        await FamDocAPI.auth.joinFamily(username, email, secretCode);
+        await FamDocAPI.auth.joinFamily(username, email, secretCode, password);
 
         // Fetch profile
         const user = await FamDocAPI.auth.me();

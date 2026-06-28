@@ -4,6 +4,22 @@ import shutil
 from mega import Mega
 from storage.base import StorageProvider
 
+# Monkeypatch Mega.get_files to prevent crash on empty accounts/missing 'f' key
+def _patched_get_files(self):
+    files = self._api_request({'a': 'f', 'c': 1, 'r': 1})
+    files_dict = {}
+    if not isinstance(files, dict) or 'f' not in files:
+        return files_dict
+    shared_keys = {}
+    self._init_shared_keys(files, shared_keys)
+    for file in files['f']:
+        processed_file = self._process_file(file, shared_keys)
+        if processed_file['a']:
+            files_dict[file['h']] = processed_file
+    return files_dict
+Mega.get_files = _patched_get_files
+
+
 # In-memory session cache: (email, password) -> Mega logged-in instance
 _mega_sessions = {}
 
@@ -24,19 +40,69 @@ class MegaProvider(StorageProvider):
             except Exception:
                 _mega_sessions.pop(cache_key, None)
                 
+        import json
+        import hashlib
+        session_file = os.path.join(tempfile.gettempdir(), f"mega_session_{hashlib.md5(email.encode()).hexdigest()}.json")
+        if os.path.exists(session_file):
+            try:
+                with open(session_file, "r") as f:
+                    data = json.load(f)
+                client = Mega()
+                client.sid = data["sid"]
+                client.master_key = tuple(data["master_key"])
+                client.sequence_num = data["sequence_num"]
+                client._trash_folder_node_id = data.get("trash_node")
+                
+                client.get_user()
+                _mega_sessions[cache_key] = client
+                return client
+            except Exception:
+                pass
+                
         mega = Mega()
-        client = mega.login(email, password)
+        try:
+            client = mega.login(email, password)
+        except Exception as e:
+            if "EBLOCKED" in str(e):
+                raise Exception("Mega account or IP is temporarily blocked (EBLOCKED). Please wait before trying again.") from e
+            raise
+            
         _mega_sessions[cache_key] = client
+        
+        try:
+            with open(session_file, "w") as f:
+                json.dump({
+                    "sid": client.sid,
+                    "master_key": list(client.master_key),
+                    "sequence_num": client.sequence_num,
+                    "trash_node": client._trash_folder_node_id
+                }, f)
+        except Exception:
+            pass
+            
         return client
+
+    def health_check(self, config: dict) -> bool:
+        """Session validation or fresh login attempt with 10s timeout."""
+        import concurrent.futures
+        def _check():
+            client = self._get_client(config)
+            client.get_user()
+            return True
+            
+        try:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(_check)
+                return future.result(timeout=10.0)
+        except Exception as e:
+            import traceback
+            print("Mega health_check exception:")
+            traceback.print_exc()
+            return False
 
     def verify_credentials(self, config: dict) -> bool:
         try:
-            email = config.get("email")
-            password = config.get("password")
-            if not email or not password:
-                raise Exception("Email and password are required for Mega credentials verification")
-            mega = Mega()
-            mega.login(email, password)
+            self._get_client(config)
             return True
         except Exception as e:
             raise Exception(f"Failed to authenticate with Mega: {str(e)}")

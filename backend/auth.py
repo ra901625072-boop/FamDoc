@@ -1,4 +1,5 @@
 import bcrypt
+import uuid
 from datetime import datetime, timedelta
 from typing import Optional
 from fastapi import Depends, HTTPException, status, Header
@@ -32,6 +33,19 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     else:
         expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
+    if "jti" not in to_encode:
+        to_encode["jti"] = str(uuid.uuid4())
+    encoded_jwt = jwt.encode(to_encode, JWT_SECRET, algorithm=JWT_ALGORITHM)
+    return encoded_jwt
+
+def create_file_access_token(file_id: int, user_id: int) -> str:
+    # 5-minute single-use/short-lived token for file previews and downloads
+    to_encode = {
+        "file_id": file_id,
+        "user_id": user_id,
+        "exp": datetime.utcnow() + timedelta(minutes=5),
+        "jti": str(uuid.uuid4())
+    }
     encoded_jwt = jwt.encode(to_encode, JWT_SECRET, algorithm=JWT_ALGORITHM)
     return encoded_jwt
 
@@ -52,11 +66,25 @@ def get_current_user(
         
     try:
         payload = jwt.decode(act_token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-        email: str = payload.get("sub")
-        user_id: int = payload.get("id")
-        if email is None or user_id is None:
-            raise credentials_exception
-        token_data = schemas.TokenData(email=email, user_id=user_id)
+        
+        jti = payload.get("jti")
+        if jti:
+            is_revoked = db.query(models.RevokedToken).filter(models.RevokedToken.jti == jti).first()
+            if is_revoked:
+                raise credentials_exception
+
+        file_id = payload.get("file_id")
+        user_id = payload.get("user_id")
+        
+        if file_id is not None:
+            # It's a scoped file access token
+            token_data = schemas.TokenData(email=None, user_id=user_id)
+        else:
+            email: str = payload.get("sub")
+            user_id: int = payload.get("id")
+            if email is None or user_id is None:
+                raise credentials_exception
+            token_data = schemas.TokenData(email=email, user_id=user_id)
     except JWTError:
         raise credentials_exception
         

@@ -89,7 +89,7 @@ def search_files(
             "family_id": file.family_id,
             "upload_date": file.upload_date,
             "storage_provider": file.storage_provider,
-            "cloud_file_id": file.cloud_file_id,
+            "cloud_file_id": file.file_id,
             "cloud_link": file.cloud_link,
             "is_shared": file.id in shared_file_ids
         })

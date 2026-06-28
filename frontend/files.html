@@ -18,9 +18,9 @@
   <style>
     /* View layout active indicator */
     .view-toggle-btn.active {
-      background-color: var(--accent-terracotta-light);
-      color: var(--accent-terracotta);
-      border-color: var(--accent-terracotta);
+      background-color: var(--accent-brand-light);
+      color: var(--accent-brand);
+      border-color: var(--accent-brand);
     }
   </style>
 </head>
@@ -52,10 +52,10 @@
     <!-- Upload Progress Modal / Overlay -->
     <div id="upload-progress-overlay" class="modal-overlay">
       <div class="famdoc-card" style="max-width: 400px; width: 100%; padding: 1.5rem;">
-        <h3 style="font-family: var(--font-serif); margin-bottom: 0.75rem;"><i class="fas fa-spinner fa-spin" style="color: var(--accent-terracotta); margin-right: 0.5rem;"></i>Uploading...</h3>
+        <h3 style="font-family: var(--font-serif); margin-bottom: 0.75rem;"><i class="fas fa-spinner fa-spin" style="color: var(--accent-brand); margin-right: 0.5rem;"></i>Uploading...</h3>
         <p id="upload-file-name" style="font-size: 0.9rem; color: var(--text-ink-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 1rem;">filename.txt</p>
         <div style="background-color: var(--border-paper); height: 10px; border-radius: 5px; overflow: hidden;">
-          <div id="upload-progress-bar" style="background-color: var(--accent-terracotta); height: 100%; width: 0%; transition: width 0.15s ease-out;"></div>
+          <div id="upload-progress-bar" style="background-color: var(--accent-brand); height: 100%; width: 0%; transition: width 0.15s ease-out;"></div>
         </div>
         <div style="text-align: right; margin-top: 0.5rem; font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-ink-muted);" id="upload-percentage">0%</div>
       </div>
@@ -100,8 +100,8 @@
     <div id="explorer-container" style="position: relative; min-height: 350px;">
       
       <!-- Drag and Drop Overlay Indicator -->
-      <div id="drag-overlay" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 3px dashed var(--accent-terracotta); border-radius: var(--radius-lg); background-color: rgba(246, 236, 232, 0.9); z-index: 10; align-items: center; justify-content: center; flex-direction: column; gap: 1rem;">
-        <i class="fas fa-cloud-upload-alt" style="font-size: 4rem; color: var(--accent-terracotta); animation: bounce 1s infinite alternate;"></i>
+      <div id="drag-overlay" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 3px dashed var(--accent-brand); border-radius: var(--radius-lg); background-color: rgba(239, 244, 254, 0.9); z-index: 10; align-items: center; justify-content: center; flex-direction: column; gap: 1rem;">
+        <i class="fas fa-cloud-upload-alt" style="font-size: 4rem; color: var(--accent-brand); animation: bounce 1s infinite alternate;"></i>
         <h3 style="font-family: var(--font-serif); font-size: 1.5rem; color: var(--text-ink);">Drop files to upload here</h3>
         <p style="color: var(--text-ink-muted);">Maximum upload size: 50MB</p>
       </div>
@@ -305,18 +305,41 @@
     let activePreviewUrl = null;
     let familyStorageConfig = null;
 
-    function downloadFileAuthenticated(fileId, filename) {
-      const token = localStorage.getItem("famdoc_token");
-      let downloadUrl = FamDocAPI.files.getDownloadUrl(fileId);
-      if (token) {
-        downloadUrl += `?token=${token}`;
+    async function getPreviewToken(fileId) {
+      const data = await FamDocAPI.request(`/api/files/${fileId}/preview-token`);
+      return data.token;
+    }
+
+    async function loadThumbnail(fileId) {
+      try {
+        const fileToken = await getPreviewToken(fileId);
+        const previewUrl = FamDocAPI.files.getPreviewUrl(fileId);
+        const authenticatedPreviewUrl = previewUrl + (fileToken ? `?token=${fileToken}` : "");
+        const imgs = document.querySelectorAll(`img[data-file-id="${fileId}"]`);
+        imgs.forEach(img => {
+          img.src = authenticatedPreviewUrl;
+        });
+      } catch (err) {
+        console.error("Failed to load thumbnail for file " + fileId, err);
       }
-      const a = document.createElement("a");
-      a.href = downloadUrl;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
+    }
+
+    async function downloadFileAuthenticated(fileId, filename) {
+      try {
+        const fileToken = await getPreviewToken(fileId);
+        let downloadUrl = FamDocAPI.files.getDownloadUrl(fileId);
+        if (fileToken) {
+          downloadUrl += `?token=${fileToken}`;
+        }
+        const a = document.createElement("a");
+        a.href = downloadUrl;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      } catch (err) {
+        FamDocAPI.utils.showToast("Failed to initialize secure download: " + err.message, "error");
+      }
     }
 
     document.addEventListener("DOMContentLoaded", () => {
@@ -498,7 +521,7 @@
         const detailsHtml = isList 
           ? `
             <div class="item-details">
-              <div class="item-name" title="${folder.name}">${folder.name}</div>
+              <div class="item-name" title="${FamDocAPI.utils.escapeHtml(folder.name)}">${FamDocAPI.utils.escapeHtml(folder.name)}</div>
               <div class="item-meta-size">${folder.file_count} files</div>
               <div class="item-meta-date">${FamDocAPI.utils.formatDate(folder.last_modified).split(',')[0]}</div>
               <div class="item-meta-uploader">—</div>
@@ -506,29 +529,54 @@
           `
           : `
             <div class="item-details">
-              <div class="item-name" title="${folder.name}">${folder.name}</div>
+              <div class="item-name" title="${FamDocAPI.utils.escapeHtml(folder.name)}">${FamDocAPI.utils.escapeHtml(folder.name)}</div>
               <div class="item-meta">${folder.file_count} files</div>
             </div>
           `;
 
-        folderCard.innerHTML = `
-          <i class="item-icon folder fas fa-folder"></i>
-          ${detailsHtml}
-          <button class="item-actions-trigger" data-action="toggle-dropdown" aria-label="Actions Menu">
-            <i class="fas fa-ellipsis-v"></i>
-          </button>
-          <div class="dropdown-menu">
-            <button class="dropdown-item" data-action="rename-folder" data-id="${folder.id}">
-              <i class="fas fa-edit"></i> Rename
+        if (isList) {
+          folderCard.innerHTML = `
+            <i class="item-icon folder fas fa-folder"></i>
+            ${detailsHtml}
+            <button class="item-actions-trigger" data-action="toggle-dropdown" aria-label="Actions Menu">
+              <i class="fas fa-ellipsis-v"></i>
             </button>
-            <button class="dropdown-item" data-action="move-folder" data-id="${folder.id}">
-              <i class="fas fa-arrows-alt"></i> Move
-            </button>
-            <button class="dropdown-item danger" data-action="delete-folder" data-id="${folder.id}">
-              <i class="fas fa-trash-alt"></i> Delete
-            </button>
-          </div>
-        `;
+            <div class="dropdown-menu">
+              <button class="dropdown-item" data-action="rename-folder" data-id="${folder.id}">
+                <i class="fas fa-edit"></i> Rename
+              </button>
+              <button class="dropdown-item" data-action="move-folder" data-id="${folder.id}">
+                <i class="fas fa-arrows-alt"></i> Move
+              </button>
+              <button class="dropdown-item danger" data-action="delete-folder" data-id="${folder.id}">
+                <i class="fas fa-trash-alt"></i> Delete
+              </button>
+            </div>
+          `;
+        } else {
+          folderCard.innerHTML = `
+            <div class="item-preview-area">
+              <i class="item-icon folder fas fa-folder"></i>
+            </div>
+            <div class="item-footer">
+              ${detailsHtml}
+              <button class="item-actions-trigger" data-action="toggle-dropdown" aria-label="Actions Menu">
+                <i class="fas fa-ellipsis-v"></i>
+              </button>
+              <div class="dropdown-menu">
+                <button class="dropdown-item" data-action="rename-folder" data-id="${folder.id}">
+                  <i class="fas fa-edit"></i> Rename
+                </button>
+                <button class="dropdown-item" data-action="move-folder" data-id="${folder.id}">
+                  <i class="fas fa-arrows-alt"></i> Move
+                </button>
+                <button class="dropdown-item danger" data-action="delete-folder" data-id="${folder.id}">
+                  <i class="fas fa-trash-alt"></i> Delete
+                </button>
+              </div>
+            </div>
+          `;
+        }
         wrapper.appendChild(folderCard);
       });
 
@@ -546,7 +594,22 @@
           openPreview(file.id);
         });
 
-        const iconClass = FamDocAPI.utils.getFileIconClass(file.file_type, file.filename);
+        const ext = file.filename.split(".").pop().toLowerCase();
+        const mime = file.file_type ? file.file_type.toLowerCase() : "";
+        const isImage = mime.includes("image") || ["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(ext);
+
+        let iconHtml = "";
+        if (isImage) {
+          const svgPlaceholder = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 24 24' fill='none' stroke='%234B86F4' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='3' y='3' width='18' height='18' rx='2' ry='2'/><circle cx='8.5' cy='8.5' r='1.5'/><polyline points='21 15 16 10 5 21'/></svg>";
+          iconHtml = `<img class="item-icon item-thumbnail" data-file-id="${file.id}" src="${svgPlaceholder}" onload="this.classList.add('loaded')" alt="${FamDocAPI.utils.escapeHtml(file.filename)}">`;
+          setTimeout(() => {
+            loadThumbnail(file.id);
+          }, 0);
+        } else {
+          const iconClass = FamDocAPI.utils.getFileIconClass(file.file_type, file.filename);
+          iconHtml = `<i class="item-icon ${iconClass}"></i>`;
+        }
+
         const formattedSize = FamDocAPI.utils.formatBytes(file.size_bytes);
         const formattedDate = FamDocAPI.utils.formatDate(file.upload_date);
 
@@ -562,12 +625,12 @@
         const syncBadge = isSyncing ? '<span class="badge-syncing" title="Syncing to cloud storage in background"><i class="fas fa-sync fa-spin"></i> Syncing</span>' : '';
 
         // Share badge or icon
-        const shareIcon = file.is_shared ? '<i class="fas fa-share-alt" style="color: var(--accent-terracotta); margin-left: 0.5rem;" title="Shared publicly"></i>' : '';
+        const shareIcon = file.is_shared ? '<i class="fas fa-share-alt" style="color: var(--accent-brand); margin-left: 0.5rem;" title="Shared publicly"></i>' : '';
 
         const detailsHtml = isList 
           ? `
             <div class="item-details">
-              <div class="item-name" title="${file.filename}">${file.filename}${shareIcon}${syncBadge}</div>
+              <div class="item-name" title="${FamDocAPI.utils.escapeHtml(file.filename)}">${FamDocAPI.utils.escapeHtml(file.filename)}${shareIcon}${syncBadge}</div>
               <div class="item-meta-size">${formattedSize}</div>
               <div class="item-meta-date">${formattedDate.split(',')[0]}</div>
               <div class="item-meta-uploader" title="${file.uploader_email || 'System'}">${file.uploader_email ? file.uploader_email.split('@')[0] : 'System'}</div>
@@ -575,37 +638,70 @@
           `
           : `
             <div class="item-details">
-              <div class="item-name" title="${file.filename}">${file.filename}${shareIcon}${syncBadge}</div>
+              <div class="item-name" title="${FamDocAPI.utils.escapeHtml(file.filename)}">${FamDocAPI.utils.escapeHtml(file.filename)}${shareIcon}${syncBadge}</div>
               <div class="item-meta">${formattedSize}</div>
             </div>
           `;
 
-        fileCard.innerHTML = `
-          <i class="item-icon ${iconClass}"></i>
-          ${detailsHtml}
-          <button class="item-actions-trigger" data-action="toggle-dropdown" aria-label="Actions Menu">
-            <i class="fas fa-ellipsis-v"></i>
-          </button>
-          <div class="dropdown-menu">
-            <button class="dropdown-item" data-action="download-file" data-id="${file.id}">
-              <i class="fas fa-download"></i> Download
+        if (isList) {
+          fileCard.innerHTML = `
+            ${iconHtml}
+            ${detailsHtml}
+            <button class="item-actions-trigger" data-action="toggle-dropdown" aria-label="Actions Menu">
+              <i class="fas fa-ellipsis-v"></i>
             </button>
-            <button class="dropdown-item" data-action="share-file" data-id="${file.id}">
-              <i class="fas fa-share-alt"></i> Share Link
-            </button>
-             ${canManage ? `
-              <button class="dropdown-item" data-action="rename-file" data-id="${file.id}">
-                <i class="fas fa-edit"></i> Rename
+            <div class="dropdown-menu">
+              <button class="dropdown-item" data-action="download-file" data-id="${file.id}">
+                <i class="fas fa-download"></i> Download
               </button>
-              <button class="dropdown-item" data-action="move-file" data-id="${file.id}">
-                <i class="fas fa-arrows-alt"></i> Move
+              <button class="dropdown-item" data-action="share-file" data-id="${file.id}">
+                <i class="fas fa-share-alt"></i> Share Link
               </button>
-              <button class="dropdown-item danger" data-action="delete-file" data-id="${file.id}">
-                <i class="fas fa-trash-alt"></i> Delete
+               ${canManage ? `
+                <button class="dropdown-item" data-action="rename-file" data-id="${file.id}">
+                  <i class="fas fa-edit"></i> Rename
+                </button>
+                <button class="dropdown-item" data-action="move-file" data-id="${file.id}">
+                  <i class="fas fa-arrows-alt"></i> Move
+                </button>
+                <button class="dropdown-item danger" data-action="delete-file" data-id="${file.id}">
+                  <i class="fas fa-trash-alt"></i> Delete
+                </button>
+              ` : ""}
+            </div>
+          `;
+        } else {
+          fileCard.innerHTML = `
+            <div class="item-preview-area">
+              ${iconHtml}
+            </div>
+            <div class="item-footer">
+              ${detailsHtml}
+              <button class="item-actions-trigger" data-action="toggle-dropdown" aria-label="Actions Menu">
+                <i class="fas fa-ellipsis-v"></i>
               </button>
-            ` : ""}
-          </div>
-        `;
+              <div class="dropdown-menu">
+                <button class="dropdown-item" data-action="download-file" data-id="${file.id}">
+                  <i class="fas fa-download"></i> Download
+                </button>
+                <button class="dropdown-item" data-action="share-file" data-id="${file.id}">
+                  <i class="fas fa-share-alt"></i> Share Link
+                </button>
+                 ${canManage ? `
+                  <button class="dropdown-item" data-action="rename-file" data-id="${file.id}">
+                    <i class="fas fa-edit"></i> Rename
+                  </button>
+                  <button class="dropdown-item" data-action="move-file" data-id="${file.id}">
+                    <i class="fas fa-arrows-alt"></i> Move
+                  </button>
+                  <button class="dropdown-item danger" data-action="delete-file" data-id="${file.id}">
+                    <i class="fas fa-trash-alt"></i> Delete
+                  </button>
+                ` : ""}
+              </div>
+            </div>
+          `;
+        }
         wrapper.appendChild(fileCard);
       });
     }
@@ -882,7 +978,7 @@
       };
 
       const contentArea = document.getElementById("preview-content-area");
-      contentArea.innerHTML = `<i class="fas fa-spinner fa-spin" style="font-size: 2.5rem; color: var(--accent-terracotta);"></i>`;
+      contentArea.innerHTML = `<i class="fas fa-spinner fa-spin" style="font-size: 2.5rem; color: var(--accent-brand);"></i>`;
       
       openModal("modal-preview");
 
@@ -897,12 +993,12 @@
 
       try {
         if (mime.includes("image") || ["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(ext)) {
-          const token = localStorage.getItem("famdoc_token");
-          const authenticatedPreviewUrl = previewUrl + (token ? `?token=${token}` : "");
-          contentArea.innerHTML = `<img src="${authenticatedPreviewUrl}" class="preview-image" alt="${file.filename}">`;
+          const fileToken = await getPreviewToken(fileId);
+          const authenticatedPreviewUrl = previewUrl + (fileToken ? `?token=${fileToken}` : "");
+          contentArea.innerHTML = `<img src="${authenticatedPreviewUrl}" class="preview-image" alt="${FamDocAPI.utils.escapeHtml(file.filename)}">`;
         } else if (mime.includes("pdf") || ext === "pdf") {
-          const token = localStorage.getItem("famdoc_token");
-          const authenticatedPreviewUrl = previewUrl + (token ? `?token=${token}` : "");
+          const fileToken = await getPreviewToken(fileId);
+          const authenticatedPreviewUrl = previewUrl + (fileToken ? `?token=${fileToken}` : "");
           contentArea.innerHTML = `<iframe src="${authenticatedPreviewUrl}" class="preview-frame"></iframe>`;
         } else if (mime.includes("text") || ["txt", "log", "json", "md", "csv"].includes(ext)) {
           const token = localStorage.getItem("famdoc_token");
@@ -1259,3 +1355,4 @@
   </div>
 </body>
 </html>
+

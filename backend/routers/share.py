@@ -9,8 +9,7 @@ import auth
 from typing import List, Optional
 from datetime import datetime, timezone
 from config import BACKEND_URL
-from storage import get_storage_provider
-from routers.files import get_family_storage_config
+from storage.storage_manager import StorageManager
 from utils.audit import log_action
 import io
 from pydantic import BaseModel
@@ -173,6 +172,10 @@ def download_public_shared_file(
     password_in: Optional[SharePasswordVerify] = None,
     db: Session = Depends(get_db)
 ):
+    from routers.auth import check_rate_limit
+    ip = request.client.host if request.client else "127.0.0.1"
+    check_rate_limit(ip)
+    
     link = db.query(models.SharedLink).filter(models.SharedLink.id == token).first()
     if not link or not link.file or link.file.deleted_at is not None:
         raise HTTPException(status_code=404, detail="Shared link not found or expired")
@@ -201,7 +204,7 @@ def download_public_shared_file(
     try:
         provider = get_storage_provider(file.storage_provider)
         config = get_family_storage_config(family, db)
-        file_bytes = provider.download_file(config, file.cloud_file_id)
+        file_bytes = provider.download_file(config, file.file_id)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

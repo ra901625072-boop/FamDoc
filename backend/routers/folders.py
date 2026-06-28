@@ -7,6 +7,10 @@ import schemas
 import auth
 from sqlalchemy import func
 from utils.audit import log_action
+import re
+from serializers import serialize_folder
+
+SAFE_FILENAME_PATTERN = re.compile(r'^[\w\-. ()\[\]]+$', re.UNICODE)
 
 router = APIRouter(prefix="/api/folders", tags=["Folders"])
 
@@ -27,22 +31,7 @@ def get_folders(
         models.Folder.deleted_at == None
     ).group_by(models.Folder.id).all()
     
-    result = []
-    for folder, file_count, total_size, last_modified_file in query_results:
-        last_modified = folder.created_at
-        if last_modified_file and last_modified_file > last_modified:
-            last_modified = last_modified_file
-            
-        result.append({
-            "id": folder.id,
-            "name": folder.name,
-            "parent_id": folder.parent_id,
-            "family_id": folder.family_id,
-            "created_at": folder.created_at,
-            "file_count": file_count,
-            "total_size_bytes": total_size,
-            "last_modified": last_modified
-        })
+    result = [serialize_folder(folder, file_count, total_size, last_modified_file) for folder, file_count, total_size, last_modified_file in query_results]
         
     return result
 
@@ -66,8 +55,15 @@ def create_folder(
                 detail="Parent folder not found"
             )
 
+    folder_name = folder_in.name.strip()
+    if not SAFE_FILENAME_PATTERN.match(folder_name) or len(folder_name) > 255:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Folder name contains unsupported characters. Use only letters, numbers, spaces, and ._-()[]."
+        )
+
     new_folder = models.Folder(
-        name=folder_in.name.strip(),
+        name=folder_name,
         parent_id=folder_in.parent_id,
         family_id=current_user.family_id
     )
@@ -81,16 +77,7 @@ def create_folder(
     log_action(db, "CREATE_FOLDER", current_user.id, current_user.family_id, ip, f"Created folder: {new_folder.name}")
     
     # Return formatted response
-    return {
-        "id": new_folder.id,
-        "name": new_folder.name,
-        "parent_id": new_folder.parent_id,
-        "family_id": new_folder.family_id,
-        "created_at": new_folder.created_at,
-        "file_count": 0,
-        "total_size_bytes": 0,
-        "last_modified": new_folder.created_at
-    }
+    return serialize_folder(new_folder)
 
 @router.put("/{folder_id}", response_model=schemas.FolderResponse)
 def rename_folder(
@@ -113,7 +100,13 @@ def rename_folder(
         )
         
     old_name = folder.name
-    folder.name = folder_in.name.strip()
+    new_name = folder_in.name.strip()
+    if not SAFE_FILENAME_PATTERN.match(new_name) or len(new_name) > 255:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Folder name contains unsupported characters. Use only letters, numbers, spaces, and ._-()[]."
+        )
+    folder.name = new_name
     db.commit()
     db.refresh(folder)
     
@@ -134,36 +127,27 @@ def rename_folder(
     if stats.last_modified_file and stats.last_modified_file > last_modified:
         last_modified = stats.last_modified_file
 
-    return {
-        "id": folder.id,
-        "name": folder.name,
-        "parent_id": folder.parent_id,
-        "family_id": folder.family_id,
-        "created_at": folder.created_at,
-        "file_count": file_count,
-        "total_size_bytes": total_size,
-        "last_modified": last_modified
-    }
+    return serialize_folder(folder, file_count, total_size, last_modified)
 
-def soft_delete_folder_recursive(folder_id: int, db: Session):
+def soft_delete_folder_recursive(folder_id: int, batch_id: str, db: Session):
     # 1. Recurse into subfolders
     subfolders = db.query(models.Folder).filter(
         models.Folder.parent_id == folder_id,
         models.Folder.deleted_at == None
     ).all()
     for sub in subfolders:
-        soft_delete_folder_recursive(sub.id, db)
+        soft_delete_folder_recursive(sub.id, batch_id, db)
         
     # 2. Soft delete files in this folder
     db.query(models.File).filter(
         models.File.folder_id == folder_id,
         models.File.deleted_at == None
-    ).update({"deleted_at": func.now()}, synchronize_session=False)
+    ).update({"deleted_at": func.now(), "deletion_batch_id": batch_id}, synchronize_session=False)
             
     # 3. Soft delete folder record
     db.query(models.Folder).filter(
         models.Folder.id == folder_id
-    ).update({"deleted_at": func.now()}, synchronize_session=False)
+    ).update({"deleted_at": func.now(), "deletion_batch_id": batch_id}, synchronize_session=False)
 
 @router.delete("/{folder_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_folder(
@@ -185,7 +169,9 @@ def delete_folder(
         )
         
     # Execute soft delete
-    soft_delete_folder_recursive(folder_id, db)
+    import uuid
+    batch_id = str(uuid.uuid4())
+    soft_delete_folder_recursive(folder_id, batch_id, db)
     db.commit()
     
     # Audit log
@@ -271,13 +257,4 @@ def move_folder(
     if stats.last_modified_file and stats.last_modified_file > last_modified:
         last_modified = stats.last_modified_file
 
-    return {
-        "id": folder.id,
-        "name": folder.name,
-        "parent_id": folder.parent_id,
-        "family_id": folder.family_id,
-        "created_at": folder.created_at,
-        "file_count": file_count,
-        "total_size_bytes": total_size,
-        "last_modified": last_modified
-    }
+    return serialize_folder(folder, file_count, total_size, last_modified)

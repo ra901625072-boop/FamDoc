@@ -53,7 +53,7 @@
       <!-- Recent Uploads Card -->
       <div class="famdoc-card">
         <div class="famdoc-card-header">
-          <h2 class="famdoc-card-title"><i class="fas fa-clock" style="color: var(--accent-terracotta); margin-right: 0.5rem;"></i>Recent Vault Uploads</h2>
+          <h2 class="famdoc-card-title"><i class="fas fa-clock" style="color: var(--accent-brand); margin-right: 0.5rem;"></i>Recent Vault Uploads</h2>
           <a href="/files.html" style="font-size: 0.85rem; font-weight: 600;">Browse All <i class="fas fa-chevron-right" style="font-size: 0.75rem;"></i></a>
         </div>
         
@@ -91,7 +91,7 @@
       <!-- Activity Feed Card -->
       <div class="famdoc-card">
         <div class="famdoc-card-header">
-          <h2 class="famdoc-card-title"><i class="fas fa-history" style="color: var(--accent-terracotta); margin-right: 0.5rem;"></i>Vault Activity</h2>
+          <h2 class="famdoc-card-title"><i class="fas fa-history" style="color: var(--accent-brand); margin-right: 0.5rem;"></i>Vault Activity</h2>
         </div>
         
         <div id="activity-feed-list" class="activity-feed">
@@ -128,6 +128,31 @@
   <script src="/js/api.js"></script>
   <script src="/js/auth.js"></script>
   <script>
+    async function getPreviewToken(fileId) {
+      try {
+        const data = await FamDocAPI.request(`/api/files/${fileId}/preview-token`);
+        return data.token;
+      } catch (err) {
+        console.error("Failed to get preview token:", err);
+        return null;
+      }
+    }
+
+    async function loadThumbnail(fileId) {
+      try {
+        const fileToken = await getPreviewToken(fileId);
+        if (!fileToken) return;
+        const previewUrl = FamDocAPI.files.getPreviewUrl(fileId);
+        const authenticatedPreviewUrl = previewUrl + `?token=${fileToken}`;
+        const imgs = document.querySelectorAll(`img[data-file-id="${fileId}"]`);
+        imgs.forEach(img => {
+          img.src = authenticatedPreviewUrl;
+        });
+      } catch (err) {
+        console.error("Failed to load thumbnail for file " + fileId, err);
+      }
+    }
+
     document.addEventListener("DOMContentLoaded", async () => {
       // Wait slightly to ensure auth token check is processed in auth.js
       setTimeout(async () => {
@@ -169,14 +194,28 @@
                 window.location.href = `/files.html?preview=${file.id}`;
               });
               
-              const iconClass = FamDocAPI.utils.getFileIconClass(file.file_type, file.filename);
+              const ext = file.filename.split(".").pop().toLowerCase();
+              const mime = file.file_type ? file.file_type.toLowerCase() : "";
+              const isImage = mime.includes("image") || ["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(ext);
+
+              let iconHtml = "";
+              if (isImage) {
+                const svgPlaceholder = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 24 24' fill='none' stroke='%234B86F4' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='3' y='3' width='18' height='18' rx='2' ry='2'/><circle cx='8.5' cy='8.5' r='1.5'/><polyline points='21 15 16 10 5 21'/></svg>";
+                iconHtml = `<img class="item-icon item-thumbnail" data-file-id="${file.id}" src="${svgPlaceholder}" onload="this.classList.add('loaded')" alt="${FamDocAPI.utils.escapeHtml(file.filename)}">`;
+                setTimeout(() => {
+                  loadThumbnail(file.id);
+                }, 0);
+              } else {
+                const iconClass = FamDocAPI.utils.getFileIconClass(file.file_type, file.filename);
+                iconHtml = `<i class="item-icon ${iconClass}"></i>`;
+              }
               const formattedSize = FamDocAPI.utils.formatBytes(file.size_bytes);
               const formattedDate = FamDocAPI.utils.formatDate(file.upload_date);
 
               fileCard.innerHTML = `
-                <i class="item-icon ${iconClass}"></i>
+                ${iconHtml}
                 <div class="item-details" style="grid-template-columns: 2fr 1fr 1.2fr; width: 100%; display: grid; align-items: center;">
-                  <div class="item-name" style="font-size: 0.85rem;" title="${file.filename}">${file.filename}</div>
+                  <div class="item-name" style="font-size: 0.85rem;" title="${FamDocAPI.utils.escapeHtml(file.filename)}">${FamDocAPI.utils.escapeHtml(file.filename)}</div>
                   <div class="item-meta-size" style="font-size: 0.75rem;">${formattedSize}</div>
                   <div class="item-meta-date" style="font-size: 0.75rem;">${formattedDate.split(',')[0]}</div>
                 </div>
@@ -265,3 +304,4 @@
   </script>
 </body>
 </html>
+

@@ -86,6 +86,15 @@ def register(user_in: schemas.UserRegister, db: Session = Depends(get_db)):
     db.add(new_family)
     db.flush()
     
+    # Auto-initialize storage from .env defaults if no personal config is provided
+    try:
+        from storage.storage_manager import StorageManager
+        manager = StorageManager()
+        manager.initialize_family_storage(new_family, db)
+    except Exception as storage_err:
+        # Non-fatal: storage will be lazily initialized on first file operation
+        print(f"Info: Could not auto-initialize storage for new family {family_id}: {str(storage_err)}")
+    
     # Add the admin as a family member
     admin_member = models.FamilyMember(
         family_id=family_id,
@@ -99,7 +108,9 @@ def register(user_in: schemas.UserRegister, db: Session = Depends(get_db)):
     return new_user
 
 @router.post("/login", response_model=schemas.Token)
-def login(credentials: schemas.UserLogin, db: Session = Depends(get_db)):
+def login(request: Request, credentials: schemas.UserLogin, db: Session = Depends(get_db)):
+    ip = request.client.host if request.client else "127.0.0.1"
+    check_rate_limit(ip)
     user = db.query(models.User).filter(models.User.email == credentials.email).first()
     if not user:
         raise HTTPException(
@@ -108,53 +119,19 @@ def login(credentials: schemas.UserLogin, db: Session = Depends(get_db)):
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    # 1. Admin login (user has password hash)
-    if user.password_hash is not None:
-        if not auth.verify_password(credentials.password, user.password_hash):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Incorrect email or password",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-    # 2. Family Member login (using the family's current secret code)
-    else:
-        # Get member's family
-        membership = db.query(models.FamilyMember).filter(models.FamilyMember.user_id == user.id).first()
-        if not membership:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="No family vault associated with this account.",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-        
-        family = db.query(models.Family).filter(models.Family.id == membership.family_id).first()
-        if not family:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Family vault not found.",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
+    if user.password_hash is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Account requires password setup. Please contact your family administrator.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
-        # Verify the entered secret code against the family's current active code
-        import hashlib
-        code_to_check = credentials.password.replace("-", "").upper()
-        sha256_hash = hashlib.sha256(code_to_check.encode("utf-8")).hexdigest()
-
-        # Check match
-        code_matches = False
-        if family.secret_code_sha256 == sha256_hash:
-            code_matches = True
-        elif family.secret_code_sha256 is None and auth.verify_password(code_to_check, family.secret_code_hash):
-            code_matches = True
-
-        if not code_matches:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Incorrect email or family secret code.",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-
-
+    if not auth.verify_password(credentials.password, user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
     access_token = auth.create_access_token(
         data={
@@ -239,7 +216,7 @@ def family_login(request: Request, login_in: schemas.FamilyLogin, db: Session = 
         user = models.User(
             username=login_in.username,
             email=login_in.email,
-            password_hash=None,
+            password_hash=auth.get_password_hash(login_in.password),
             role="member"
         )
         db.add(user)
@@ -298,3 +275,21 @@ def update_profile(
     db.commit()
     db.refresh(current_user)
     return current_user
+
+@router.post("/logout")
+def logout(
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db),
+    token: str = Depends(auth.oauth2_scheme)
+):
+    from jose import jwt
+    try:
+        payload = jwt.decode(token, auth.JWT_SECRET, algorithms=[auth.JWT_ALGORITHM])
+        jti = payload.get("jti")
+        if jti:
+            revoked = models.RevokedToken(jti=jti)
+            db.add(revoked)
+            db.commit()
+    except Exception:
+        pass
+    return {"message": "Logged out successfully"}
