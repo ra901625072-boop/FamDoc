@@ -101,7 +101,7 @@ class Folder(Base):
 
     # Relationships
     family = relationship("Family", back_populates="folders")
-    files = relationship("File", back_populates="folder", cascade="all, delete-orphan")
+    files = relationship("File", back_populates="folder")
     parent = relationship("Folder", remote_side=[id], backref="subfolders")
 
 
