@@ -1,6 +1,12 @@
 /**
  * FamDoc API Client Wrapper
  */
+// Configurable base URL for cross-origin hosting (e.g. backend on Render and frontend on Vercel)
+// - If empty, relative paths are used (Option A: Proxy Rewrite in vercel.json)
+// - Alternatively, set to your Render backend URL (e.g. "https://your-backend.onrender.com")
+// Supports dynamic overrides in local storage via: localStorage.setItem("famdoc_api_base_url", "YOUR_BACKEND_URL")
+const API_BASE_URL = localStorage.getItem("famdoc_api_base_url") || "";
+
 const FamDocAPI = {
   // Base request method
   async request(path, options = {}) {
@@ -21,8 +27,10 @@ const FamDocAPI = {
       headers
     };
 
+    const fullPath = (API_BASE_URL && path.startsWith("/")) ? `${API_BASE_URL}${path}` : path;
+
     try {
-      const response = await fetch(path, fetchOptions);
+      const response = await fetch(fullPath, fetchOptions);
 
       // Handle 401 Unauthorized globally
       if (response.status === 401) {
@@ -232,7 +240,9 @@ const FamDocAPI = {
       if (onProgress) {
         return new Promise((resolve, reject) => {
           const xhr = new XMLHttpRequest();
-          xhr.open("POST", "/api/files/upload");
+          const uploadPath = "/api/files/upload";
+          const fullUploadPath = (API_BASE_URL && uploadPath.startsWith("/")) ? `${API_BASE_URL}${uploadPath}` : uploadPath;
+          xhr.open("POST", fullUploadPath);
           
           const token = localStorage.getItem("famdoc_token");
           if (token) {
@@ -295,11 +305,13 @@ const FamDocAPI = {
     },
 
     getDownloadUrl(fileId) {
-      return `/api/files/${fileId}/download`;
+      const path = `/api/files/${fileId}/download`;
+      return (API_BASE_URL && path.startsWith("/")) ? `${API_BASE_URL}${path}` : path;
     },
 
     getPreviewUrl(fileId) {
-      return `/api/files/${fileId}/preview`;
+      const path = `/api/files/${fileId}/preview`;
+      return (API_BASE_URL && path.startsWith("/")) ? `${API_BASE_URL}${path}` : path;
     }
   },
 
@@ -375,7 +387,9 @@ const FamDocAPI = {
       const bodyObj = password ? { password } : null;
 
       try {
-        const response = await fetch(`/api/shared/${token}/download`, {
+        const downloadPath = `/api/shared/${token}/download`;
+        const fullDownloadPath = (API_BASE_URL && downloadPath.startsWith("/")) ? `${API_BASE_URL}${downloadPath}` : downloadPath;
+        const response = await fetch(fullDownloadPath, {
           method: "POST",
           headers: {
             "Content-Type": "application/json"

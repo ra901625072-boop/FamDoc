@@ -17,15 +17,15 @@ def purge_old_recycle_bin_items(db: Session, retention_days: int = 30):
     if old_files:
         logger.info(f"Cleanup Job: Found {len(old_files)} soft-deleted files older than {retention_days} days to purge.")
         for file in old_files:
-            family = db.query(models.Family).filter(models.Family.id == file.family_id).first()
-            if family:
-                try:
-                    provider = get_storage_provider(file.storage_provider)
-                    config = get_file_storage_config(file, family, db)
+            try:
+                manager = StorageManager()
+                provider = manager.providers.get(file.storage_provider or "local")
+                config = manager.get_file_config(file, db)
+                if provider:
                     provider.delete_file(config, file.file_id)
-                    logger.info(f"Cleanup Job: Purged cloud file {file.file_id} for {file.filename}")
-                except Exception as e:
-                    logger.warning(f"Warning: Cleanup Job failed to delete cloud file {file.file_id} ({file.filename}): {e}")
+                logger.info(f"Cleanup Job: Purged file {file.file_id} for {file.filename}")
+            except Exception as e:
+                logger.warning(f"Warning: Cleanup Job failed to delete file {file.file_id} ({file.filename}): {e}")
             db.delete(file)
         db.commit()
 

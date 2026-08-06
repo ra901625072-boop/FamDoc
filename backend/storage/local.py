@@ -47,10 +47,8 @@ class LocalStorageProvider(StorageProvider):
         return True
 
     def rename_file(self, config: dict, cloud_file_id: str, new_name: str) -> bool:
-        vault_dir = config.get("vault_folder_id")
-        if vault_dir:
-            old_path = os.path.join(vault_dir, cloud_file_id)
-            new_path = os.path.join(vault_dir, new_name)
-            if os.path.exists(old_path):
-                os.rename(old_path, new_path)
+        # Local files are identified on disk using their unique cloud_file_id (which contains a UUID prefix).
+        # We keep the physical file name unchanged on rename to avoid collisions and preserve uniqueness.
+        # The database record tracks the user-facing name in file.filename.
         return True
+

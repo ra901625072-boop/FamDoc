@@ -292,8 +292,6 @@ def rename_file(
         )
         
     file.filename = new_name
-    if file.storage_provider == "local":
-        file.file_id = new_name
     db.commit()
     db.refresh(file)
     
@@ -324,11 +322,8 @@ def delete_file(
             detail="You do not have permission to delete files uploaded by other family members"
         )
         
-    family = db.query(models.Family).filter(models.Family.id == current_user.family_id).first()
-    
-    manager = StorageManager()
-    family_config = manager.get_family_config(family, db)
-    manager.delete_file(file, family_config, db)
+    file.deleted_at = datetime.now(timezone.utc)
+    db.commit()
     
     ip = request.client.host if request.client else "127.0.0.1"
     log_action(db, "DELETE_FILE", current_user.id, current_user.family_id, ip, f"Soft-deleted file: {file.filename}")

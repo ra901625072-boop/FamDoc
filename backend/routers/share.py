@@ -202,9 +202,9 @@ def download_public_shared_file(
     family = db.query(models.Family).filter(models.Family.id == file.family_id).first()
 
     try:
-        provider = get_storage_provider(file.storage_provider)
-        config = get_family_storage_config(family, db)
-        file_bytes = provider.download_file(config, file.file_id)
+        manager = StorageManager()
+        family_config = manager.get_family_config(family, db)
+        file_bytes = manager.read_file(file, family_config)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

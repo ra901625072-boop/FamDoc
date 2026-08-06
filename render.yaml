@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: famdoc-backend
+    env: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DATABASE_URL
+        sync: false # Set to your Supabase connection string
+      - key: JWT_SECRET
+        generateValue: true # Render will automatically generate a secure key
+      - key: FRONTEND_URL
+        sync: false # Set to your Vercel frontend URL (e.g. https://my-famdoc.vercel.app)
+      - key: BACKEND_URL
+        sync: false # Set to your Render backend URL (e.g. https://my-famdoc-backend.onrender.com)
+      - key: CORS_ORIGINS
+        sync: false # Set to your Vercel URL to allow CORS requests
