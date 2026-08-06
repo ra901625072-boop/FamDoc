@@ -9,6 +9,12 @@ RENDER_EXTERNAL_URL = os.getenv("RENDER_EXTERNAL_URL")
 BACKEND_URL = os.getenv("BACKEND_URL", RENDER_EXTERNAL_URL or "http://localhost:8000")
 FRONTEND_URL = os.getenv("FRONTEND_URL", RENDER_EXTERNAL_URL or "http://localhost:8000")
 
+# Serve Frontend settings (useful for decoupling frontend on Vercel and backend on Render)
+SERVE_FRONTEND = os.getenv("SERVE_FRONTEND", "true").lower() == "true"
+if os.getenv("RENDER") or RENDER_EXTERNAL_URL:
+    # Disable serving frontend by default on Render, unless explicitly set to true
+    SERVE_FRONTEND = os.getenv("SERVE_FRONTEND", "false").lower() == "true"
+
 # CORS Origins Setup
 cors_origins_raw = os.getenv("CORS_ORIGINS", "")
 if cors_origins_raw:

@@ -8,7 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from database import engine, Base, run_migrations
 import models
 from routers import auth, family, storage_config, folders, files, recycle_bin, search, dashboard, share, views
-from config import CORS_ORIGINS, IS_DEFAULT_JWT_SECRET
+from config import CORS_ORIGINS, IS_DEFAULT_JWT_SECRET, SERVE_FRONTEND
 
 from logging_config import logger
 
@@ -116,26 +116,35 @@ app.include_router(recycle_bin.router)
 app.include_router(search.router)
 app.include_router(dashboard.router)
 app.include_router(share.router)
-app.include_router(views.router)
 
-# Mount Frontend Static Files
-# Path to the frontend directory relative to this file
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-frontend_path = os.path.abspath(os.path.join(BASE_DIR, "..", "frontend"))
+if SERVE_FRONTEND:
+    app.include_router(views.router)
+else:
+    # A simple health check response for the root domain on Render
+    @app.get("/")
+    def read_root():
+        return {
+            "status": "online",
+            "message": "FamDoc API Backend is running. Frontend is hosted separately on Vercel."
+        }
 
-# Ensure the frontend folder exists
-if not os.path.exists(frontend_path):
-    os.makedirs(frontend_path)
-    os.makedirs(os.path.join(frontend_path, "css"), exist_ok=True)
-    os.makedirs(os.path.join(frontend_path, "js"), exist_ok=True)
+if SERVE_FRONTEND:
+    # Mount Frontend Static Files
+    # Path to the frontend directory relative to this file
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    frontend_path = os.path.abspath(os.path.join(BASE_DIR, "..", "frontend"))
 
-# Register static files mounting last so that API routes take precedence
-# Mount /css, /js, and other folders
-app.mount("/css", StaticFiles(directory=os.path.join(frontend_path, "css")), name="css")
-app.mount("/js", StaticFiles(directory=os.path.join(frontend_path, "js")), name="js")
+    # Ensure the frontend folder exists
+    if not os.path.exists(frontend_path):
+        os.makedirs(frontend_path)
+        os.makedirs(os.path.join(frontend_path, "css"), exist_ok=True)
+        os.makedirs(os.path.join(frontend_path, "js"), exist_ok=True)
 
+    # Register static files mounting last so that API routes take precedence
+    # Mount /css, /js, and other folders
+    app.mount("/css", StaticFiles(directory=os.path.join(frontend_path, "css")), name="css")
+    app.mount("/js", StaticFiles(directory=os.path.join(frontend_path, "js")), name="js")
 
-
-# Mount the entire frontend directory at the root to serve all HTML files (login.html, dashboard.html, etc.)
-# This must be the last route registered so API routes take precedence.
-app.mount("/", StaticFiles(directory=frontend_path, html=True), name="frontend")
+    # Mount the entire frontend directory at the root to serve all HTML files (login.html, dashboard.html, etc.)
+    # This must be the last route registered so API routes take precedence.
+    app.mount("/", StaticFiles(directory=frontend_path, html=True), name="frontend")
