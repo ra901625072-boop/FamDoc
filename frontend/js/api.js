@@ -7,6 +7,36 @@
 // Supports dynamic overrides in local storage via: localStorage.setItem("famdoc_api_base_url", "YOUR_BACKEND_URL")
 const API_BASE_URL = localStorage.getItem("famdoc_api_base_url") || "";
 
+function translateValidationError(field, message) {
+  const cleanMsg = message.replace(/^value error,\s*/i, "");
+  if (cleanMsg.toLowerCase().startsWith(field.toLowerCase())) {
+    return cleanMsg.charAt(0).toUpperCase() + cleanMsg.slice(1);
+  }
+  
+  let friendlyField = field.charAt(0).toUpperCase() + field.slice(1);
+  friendlyField = friendlyField.replace(/_/g, " ");
+
+  let friendlyMsg = cleanMsg;
+  
+  if (cleanMsg.includes("match pattern '^[a-zA-Z0-9_]+$'")) {
+    friendlyMsg = "should contain only letters, numbers, and underscores (no spaces or special characters).";
+  } else if (cleanMsg.includes("match pattern")) {
+    friendlyMsg = "contains unsupported characters.";
+  } else if (cleanMsg === "Field required") {
+    friendlyMsg = "is required.";
+  } else if (cleanMsg.includes("valid email address")) {
+    friendlyMsg = "must be a valid email address.";
+  } else if (cleanMsg.includes("at least")) {
+    const match = cleanMsg.match(/at least (\d+)/);
+    friendlyMsg = match ? `must be at least ${match[1]} characters long.` : "is too short.";
+  } else if (cleanMsg.includes("at most")) {
+    const match = cleanMsg.match(/at most (\d+)/);
+    friendlyMsg = match ? `must be at most ${match[1]} characters long.` : "is too long.";
+  }
+  
+  return `${friendlyField} ${friendlyMsg}`;
+}
+
 const FamDocAPI = {
   // Base request method
   async request(path, options = {}) {
@@ -58,7 +88,10 @@ const FamDocAPI = {
           if (typeof errData.detail === "string") {
             errorMsg = errData.detail;
           } else if (Array.isArray(errData.detail)) {
-            errorMsg = errData.detail.map(err => `${err.loc.slice(1).join('.')}: ${err.msg}`).join("; ");
+            errorMsg = errData.detail.map(err => {
+              const field = err.loc.slice(1).join('.');
+              return translateValidationError(field, err.msg);
+            }).join("; ");
           } else if (errData.detail) {
             errorMsg = JSON.stringify(errData.detail);
           }
