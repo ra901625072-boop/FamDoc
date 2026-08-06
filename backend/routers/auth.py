@@ -193,15 +193,18 @@ def family_login(request: Request, login_in: schemas.FamilyLogin, db: Session = 
     # 5. Check this email is not already a member of this family
     existing_user = db.query(models.User).filter(models.User.email == login_in.email).first()
     if existing_user:
-        # User exists, verify they aren't already in this family
-        membership = db.query(models.FamilyMember).filter(
-            models.FamilyMember.family_id == matched_family.id,
-            models.FamilyMember.user_id == existing_user.id
-        ).first()
-        if membership:
+        # Verify password for the existing user
+        if not auth.verify_password(login_in.password, existing_user.password_hash):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Incorrect password for the existing account."
+            )
+            
+        # Verify they aren't already associated with any family group
+        if existing_user.family_id is not None:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="You are already a member of this family."
+                detail="This account is already associated with a family group."
             )
         user = existing_user
     else:
@@ -230,8 +233,8 @@ def family_login(request: Request, login_in: schemas.FamilyLogin, db: Session = 
     )
     db.add(new_member)
 
-    # Expire code immediately for one-time use limitation
-    matched_family.expires_at = datetime.now(timezone.utc)
+    # Note: We removed the immediate expiration of the code so it remains reusable
+    # for other family members until the 7-day expires_at limit or capacity is reached.
 
     db.commit()
     db.refresh(user)
