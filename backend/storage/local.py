@@ -16,7 +16,7 @@ class LocalStorageProvider(StorageProvider):
         os.makedirs(vault_dir, exist_ok=True)
         return vault_dir
 
-    def upload_file(self, config: dict, vault_folder_id: str, filename: str, file_content: bytes, mimetype: str) -> dict:
+    def upload_file(self, config: dict, vault_folder_id: str, filename: str, file_content: bytes, mimetype: str, username: str = None) -> dict:
         import uuid
         os.makedirs(vault_folder_id, exist_ok=True)
         unique_filename = f"{uuid.uuid4()}_{filename}"

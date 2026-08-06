@@ -27,7 +27,7 @@ class StorageProvider(ABC):
         pass
 
     @abstractmethod
-    def upload_file(self, config: dict, vault_folder_id: str, filename: str, file_content: bytes, mimetype: str) -> dict:
+    def upload_file(self, config: dict, vault_folder_id: str, filename: str, file_content: bytes, mimetype: str, username: str = None) -> dict:
         """
         Uploads file content to the cloud vault folder.
         Returns a dictionary containing:

@@ -136,7 +136,7 @@ class MegaProvider(StorageProvider):
             
         return node_id
 
-    def upload_file(self, config: dict, vault_folder_id: str, filename: str, file_content: bytes, mimetype: str) -> dict:
+    def upload_file(self, config: dict, vault_folder_id: str, filename: str, file_content: bytes, mimetype: str, username: str = None) -> dict:
         client = self._get_client(config)
         
         # Write content to local temporary file to upload

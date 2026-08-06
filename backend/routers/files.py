@@ -322,11 +322,16 @@ def delete_file(
             detail="You do not have permission to delete files uploaded by other family members"
         )
         
-    file.deleted_at = datetime.now(timezone.utc)
-    db.commit()
+    family = db.query(models.Family).filter(models.Family.id == current_user.family_id).first()
+    if not family:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Family record not found")
+
+    manager = StorageManager()
+    family_config = manager.get_family_config(family, db)
+    manager.delete_file(file, family_config, db)
     
     ip = request.client.host if request.client else "127.0.0.1"
-    log_action(db, "DELETE_FILE", current_user.id, current_user.family_id, ip, f"Soft-deleted file: {file.filename}")
+    log_action(db, "DELETE_FILE", current_user.id, current_user.family_id, ip, f"Deleted file: {file.filename}")
     
     return None
 

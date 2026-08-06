@@ -93,15 +93,11 @@ class GoogleDriveProvider(StorageProvider):
             raise Exception(f"OAuth verification failed: {str(e)}")
 
     def ensure_vault_folder(self, family_id: str, config: dict) -> str:
-        parent_id = config.get("folder_id")
         service = self._get_client(config)
-        folder_name = f"FamilyVault_{family_id}"
+        folder_name = "famdoc"
         
-        # Look for the folder in My Drive or inside custom parent if specified
-        if parent_id:
-            query = f"mimeType = 'application/vnd.google-apps.folder' and name = '{folder_name}' and '{parent_id}' in parents and trashed = false"
-        else:
-            query = f"mimeType = 'application/vnd.google-apps.folder' and name = '{folder_name}' and trashed = false"
+        # Look for the folder 'famdoc' in My Drive root
+        query = f"mimeType = 'application/vnd.google-apps.folder' and name = '{folder_name}' and 'root' in parents and trashed = false"
         
         from storage.base import SimpleRetry
         results = None
@@ -120,13 +116,12 @@ class GoogleDriveProvider(StorageProvider):
         if files:
             return files[0]['id']
             
-        # Create folder in root My Drive or custom parent
+        # Create folder in My Drive root
         file_metadata = {
             'name': folder_name,
-            'mimeType': 'application/vnd.google-apps.folder'
+            'mimeType': 'application/vnd.google-apps.folder',
+            'parents': ['root']
         }
-        if parent_id:
-            file_metadata['parents'] = [parent_id]
         
         new_folder = None
         for attempt in SimpleRetry(attempts=3, wait=1):
@@ -135,12 +130,46 @@ class GoogleDriveProvider(StorageProvider):
                 
         return new_folder.get('id')
 
-    def upload_file(self, config: dict, vault_folder_id: str, filename: str, file_content: bytes, mimetype: str) -> dict:
+    def upload_file(self, config: dict, vault_folder_id: str, filename: str, file_content: bytes, mimetype: str, username: str = None) -> dict:
         service = self._get_client(config)
+        
+        target_folder_id = vault_folder_id
+        if username:
+            # Query for the subfolder with name = username under parent vault_folder_id (which is root famdoc folder)
+            query = f"mimeType = 'application/vnd.google-apps.folder' and name = '{username}' and '{vault_folder_id}' in parents and trashed = false"
+            
+            from storage.base import SimpleRetry
+            results = None
+            for attempt in SimpleRetry(attempts=3, wait=1):
+                with attempt:
+                    results = service.files().list(
+                        q=query,
+                        spaces='drive',
+                        fields='files(id, name)',
+                        pageSize=1,
+                        supportsAllDrives=True,
+                        includeItemsFromAllDrives=True
+                    ).execute()
+                    
+            subfolders = results.get('files', [])
+            if subfolders:
+                target_folder_id = subfolders[0]['id']
+            else:
+                # Create the subfolder under vault_folder_id
+                subfolder_metadata = {
+                    'name': username,
+                    'mimeType': 'application/vnd.google-apps.folder',
+                    'parents': [vault_folder_id]
+                }
+                new_subfolder = None
+                for attempt in SimpleRetry(attempts=3, wait=1):
+                    with attempt:
+                        new_subfolder = service.files().create(body=subfolder_metadata, fields='id', supportsAllDrives=True).execute()
+                target_folder_id = new_subfolder.get('id')
         
         file_metadata = {
             'name': filename,
-            'parents': [vault_folder_id]
+            'parents': [target_folder_id]
         }
         
         media = MediaIoBaseUpload(io.BytesIO(file_content), mimetype=mimetype, resumable=True)

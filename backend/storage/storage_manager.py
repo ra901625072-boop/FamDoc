@@ -170,6 +170,7 @@ class StorageManager:
                     local_config, file.file_id
                 )
 
+                uploader_username = file.uploader.username if file.uploader else None
                 target_config = config.get(target, {})
                 cloud_result = self.providers[target].upload_file(
                     config=target_config,
@@ -177,6 +178,7 @@ class StorageManager:
                     filename=file.filename,
                     file_content=local_content,
                     mimetype=file.file_type or "application/octet-stream",
+                    username=uploader_username,
                 )
 
                 old_local_file_id     = file.file_id
