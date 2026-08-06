@@ -55,7 +55,13 @@ const FamDocAPI = {
         let errorMsg = "Something went wrong";
         try {
           const errData = await response.json();
-          errorMsg = errData.detail || errorMsg;
+          if (typeof errData.detail === "string") {
+            errorMsg = errData.detail;
+          } else if (Array.isArray(errData.detail)) {
+            errorMsg = errData.detail.map(err => `${err.loc.slice(1).join('.')}: ${err.msg}`).join("; ");
+          } else if (errData.detail) {
+            errorMsg = JSON.stringify(errData.detail);
+          }
         } catch (e) {}
         throw new Error(errorMsg);
       }
@@ -89,10 +95,10 @@ const FamDocAPI = {
       return data;
     },
 
-    async joinFamily(username, email, secretCode) {
+    async joinFamily(username, email, secretCode, password) {
       const data = await FamDocAPI.request("/api/auth/family-login", {
         method: "POST",
-        body: JSON.stringify({ username, email, secret_code: secretCode })
+        body: JSON.stringify({ username, email, secret_code: secretCode, password })
       });
       if (data && data.access_token) {
         localStorage.setItem("famdoc_token", data.access_token);
