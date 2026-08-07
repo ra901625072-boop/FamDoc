@@ -2,19 +2,16 @@ import os
 import asyncio
 if not hasattr(asyncio, "coroutine"):
     asyncio.coroutine = lambda f: f
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from database import engine, Base, run_migrations
+from database import engine, Base, run_migrations, SessionLocal
 import models
 from routers import auth, family, storage_config, folders, files, recycle_bin, search, dashboard, share, views
 from config import CORS_ORIGINS, IS_DEFAULT_JWT_SECRET, SERVE_FRONTEND
 
 from logging_config import logger
-
-# Create database tables
-Base.metadata.create_all(bind=engine)
-run_migrations()
 
 # JWT Secret Key Security Validation
 APP_ENV = os.getenv("APP_ENV", "production")
@@ -32,10 +29,33 @@ if not STORAGE_CONFIG_ENCRYPTION_KEY:
     else:
         logger.warning("WARNING: STORAGE_CONFIG_ENCRYPTION_KEY is not set. Falling back to key derived from JWT_SECRET. This is unsafe for production deployment.")
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Run database tables creation & migrations on startup
+    Base.metadata.create_all(bind=engine)
+    run_migrations()
+    
+    # Run sync recovery
+    try:
+        db = SessionLocal()
+        try:
+            from storage.storage_manager import StorageManager
+            StorageManager().recover_interrupted_syncs(db)
+        finally:
+            db.close()
+    except Exception as recovery_err:
+        logger.error(f"Startup Recovery Error: {recovery_err}")
+
+    # Start workers
+    start_cleanup_worker()
+    start_sync_worker()
+    yield
+
 app = FastAPI(
     title="Family Document Management System",
     description="Full-stack family vault powered by Google Drive or Mega storage",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan
 )
 
 import threading
@@ -116,21 +136,7 @@ def start_sync_worker():
     thread.start()
     logger.info("Sync worker thread launched")
 
-@app.on_event("startup")
-def on_startup():
-    # Run sync recovery to clean up any residual files from crashed worker runs
-    try:
-        db = SessionLocal()
-        try:
-            from storage.storage_manager import StorageManager
-            StorageManager().recover_interrupted_syncs(db)
-        finally:
-            db.close()
-    except Exception as recovery_err:
-        logger.error(f"Startup Recovery Error: {recovery_err}")
-
-    start_cleanup_worker()
-    start_sync_worker()
+# Startup operations are handled by the lifespan context manager
 
 # CORS Configuration
 # Restricted to CORS_ORIGINS configured in config.py

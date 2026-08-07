@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, JSON, Boolean
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, JSON, Boolean, UniqueConstraint, Index
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import Base
@@ -68,6 +68,9 @@ class Family(Base):
 
 class FamilyMember(Base):
     __tablename__ = "family_members"
+    __table_args__ = (
+        UniqueConstraint('family_id', 'user_id', name='uq_family_member'),
+    )
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     family_id = Column(String(36), ForeignKey("families.id", ondelete="CASCADE"), nullable=False, index=True)
@@ -91,6 +94,9 @@ class FamilyMember(Base):
 
 class Folder(Base):
     __tablename__ = "folders"
+    __table_args__ = (
+        Index('ix_folders_family_parent_deleted', 'family_id', 'parent_id', 'deleted_at'),
+    )
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     name = Column(String(255), nullable=False)
@@ -108,6 +114,10 @@ class Folder(Base):
 
 class File(Base):
     __tablename__ = "files"
+    __table_args__ = (
+        Index('ix_files_family_folder_deleted', 'family_id', 'folder_id', 'deleted_at'),
+        Index('ix_files_family_deleted', 'family_id', 'deleted_at'),
+    )
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     filename = Column(String(255), nullable=False)
@@ -151,6 +161,9 @@ class File(Base):
 
 class AuditLog(Base):
     __tablename__ = "audit_logs"
+    __table_args__ = (
+        Index('ix_audit_logs_family_timestamp', 'family_id', 'timestamp'),
+    )
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     action = Column(String(50), nullable=False, index=True) # "LOGIN", "LOGOUT", "UPLOAD", "DELETE", "RENAME", "DOWNLOAD"
