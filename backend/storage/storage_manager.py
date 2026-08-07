@@ -9,7 +9,7 @@ which is called by the background worker in main.py.
 import os
 import threading
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Optional
 from sqlalchemy.orm import Session
 from config import MEGA_EMAIL, MEGA_PASSWORD, GOOGLE_SERVICE_ACCOUNT_FILE, GOOGLE_FOLDER_ID
@@ -35,7 +35,7 @@ class StorageManager:
             "local":  LocalStorageProvider(),
         }
 
-    def check_availability(self, config: dict, cache_ttl: int = 30) -> dict:
+    def check_availability(self, config: dict, cache_ttl: int = 30, db = None) -> dict:
         """
         Returns { "google": bool, "mega": bool }.
         """
@@ -56,7 +56,7 @@ class StorageManager:
                     return cached_result
 
         result = {
-            "google": self.providers["google"].health_check(config.get("google", {})),
+            "google": self.providers["google"].health_check(config.get("google", {}), db=db),
             "mega":   self.providers["mega"].health_check(config.get("mega", {})),
         }
 
@@ -100,14 +100,17 @@ class StorageManager:
             })
             raise
 
-    def read_file(self, file, family_config: dict) -> bytes:
+    def read_file(self, file, family_config: dict, db = None) -> bytes:
         provider_name = file.storage_provider or "local"
         cascade_order = self._cascade_from(provider_name)
 
         for p_name in cascade_order:
             try:
                 cfg = family_config.get(p_name, {})
-                content = self.providers[p_name].download_file(cfg, file.file_id)
+                f_id = file.local_file_id if p_name == "local" else file.cloud_file_id
+                if not f_id:
+                    continue
+                content = self.providers[p_name].download_file(cfg, f_id, db=db)
                 return content
             except Exception as e:
                 logger.warning({
@@ -136,13 +139,28 @@ class StorageManager:
         family_configs: dict,
         batch_size:     int = 50,
     ) -> dict:
+        import uuid
+        import socket
         from models import File
+        from sqlalchemy import or_, and_
 
+        now_utc = datetime.now(timezone.utc)
+        timeout_limit = now_utc - timedelta(minutes=10)
+        
+        # Unique identifier for this thread/process worker
+        current_holder = f"worker-{socket.gethostname()}-{threading.get_ident()}-{uuid.uuid4().hex[:8]}"
+
+        # Retrieve files that are pending sync and either not locked, or locked for more than 10 minutes
         pending_files = (
             db.query(File)
             .filter(
                 File.pending_sync == True,
                 File.deleted_at == None,
+                File.sync_retry_count < 5,
+                or_(
+                    File.lock_acquired_at == None,
+                    File.lock_acquired_at < timeout_limit
+                )
             )
             .order_by(File.pending_sync_at.asc())
             .limit(batch_size)
@@ -154,8 +172,29 @@ class StorageManager:
         skipped = 0
 
         for file in pending_files:
+            # Atomic leasing attempt: try to update the lock columns if they haven't changed
+            leased_rows = db.query(File).filter(
+                File.id == file.id,
+                File.pending_sync == True,
+                File.deleted_at == None,
+                or_(
+                    File.lock_acquired_at == None,
+                    File.lock_acquired_at < timeout_limit
+                )
+            ).update({
+                "lock_acquired_at": datetime.now(timezone.utc),
+                "lock_holder": current_holder
+            }, synchronize_session=False)
+
+            db.commit()
+
+            if leased_rows == 0:
+                # File was leased by another process/thread in the split second between query and update
+                skipped += 1
+                continue
+
             config = family_configs.get(file.family_id, {})
-            availability = self.check_availability(config)
+            availability = self.check_availability(config, db=db)
 
             if availability.get("google"):
                 target = "google"
@@ -164,17 +203,23 @@ class StorageManager:
             else:
                 skipped += 1
                 logger.warning({
-                    "message":   "All cloud providers unavailable, skipping file",
+                    "message":   "All cloud providers unavailable, releasing lease",
                     "file_id":   file.file_id,
                     "family_id": file.family_id,
                     "timestamp": datetime.now(timezone.utc).isoformat(),
                 })
+                # Release the lease so other workers can try later when providers come back online
+                db.query(File).filter(File.id == file.id).update({
+                    "lock_acquired_at": None,
+                    "lock_holder": None
+                }, synchronize_session=False)
+                db.commit()
                 continue
 
             try:
                 local_config = config.get("local", {})
                 local_content = self.providers["local"].download_file(
-                    local_config, file.file_id
+                    local_config, file.local_file_id, db=db
                 )
 
                 uploader_username = file.uploader.username if file.uploader else None
@@ -186,25 +231,34 @@ class StorageManager:
                     file_content=local_content,
                     mimetype=file.file_type or "application/octet-stream",
                     username=uploader_username,
+                    db=db
                 )
 
-                old_local_file_id     = file.file_id
-                file.file_id          = cloud_result["cloud_file_id"]
+                old_local_file_id     = file.local_file_id
+                # Phase 1: Mark cloud upload complete but keep local reference
+                file.cloud_file_id    = cloud_result["cloud_file_id"]
                 file.cloud_link       = cloud_result.get("cloud_link")
                 file.storage_provider = target
                 file.pending_sync     = False
                 file.pending_sync_at  = None
                 file.synced_to        = target
+                # Clear task lease locks
+                file.lock_acquired_at = None
+                file.lock_holder      = None
+                file.sync_retry_count = 0
                 db.commit()
 
+                # Phase 2: Perform local deletion and clear local reference
                 try:
-                    self.providers["local"].delete_file(local_config, old_local_file_id)
+                    self.providers["local"].delete_file(local_config, old_local_file_id, db=db)
+                    file.local_file_id = None
+                    db.commit()
                 except Exception as del_err:
                     logger.warning({
                         "message":       "Local copy delete failed after cloud upload",
                         "error":         str(del_err),
                         "local_file_id": old_local_file_id,
-                        "cloud_file_id": file.file_id,
+                        "cloud_file_id": file.cloud_file_id,
                         "timestamp":     datetime.now(timezone.utc).isoformat(),
                     })
 
@@ -229,6 +283,13 @@ class StorageManager:
                     "filename":  file.filename,
                     "timestamp": datetime.now(timezone.utc).isoformat(),
                 })
+                # Release the lease, increment retry count
+                db.query(File).filter(File.id == file.id).update({
+                    "lock_acquired_at": None,
+                    "lock_holder": None,
+                    "sync_retry_count": File.sync_retry_count + 1
+                }, synchronize_session=False)
+                db.commit()
 
         return {
             "synced":  synced,
@@ -246,7 +307,17 @@ class StorageManager:
         cfg      = family_config.get(provider, {})
 
         try:
-            self.providers[provider].delete_file(cfg, file.file_id)
+            f_id = file.cloud_file_id if provider != "local" else file.local_file_id
+            if f_id:
+                self.providers[provider].delete_file(cfg, f_id, db=db)
+            
+            # Delete any residual local copies if they still exist
+            if provider != "local" and file.local_file_id:
+                local_cfg = family_config.get("local", {})
+                self.providers["local"].delete_file(local_cfg, file.local_file_id, db=db)
+                file.local_file_id = None
+                db.commit()
+                
             status = "success"
         except Exception as e:
             status = "storage_delete_failed"
@@ -264,6 +335,32 @@ class StorageManager:
             "tier":      provider,
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
+
+    def recover_interrupted_syncs(self, db: Session):
+        """
+        Scan and clean up any remaining local copies of files that have
+        already been successfully synced and committed to the cloud.
+        """
+        from models import File
+        interrupted_files = db.query(File).filter(
+            File.storage_provider != "local",
+            File.local_file_id != None
+        ).all()
+        
+        if not interrupted_files:
+            return
+            
+        logger.info(f"Sync Recovery: Found {len(interrupted_files)} files with pending local cleanup.")
+        for file in interrupted_files:
+            try:
+                local_config = self.get_family_config(file.family, db).get("local", {})
+                self.providers["local"].delete_file(local_config, file.local_file_id, db=db)
+                logger.info(f"Sync Recovery: Successfully deleted local copy {file.local_file_id} for file {file.filename}")
+            except Exception as e:
+                logger.warning(f"Sync Recovery: Failed to delete local copy {file.local_file_id}: {e}")
+            
+            file.local_file_id = None
+        db.commit()
 
     def initialize_family_storage(self, family, db: Session):
         # 1. Try Google Drive if configured
@@ -289,7 +386,7 @@ class StorageManager:
 
         if has_google_config and sa_exists:
             try:
-                vault_id = self.providers["google"].ensure_vault_folder(family.id, google_config)
+                vault_id = self.providers["google"].ensure_vault_folder(family.id, google_config, db=db)
                 
                 family.storage_provider = "google"
                 family.vault_folder_id = vault_id

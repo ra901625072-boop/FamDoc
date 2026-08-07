@@ -22,7 +22,7 @@ def purge_old_recycle_bin_items(db: Session, retention_days: int = 30):
                 provider = manager.providers.get(file.storage_provider or "local")
                 config = manager.get_file_config(file, db)
                 if provider:
-                    provider.delete_file(config, file.file_id)
+                    provider.delete_file(config, file.file_id, db=db)
                 logger.info(f"Cleanup Job: Purged file {file.file_id} for {file.filename}")
             except Exception as e:
                 logger.warning(f"Warning: Cleanup Job failed to delete file {file.file_id} ({file.filename}): {e}")

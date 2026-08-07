@@ -8,7 +8,7 @@ from googleapiclient.http import MediaIoBaseUpload, MediaIoBaseDownload
 from storage.base import StorageProvider
 
 class GoogleDriveProvider(StorageProvider):
-    def _get_client(self, config: dict):
+    def _get_client(self, config: dict, db = None):
         client_id = config.get("client_id")
         client_secret = config.get("client_secret")
         access_token = config.get("access_token")
@@ -43,16 +43,23 @@ class GoogleDriveProvider(StorageProvider):
                 
                 # Update DB if family_id is provided
                 if family_id:
-                    from database import SessionLocal
-                    import models
-                    db = SessionLocal()
-                    try:
+                    if db:
+                        import models
                         family = db.query(models.Family).filter(models.Family.id == family_id).first()
                         if family:
                             family.storage_config = config
                             db.commit()
-                    finally:
-                        db.close()
+                    else:
+                        from database import SessionLocal
+                        import models
+                        db_session = SessionLocal()
+                        try:
+                            family = db_session.query(models.Family).filter(models.Family.id == family_id).first()
+                            if family:
+                                family.storage_config = config
+                                db_session.commit()
+                        finally:
+                            db_session.close()
             except Exception as e:
                 raise Exception(f"Google Token Refresh Error: {str(e)}")
                 
@@ -66,11 +73,11 @@ class GoogleDriveProvider(StorageProvider):
         service = build('drive', 'v3', credentials=creds, static_discovery=True)
         return service
 
-    def health_check(self, config: dict) -> bool:
+    def health_check(self, config: dict, db = None) -> bool:
         """Lightweight ping: GET /drive/v3/about with 3s timeout."""
         try:
             # Ensure we have a valid access token (refresh if needed)
-            self._get_client(config)
+            self._get_client(config, db)
             access_token = config.get("access_token")
             if not access_token:
                 return False
@@ -83,17 +90,17 @@ class GoogleDriveProvider(StorageProvider):
         except Exception:
             return False
 
-    def verify_credentials(self, config: dict) -> bool:
+    def verify_credentials(self, config: dict, db = None) -> bool:
         try:
-            service = self._get_client(config)
+            service = self._get_client(config, db)
             # Try to get root folder metadata to verify access
             service.files().get(fileId="root", fields="id, name", supportsAllDrives=True).execute()
             return True
         except Exception as e:
             raise Exception(f"OAuth verification failed: {str(e)}")
 
-    def ensure_vault_folder(self, family_id: str, config: dict) -> str:
-        service = self._get_client(config)
+    def ensure_vault_folder(self, family_id: str, config: dict, db = None) -> str:
+        service = self._get_client(config, db)
         folder_name = "famdoc"
         
         # Look for the folder 'famdoc' in My Drive root
@@ -130,8 +137,8 @@ class GoogleDriveProvider(StorageProvider):
                 
         return new_folder.get('id')
 
-    def upload_file(self, config: dict, vault_folder_id: str, filename: str, file_content: bytes, mimetype: str, username: str = None) -> dict:
-        service = self._get_client(config)
+    def upload_file(self, config: dict, vault_folder_id: str, filename: str, file_content: bytes, mimetype: str, username: str = None, db = None) -> dict:
+        service = self._get_client(config, db)
         
         target_folder_id = vault_folder_id
         if username:
@@ -193,8 +200,8 @@ class GoogleDriveProvider(StorageProvider):
             "cloud_link": cloud_link
         }
 
-    def download_file(self, config: dict, cloud_file_id: str) -> bytes:
-        service = self._get_client(config)
+    def download_file(self, config: dict, cloud_file_id: str, db = None) -> bytes:
+        service = self._get_client(config, db)
         
         request = service.files().get_media(fileId=cloud_file_id, supportsAllDrives=True)
         fh = io.BytesIO()
@@ -212,8 +219,8 @@ class GoogleDriveProvider(StorageProvider):
                     
         return fh.getvalue()
 
-    def delete_file(self, config: dict, cloud_file_id: str) -> bool:
-        service = self._get_client(config)
+    def delete_file(self, config: dict, cloud_file_id: str, db = None) -> bool:
+        service = self._get_client(config, db)
         
         from storage.base import SimpleRetry
         for attempt in SimpleRetry(attempts=3, wait=1):
@@ -226,8 +233,8 @@ class GoogleDriveProvider(StorageProvider):
                     raise e
         return True
 
-    def rename_file(self, config: dict, cloud_file_id: str, new_name: str) -> bool:
-        service = self._get_client(config)
+    def rename_file(self, config: dict, cloud_file_id: str, new_name: str, db = None) -> bool:
+        service = self._get_client(config, db)
         
         file_metadata = {
             'name': new_name
@@ -244,9 +251,9 @@ class GoogleDriveProvider(StorageProvider):
                 ).execute()
         return True
 
-    def get_direct_download_url(self, config: dict, cloud_file_id: str) -> str:
+    def get_direct_download_url(self, config: dict, cloud_file_id: str, db = None) -> str:
         # Resolve/refresh credentials to ensure access_token is current
-        self._get_client(config)
+        self._get_client(config, db)
         access_token = config.get("access_token")
         if access_token:
             return f"https://www.googleapis.com/drive/v3/files/{cloud_file_id}?alt=media&access_token={access_token}"

@@ -138,7 +138,7 @@ def purge_folder_recursive(folder_id: int, family: models.Family, db: Session):
         try:
             provider = file.storage_provider or "local"
             config = family_config.get(provider, {})
-            manager.providers[provider].delete_file(config, file.file_id)
+            manager.providers[provider].delete_file(config, file.file_id, db=db)
         except Exception as e:
             print(f"Warning: Failed to delete cloud file {file.file_id} on {file.storage_provider} during purge: {e}")
         db.delete(file)
@@ -180,7 +180,7 @@ def purge_item(
             family_config = manager.get_family_config(family, db)
             provider = file.storage_provider or "local"
             config = family_config.get(provider, {})
-            manager.providers[provider].delete_file(config, file.file_id)
+            manager.providers[provider].delete_file(config, file.file_id, db=db)
         except Exception as e:
             print(f"Warning: Failed to delete cloud file {file.file_id} during purge: {e}")
         

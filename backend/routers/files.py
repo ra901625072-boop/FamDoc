@@ -126,6 +126,20 @@ async def upload_file(
             detail="Security error: Upload blocked. The file matches a known malware signature."
         )
 
+    # Enforce family storage quota limit
+    from sqlalchemy import func
+    used_bytes = db.query(func.sum(models.File.size_bytes)).filter(
+        models.File.family_id == current_user.family_id,
+        models.File.deleted_at == None
+    ).scalar() or 0
+
+    if used_bytes + file_size > family.storage_quota_bytes:
+        quota_mb = family.storage_quota_bytes / (1024 * 1024)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Storage quota exceeded. Your family is allowed up to {quota_mb:.1f} MB of total vault storage."
+        )
+
     manager = StorageManager()
 
     # Resolve local storage config for this family
@@ -146,7 +160,8 @@ async def upload_file(
         filename         = file.filename,
         file_type        = file.content_type or "application/octet-stream",
         size_bytes       = file_size,
-        file_id          = result["file_id"],
+        local_file_id    = result["file_id"],
+        cloud_file_id    = None,
         folder_id        = folder_id,
         family_id        = current_user.family_id,
         uploader_id      = current_user.id,
@@ -188,7 +203,7 @@ def get_preview_token(
 def download_file(
     file_id: int,
     request: Request,
-    current_user: models.User = Depends(auth.get_current_user),
+    current_user: models.User = Depends(auth.get_current_user_or_file_preview),
     db: Session = Depends(get_db)
 ):
     file = db.query(models.File).filter(
@@ -227,7 +242,7 @@ def download_file(
 def preview_file(
     file_id: int,
     request: Request,
-    current_user: models.User = Depends(auth.get_current_user),
+    current_user: models.User = Depends(auth.get_current_user_or_file_preview),
     db: Session = Depends(get_db)
 ):
     file = db.query(models.File).filter(
@@ -311,7 +326,7 @@ def rename_file(
         family_config = manager.get_family_config(family, db)
         provider_name = file.storage_provider or "local"
         cfg = family_config.get(provider_name, {})
-        manager.providers[provider_name].rename_file(cfg, file.file_id, new_name)
+        manager.providers[provider_name].rename_file(cfg, file.file_id, new_name, db=db)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

@@ -1,8 +1,8 @@
 import bcrypt
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
-from fastapi import Depends, HTTPException, status, Header
+from fastapi import Depends, HTTPException, status, Header, Request
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
@@ -29,10 +29,13 @@ def get_password_hash(password: str) -> str:
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     to_encode = data.copy()
     if expires_delta:
-        expire = datetime.utcnow() + expires_delta
+        expire = datetime.now(timezone.utc) + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    to_encode.update({"exp": expire})
+        expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({
+        "exp": expire,
+        "scope": "session"
+    })
     if "jti" not in to_encode:
         to_encode["jti"] = str(uuid.uuid4())
     encoded_jwt = jwt.encode(to_encode, JWT_SECRET, algorithm=JWT_ALGORITHM)
@@ -43,16 +46,19 @@ def create_file_access_token(file_id: int, user_id: int) -> str:
     to_encode = {
         "file_id": file_id,
         "user_id": user_id,
-        "exp": datetime.utcnow() + timedelta(minutes=5),
+        "scope": "file_preview",
+        "exp": datetime.now(timezone.utc) + timedelta(minutes=5),
         "jti": str(uuid.uuid4())
     }
     encoded_jwt = jwt.encode(to_encode, JWT_SECRET, algorithm=JWT_ALGORITHM)
     return encoded_jwt
 
-def get_current_user(
-    token_header: Optional[str] = Depends(oauth2_scheme),
+def get_current_user_with_scopes(
+    allowed_scopes: list,
+    token_header: Optional[str] = None,
     token: Optional[str] = None,
-    db: Session = Depends(get_db)
+    db: Session = None,
+    request: Optional[Request] = None
 ) -> models.User:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -64,6 +70,9 @@ def get_current_user(
     if not act_token:
         raise credentials_exception
         
+    if act_token.startswith("Bearer "):
+        act_token = act_token[7:]
+        
     try:
         payload = jwt.decode(act_token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
         
@@ -74,17 +83,45 @@ def get_current_user(
                 raise credentials_exception
 
         file_id = payload.get("file_id")
-        user_id = payload.get("user_id")
-        
-        if file_id is not None:
-            # It's a scoped file access token
-            token_data = schemas.TokenData(email=None, user_id=user_id)
-        else:
+        user_id = payload.get("user_id") or payload.get("id")
+        scope = payload.get("scope")
+
+        # Fallback to identify legacy tokens or tokens without explicit scope claims
+        if scope is None:
+            if file_id is not None:
+                scope = "file_preview"
+            else:
+                scope = "session"
+
+        if scope not in allowed_scopes:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not enough permissions (invalid token scope)"
+            )
+
+        if scope == "file_preview" and request is not None:
+            file_id_param = request.path_params.get("file_id")
+            if file_id_param is not None:
+                try:
+                    if int(file_id_param) != int(file_id):
+                        raise HTTPException(
+                            status_code=status.HTTP_403_FORBIDDEN,
+                            detail="Token is not authorized for this file ID"
+                        )
+                except (ValueError, TypeError):
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="Invalid file ID format"
+                    )
+
+        if scope == "session":
             email: str = payload.get("sub")
-            user_id: int = payload.get("id")
             if email is None or user_id is None:
                 raise credentials_exception
-            token_data = schemas.TokenData(email=email, user_id=user_id)
+            token_data = schemas.TokenData(email=email, user_id=user_id, scope=scope)
+        else:
+            token_data = schemas.TokenData(email=None, user_id=user_id, scope=scope, file_id=file_id)
+            
     except JWTError:
         raise credentials_exception
         
@@ -93,6 +130,20 @@ def get_current_user(
         raise credentials_exception
     return user
 
+def get_current_user(
+    token_header: Optional[str] = Depends(oauth2_scheme),
+    token: Optional[str] = None,
+    db: Session = Depends(get_db)
+) -> models.User:
+    return get_current_user_with_scopes(["session"], token_header, token, db)
+
+def get_current_user_or_file_preview(
+    request: Request,
+    token_header: Optional[str] = Depends(oauth2_scheme),
+    token: Optional[str] = None,
+    db: Session = Depends(get_db)
+) -> models.User:
+    return get_current_user_with_scopes(["session", "file_preview"], token_header, token, db, request)
 
 def get_admin_user(
     current_user: models.User = Depends(get_current_user),

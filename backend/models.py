@@ -42,6 +42,7 @@ class Family(Base):
     storage_provider = Column(String(50), nullable=True) # "google" or "mega"
     _storage_config = Column("storage_config", String(2048), nullable=True) # Config details (tokens or login)
     vault_folder_id = Column(String(255), nullable=True) # Root folder ID in Google/Mega
+    storage_quota_bytes = Column(Integer, nullable=False, default=524288000) # Default 500MB
 
     @property
     def storage_config(self) -> Optional[dict]:
@@ -119,11 +120,28 @@ class File(Base):
     deleted_at = Column(DateTime(timezone=True), nullable=True, index=True)
     deletion_batch_id = Column(String(36), nullable=True, index=True)
     storage_provider = Column(String(50), default="local", nullable=False) # "local", "google", or "mega"
-    file_id = Column(String(255), nullable=False) # Unique ID from Google/Mega or local path
+    _file_id = Column("file_id", String(255), nullable=True) # Legacy DB column
+    local_file_id = Column(String(255), nullable=True)
+    cloud_file_id = Column(String(255), nullable=True)
+    
+    @property
+    def file_id(self) -> str:
+        return self.cloud_file_id or self.local_file_id or self._file_id
+
+    @file_id.setter
+    def file_id(self, value: str):
+        self._file_id = value
+        if self.storage_provider == "local" or self.storage_provider is None:
+            self.local_file_id = value
+        else:
+            self.cloud_file_id = value
     cloud_link = Column(String(1024), nullable=True) # Direct preview/download web url
     pending_sync = Column(Boolean, default=True, nullable=False) # True = awaiting cloud upload
     pending_sync_at = Column(DateTime(timezone=True), nullable=True) # When the file was flagged for sync
     synced_to = Column(String(50), nullable=True) # "google" or "mega" or None
+    lock_acquired_at = Column(DateTime(timezone=True), nullable=True, index=True)
+    lock_holder = Column(String(255), nullable=True, index=True)
+    sync_retry_count = Column(Integer, default=0, nullable=False)
 
     # Relationships
     family = relationship("Family", back_populates="files")

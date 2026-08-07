@@ -62,6 +62,13 @@ def run_migrations():
                     logger.info("Migration: Successfully added secret_code_sha256 column and index to families table.")
                 except Exception as e:
                     logger.error(f"Migration error (families): {str(e)}")
+        if "storage_quota_bytes" not in columns:
+            with engine.connect() as conn:
+                try:
+                    conn.execute(text("ALTER TABLE families ADD COLUMN storage_quota_bytes INTEGER NOT NULL DEFAULT 524288000"))
+                    logger.info("Migration: Successfully added storage_quota_bytes column to families table.")
+                except Exception as e:
+                    logger.error(f"Migration error (families storage_quota_bytes): {str(e)}")
 
     # 2. Migrate folders table
     if "folders" in table_names:
@@ -138,6 +145,65 @@ def run_migrations():
                     logger.info("Migration: Successfully added storage_provider column to files table.")
                 except Exception as e:
                     logger.error(f"Migration error (files storage_provider): {str(e)}")
+
+        if "lock_acquired_at" not in columns:
+            with engine.connect() as conn:
+                try:
+                    conn.execute(text("ALTER TABLE files ADD COLUMN lock_acquired_at DATETIME"))
+                    conn.execute(text("CREATE INDEX ix_files_lock_acquired_at ON files(lock_acquired_at)"))
+                    logger.info("Migration: Successfully added lock_acquired_at column and index to files table.")
+                except Exception as e:
+                    logger.error(f"Migration error (files lock_acquired_at): {str(e)}")
+
+        if "lock_holder" not in columns:
+            with engine.connect() as conn:
+                try:
+                    conn.execute(text("ALTER TABLE files ADD COLUMN lock_holder VARCHAR(255)"))
+                    conn.execute(text("CREATE INDEX ix_files_lock_holder ON files(lock_holder)"))
+                    logger.info("Migration: Successfully added lock_holder column and index to files table.")
+                except Exception as e:
+                    logger.error(f"Migration error (files lock_holder): {str(e)}")
+
+        if "sync_retry_count" not in columns:
+            with engine.connect() as conn:
+                try:
+                    conn.execute(text("ALTER TABLE files ADD COLUMN sync_retry_count INTEGER NOT NULL DEFAULT 0"))
+                    logger.info("Migration: Successfully added sync_retry_count column to files table.")
+                except Exception as e:
+                    logger.error(f"Migration error (files sync_retry_count): {str(e)}")
+
+        # Add local_file_id and cloud_file_id columns
+        local_file_id_added = False
+        cloud_file_id_added = False
+        if "local_file_id" not in columns:
+            with engine.connect() as conn:
+                try:
+                    conn.execute(text("ALTER TABLE files ADD COLUMN local_file_id VARCHAR(255)"))
+                    local_file_id_added = True
+                    logger.info("Migration: Successfully added local_file_id column to files table.")
+                except Exception as e:
+                    logger.error(f"Migration error (files local_file_id): {str(e)}")
+        
+        if "cloud_file_id" not in columns:
+            with engine.connect() as conn:
+                try:
+                    conn.execute(text("ALTER TABLE files ADD COLUMN cloud_file_id VARCHAR(255)"))
+                    cloud_file_id_added = True
+                    logger.info("Migration: Successfully added cloud_file_id column to files table.")
+                except Exception as e:
+                    logger.error(f"Migration error (files cloud_file_id): {str(e)}")
+
+        # Run data migration to populate local_file_id and cloud_file_id if either was newly added
+        if local_file_id_added or cloud_file_id_added:
+            with engine.connect() as conn:
+                try:
+                    # Migrate local files
+                    res_local = conn.execute(text("UPDATE files SET local_file_id = file_id WHERE (storage_provider = 'local' OR storage_provider IS NULL) AND local_file_id IS NULL"))
+                    # Migrate cloud files
+                    res_cloud = conn.execute(text("UPDATE files SET cloud_file_id = file_id WHERE storage_provider IS NOT NULL AND storage_provider != 'local' AND cloud_file_id IS NULL"))
+                    logger.info("Migration: Successfully completed data migration for files.local_file_id and files.cloud_file_id.")
+                except Exception as e:
+                    logger.error(f"Migration error during files column data migration: {str(e)}")
 
         # Add index on pending_sync_at to optimize order_by queries
         with engine.connect() as conn:

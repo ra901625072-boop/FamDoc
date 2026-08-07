@@ -163,7 +163,7 @@ def oauth2callback(
     
     try:
         provider = get_storage_provider("google")
-        vault_id = provider.ensure_vault_folder(family.id, active_config)
+        vault_id = provider.ensure_vault_folder(family.id, active_config, db=db)
     except Exception as err:
         return RedirectResponse(url=f"{FRONTEND_URL.rstrip('/')}/storage-config.html?google_auth=error&detail={urllib.parse.quote(str(err))}")
         

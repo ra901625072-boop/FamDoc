@@ -8,26 +8,14 @@ import auth
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 
-# Simple in-memory rate limiter
-# Structure: { ip_address: [timestamp1, timestamp2, ...] }
-rate_limit_store = {}
-RATE_LIMIT_MAX = 5
-RATE_LIMIT_WINDOW = timedelta(minutes=10)
+from utils.rate_limiter import check_rate_limit as verify_rate_limit
 
 def check_rate_limit(ip: str):
-    now = datetime.now(timezone.utc)
-    # Clean up old entries
-    if ip in rate_limit_store:
-        rate_limit_store[ip] = [ts for ts in rate_limit_store[ip] if now - ts < RATE_LIMIT_WINDOW]
-    else:
-        rate_limit_store[ip] = []
-        
-    if len(rate_limit_store[ip]) >= RATE_LIMIT_MAX:
+    if verify_rate_limit(f"auth_login:{ip}", max_requests=5, window_seconds=600):
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail="Too many family login attempts. Please try again in 10 minutes."
         )
-    rate_limit_store[ip].append(now)
 
 @router.post("/register", response_model=schemas.UserResponse, status_code=status.HTTP_201_CREATED)
 def register(user_in: schemas.UserRegister, db: Session = Depends(get_db)):

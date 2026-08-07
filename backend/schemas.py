@@ -42,6 +42,8 @@ class TokenData(BaseModel):
     email: Optional[str] = None
     user_id: Optional[int] = None
     role: Optional[str] = None
+    scope: Optional[str] = None
+    file_id: Optional[int] = None
 
 class UserProfileUpdate(BaseModel):
     username: Optional[str] = Field(None, min_length=3, max_length=20, pattern=r"^[a-zA-Z0-9_\s]+$")

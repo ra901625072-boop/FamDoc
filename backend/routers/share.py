@@ -172,9 +172,13 @@ def download_public_shared_file(
     password_in: Optional[SharePasswordVerify] = None,
     db: Session = Depends(get_db)
 ):
-    from routers.auth import check_rate_limit
+    from utils.rate_limiter import check_rate_limit as verify_rate_limit
     ip = request.client.host if request.client else "127.0.0.1"
-    check_rate_limit(ip)
+    if verify_rate_limit(f"shared_download:{token}:{ip}", max_requests=10, window_seconds=3600):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many download attempts for this shared link. Please try again in an hour."
+        )
     
     link = db.query(models.SharedLink).filter(models.SharedLink.id == token).first()
     if not link or not link.file or link.file.deleted_at is not None:
