@@ -1,0 +1,449 @@
+/* ==========================================================================
+   FamDoc Design System - Reusable Core Components
+   ========================================================================== */
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  padding: 0.7rem 1.4rem;
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+  outline: none;
+}
+
+.btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(0.5px);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--accent-gradient);
+  color: #ffffff;
+  box-shadow: var(--accent-shadow);
+  border: none;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent-gradient-hover);
+  box-shadow: 0 6px 20px rgba(var(--accent-brand-rgb), 0.4);
+}
+
+.btn-secondary {
+  background-color: var(--surface-paper-tint);
+  border-color: var(--border-paper);
+  color: var(--text-ink);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background-color: var(--surface-paper-hover);
+  border-color: var(--border-paper-dark);
+  color: var(--text-ink);
+}
+
+.btn-danger {
+  background-color: var(--warning-red);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(224, 116, 106, 0.2);
+}
+
+.btn-danger:hover:not(:disabled) {
+  background-color: var(--warning-red-hover);
+  box-shadow: 0 6px 16px rgba(224, 116, 106, 0.35);
+}
+
+.btn-text {
+  background: transparent;
+  color: var(--text-ink-muted);
+  padding: 0.5rem;
+}
+
+.btn-text:hover:not(:disabled) {
+  color: var(--accent-brand);
+  background-color: var(--accent-brand-light);
+}
+
+/* Forms & Controls */
+.form-group {
+  margin-bottom: 1.5rem;
+  text-align: left;
+}
+
+.form-label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: var(--text-ink);
+  letter-spacing: 0.2px;
+}
+
+.form-control {
+  width: 100%;
+  padding: 0.8rem 1.1rem;
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  border: 1px solid var(--border-paper);
+  border-radius: var(--radius-md);
+  background-color: var(--surface-paper-tint);
+  color: var(--text-ink);
+  transition: var(--transition-smooth);
+  outline: none;
+}
+
+.form-control:focus {
+  border-color: var(--accent-brand);
+  background-color: var(--surface-card);
+  box-shadow: 0 0 0 4px rgba(var(--accent-brand-rgb), 0.12);
+}
+
+/* Badges / Tags */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.7rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  border-radius: 50px;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.badge-primary {
+  background-color: var(--accent-brand-light);
+  color: var(--accent-brand);
+  border: 1px solid rgba(var(--accent-brand-rgb), 0.12);
+}
+
+.badge-success {
+  background-color: var(--success-sage-light);
+  color: var(--success-sage);
+  border: 1px solid var(--success-sage-border);
+}
+
+.badge-danger {
+  background-color: var(--warning-red-light);
+  color: var(--warning-red);
+  border: 1px solid var(--warning-red-border);
+}
+
+.badge-syncing {
+  background-color: var(--syncing-bg);
+  color: var(--syncing-text);
+  border: 1px solid var(--syncing-border);
+}
+
+.icon-chip {
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-md);
+  background-color: var(--accent-brand-light);
+  color: var(--accent-brand);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.05rem;
+  border: 1px solid rgba(var(--accent-brand-rgb), 0.1);
+  flex-shrink: 0;
+}
+
+.icon-chip.lg {
+  width: 48px;
+  height: 48px;
+  font-size: 1.25rem;
+}
+
+/* Alerts & Warnings */
+.famdoc-alert {
+  padding: 1.1rem 1.4rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-paper);
+  background-color: var(--surface-alert-info);
+  color: var(--text-ink);
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.famdoc-alert.warning {
+  border-color: var(--warning-red-border);
+  background-color: var(--warning-red-light);
+  color: var(--warning-red-dark);
+}
+
+.famdoc-alert.success {
+  border-color: var(--success-sage-border);
+  background-color: var(--success-sage-light);
+  color: var(--success-sage-dark);
+}
+
+.famdoc-alert i {
+  font-size: 1.1rem;
+  margin-top: 0.15rem;
+  flex-shrink: 0;
+}
+
+/* Loading Skeletons (Smooth Shimmer Wave) */
+.fd-skel {
+  background: linear-gradient(
+    90deg,
+    var(--surface-paper-tint) 25%,
+    var(--surface-card) 50%,
+    var(--surface-paper-tint) 75%
+  );
+  background-size: 200% 100%;
+  animation: fdShimmer 1.4s infinite linear;
+  display: inline-block;
+}
+
+@keyframes fdShimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.fd-skel-circle {
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.fd-skel-text {
+  height: 12px;
+  border-radius: 6px;
+  background-color: var(--surface-paper-tint);
+}
+.fd-skel-text.sm { width: 30%; }
+.fd-skel-text.md { width: 60%; }
+.fd-skel-text.lg { width: 85%; }
+
+.fd-skel-block {
+  border-radius: var(--radius-md);
+  background-color: var(--surface-paper-tint);
+}
+
+.skel-row {
+  padding: 0.95rem 1.4rem;
+  gap: 1.25rem;
+  border: 1px solid var(--border-paper);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  background-color: var(--surface-card);
+  margin-bottom: 0.6rem;
+  cursor: default;
+}
+
+.skel-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.skel-btn {
+  border-radius: var(--radius-md);
+  background-color: var(--surface-paper-tint);
+  height: 32px;
+  width: 80px;
+}
+
+.skel-badge {
+  height: 20px;
+  width: 60px;
+  border-radius: 50px;
+  background-color: var(--surface-paper-tint);
+}
+
+.skel-block-large {
+  height: 52px;
+  width: 100%;
+  border-radius: var(--radius-md);
+  background-color: var(--surface-paper-tint);
+}
+
+.fd-skel-vault-item {
+  background-color: var(--surface-card);
+  border: 1px solid var(--border-paper);
+  border-radius: var(--radius-md);
+  padding: 1.5rem;
+  display: flex;
+  position: relative;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  aspect-ratio: 1 / 1.05;
+  justify-content: center;
+}
+
+/* Multi-Select & Bulk Actions Styling */
+.fd-select-checkbox-container {
+  display: inline-block;
+  position: relative;
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  user-select: none;
+  margin-right: 0.5rem;
+  flex-shrink: 0;
+}
+
+.fd-select-checkbox-container input {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  height: 0;
+  width: 0;
+}
+
+.fd-select-checkmark {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 20px;
+  width: 20px;
+  background-color: var(--surface-card);
+  border: 2.2px solid var(--border-paper-dark);
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.fd-select-checkbox-container:hover input ~ .fd-select-checkmark {
+  border-color: var(--accent-brand);
+}
+
+.fd-select-checkbox-container input:checked ~ .fd-select-checkmark {
+  background-color: var(--accent-brand);
+  border-color: var(--accent-brand);
+}
+
+.fd-select-checkmark::after {
+  content: "";
+  position: absolute;
+  display: none;
+  left: 6px;
+  top: 2px;
+  width: 5px;
+  height: 10px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.fd-select-checkbox-container input:checked ~ .fd-select-checkmark::after {
+  display: block;
+}
+
+/* Grid checkbox position */
+.items-grid .fd-select-checkbox-container {
+  position: absolute;
+  top: 0.65rem;
+  left: 0.65rem;
+  z-index: 15;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  margin-right: 0;
+}
+
+.items-grid .vault-item:hover .fd-select-checkbox-container,
+.items-grid .vault-item:has(input:checked) .fd-select-checkbox-container {
+  opacity: 1;
+}
+
+.vault-item:has(input:checked) {
+  border-color: var(--accent-brand) !important;
+  background-color: var(--accent-brand-light) !important;
+}
+
+.items-grid .vault-item:has(input:checked)::before {
+  border-color: var(--accent-brand) !important;
+  background-color: var(--accent-brand-light) !important;
+}
+
+.items-grid .vault-item:has(input:checked)::after {
+  border-color: var(--accent-brand) !important;
+}
+
+/* Floating Bulk Actions Bar at the bottom */
+.bulk-actions-bar {
+  position: fixed;
+  bottom: -100px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--surface-card);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--border-paper-dark);
+  border-radius: var(--radius-lg);
+  padding: 0.9rem 1.75rem;
+  display: flex;
+  align-items: center;
+  gap: 1.75rem;
+  box-shadow: 0 16px 40px rgba(0,0,0,0.12);
+  z-index: 1000;
+  transition: bottom 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.bulk-actions-bar.show {
+  bottom: 2rem;
+}
+
+.bulk-selected-count {
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text-ink);
+  white-space: nowrap;
+}
+
+.bulk-action-buttons {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.bulk-action-buttons .btn {
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+@media (max-width: 768px) {
+  .bulk-actions-bar {
+    width: 90%;
+    flex-direction: column;
+    gap: 0.85rem;
+    padding: 1rem;
+    bottom: -150px;
+  }
+  .bulk-actions-bar.show {
+    bottom: calc(var(--bottom-nav-height) + 1rem);
+  }
+  .bulk-action-buttons {
+    width: 100%;
+    justify-content: stretch;
+  }
+  .bulk-action-buttons .btn {
+    flex: 1;
+    justify-content: center;
+  }
+}

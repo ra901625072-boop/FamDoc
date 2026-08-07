@@ -567,7 +567,7 @@ const FamDocAPI = {
       }
 
       const toast = document.createElement("div");
-      toast.className = `famdoc-alert famdoc-alert-${type === "error" ? "warning" : type}`;
+      toast.className = `famdoc-alert ${type === "error" ? "warning" : type}`;
       toast.style.margin = "0";
       toast.style.boxShadow = "0 4px 12px rgba(var(--shadow-base), 0.15)";
       toast.style.animation = "toastEnter 0.25s ease-out";

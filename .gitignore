@@ -14,7 +14,9 @@ venv.bak/
 
 # Database
 *.db
-*.sqlite3
+*.db-shm
+*.db-wal
+local_vault/
 
 # Logs
 *.log

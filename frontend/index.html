@@ -3,196 +3,86 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>FamDoc — Your Family Keepsake Vault</title>
-  <!-- SEO Meta Tags -->
-  <meta name="description" content="FamDoc is a warm, tactile family vault for your shared documents, photos, and records. Safe, secure, and private.">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Theme Management -->
+  <title>FamDoc — Shared Family Keepsake Vault</title>
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="/img/logo.svg">
+  
+  <!-- FontAwesome & Google Fonts -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+  
+  <!-- Unified Stylesheets -->
+  <link rel="stylesheet" href="/css/style.css">
+  
+  <!-- Inline Critical Theme Init script to avoid flash of light mode -->
   <script>
     (function() {
-      const theme = localStorage.getItem('famdoc-theme') || 
-                    (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-      document.documentElement.setAttribute('data-theme', theme);
+      const savedTheme = localStorage.getItem('famdoc-theme');
+      if (savedTheme) {
+        document.documentElement.setAttribute('data-theme', savedTheme);
+      } else {
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        document.documentElement.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+      }
     })();
   </script>
-  <script src="/js/theme.js" defer></script>
-  <link rel="stylesheet" href="/css/style.css">
-  <style>
-    .landing-wrapper {
-      max-width: 1000px;
-      margin: 0 auto;
-      padding: 4rem 2rem;
-      text-align: center;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-    }
-    
-    .landing-logo {
-      font-family: var(--font-serif);
-      font-size: 3rem;
-      font-weight: 700;
-      color: var(--accent-brand);
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      margin-bottom: 1.5rem;
-    }
-    
-    .landing-hero {
-      font-family: var(--font-serif);
-      font-size: 3.5rem;
-      max-width: 750px;
-      line-height: 1.2;
-      margin-bottom: 1.5rem;
-      color: var(--text-ink);
-    }
-    
-    .landing-subtitle {
-      font-size: 1.25rem;
-      color: var(--text-ink-muted);
-      max-width: 600px;
-      margin-bottom: 3rem;
-    }
-    
-    .landing-actions {
-      display: flex;
-      gap: 1.25rem;
-      justify-content: center;
-      flex-wrap: wrap;
-      margin-bottom: 4rem;
-    }
-    
-    .landing-actions .btn {
-      padding: 0.85rem 1.75rem;
-      font-size: 1rem;
-    }
-    
-    .landing-features {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 2rem;
-      width: 100%;
-      text-align: left;
-    }
-    
-    .feature-card {
-      background-color: var(--surface-card);
-      border: 1px solid var(--border-paper);
-      border-radius: var(--radius-lg);
-      padding: 2.25rem;
-      transition: var(--transition-smooth);
-    }
-    
-    .feature-card:hover {
-      border-color: var(--accent-brand);
-      transform: translateY(-2px);
-    }
-    
-    
-    .feature-title {
-      font-size: 1.25rem;
-      margin-bottom: 0.75rem;
-    }
-    
-    .feature-desc {
-      color: var(--text-ink-muted);
-      font-size: 0.95rem;
-    }
-    
-    @media (max-width: 768px) {
-      .landing-hero {
-        font-size: 2.5rem;
-      }
-    }
-  </style>
 </head>
 <body>
-  <div class="landing-wrapper fd-page-enter">
-    <button class="theme-toggle-btn guest-theme-toggle" aria-label="Toggle dark mode">
-      <i class="fas fa-moon"></i>
-    </button>
-    <div class="landing-logo">
-      <img src="/img/logo.svg" alt="FamDoc Logo" class="famdoc-logo-img">
-      <span class="brand-text">Fam<span class="highlight">Doc</span></span>
-    </div>
-    
-    <h1 class="landing-hero" id="main-heading">The digital keepsake vault for your family's records.</h1>
-    
-    <p class="landing-subtitle">
-      Gather your deeds, certificates, memories, and files in a safe, warm space. Made to feel like a keepsake box, not a corporate spreadsheet.
-    </p>
-    
-    <div class="landing-actions">
-      <a href="/register.html" class="btn btn-primary" id="btn-register-vault">
-        <i class="fas fa-plus"></i>
-        <span>Create a Family Vault</span>
-      </a>
-      <a href="/join.html" class="btn btn-secondary" id="btn-join-family">
-        <i class="fas fa-key"></i>
-        <span>Join with Family Code</span>
-      </a>
-      <a href="/login.html" class="btn btn-text" id="btn-login" style="font-weight: 600;">
-        <span>Log In</span>
-        <i class="fas fa-arrow-right" style="font-size: 0.8rem; margin-left: 0.25rem;"></i>
-      </a>
-    </div>
-    
-    <div class="landing-features">
-      <div class="feature-card">
-        <div class="icon-chip lg" style="margin-bottom: 1.5rem;">
-          <i class="fas fa-shield-alt"></i>
-        </div>
-        <h3 class="feature-title">Secure & Confidential</h3>
-        <p class="feature-desc">All uploads are fully scanned for malware and securely stored in your family's dedicated vault. No middleman storage.</p>
-      </div>
-      
-      <div class="feature-card">
-        <div class="icon-chip lg" style="margin-bottom: 1.5rem;">
-          <i class="fas fa-ticket-alt"></i>
-        </div>
-        <h3 class="feature-title">Shared Keepsake Stub</h3>
-        <p class="feature-desc">Invite members using a single physical-looking code. Admins manage the rosters, while families upload and search with ease.</p>
-      </div>
-      
-      <div class="feature-card">
-        <div class="icon-chip lg" style="margin-bottom: 1.5rem;">
-          <i class="fas fa-search"></i>
-        </div>
-        <h3 class="feature-title">Intuitive File Discovery</h3>
-        <p class="feature-desc">Filter by type, uploader, date, and keyword. Built-in interactive document and image previews right inside your browser.</p>
-      </div>
-    </div>
+
+  <!-- SPA Core Shell Mounting -->
+  <div id="famdoc-layout-container" class="ready">
+    <div id="view-mount-point"></div>
   </div>
 
+  <!-- Core API Clients -->
   <script src="/js/api.js"></script>
-  <script src="/js/auth.js"></script>
+  
+  <!-- Background Queue Sync Managers -->
+  <script src="/js/background-manager.js"></script>
+  
+  <!-- SPA Routing Engine & View Managers -->
+  <script src="/js/router.js"></script>
+  
+  <!-- Dynamic View Renders -->
+  <script src="/js/views/landing.js"></script>
+  <script src="/js/views/auth.js"></script>
+  <script src="/js/views/dashboard.js"></script>
+  <script src="/js/views/vault.js"></script>
+  <script src="/js/views/trash.js"></script>
+  <script src="/js/views/profile.js"></script>
+  <script src="/js/views/storage.js"></script>
+  <script src="/js/views/shared.js"></script>
+  <script src="/js/views/family.js"></script>
+
+  <!-- Global Application Orchestration -->
+  <script src="/js/app.js"></script>
+
+  <!-- Theme Managers (placed after body elements setup) -->
+  <script src="/js/theme.js"></script>
+
+  <!-- SPA Router Bootstrapper Initialization -->
   <script>
-    document.getElementById("btn-login").addEventListener("click", async (e) => {
-      const token = localStorage.getItem("famdoc_token");
-      if (token) {
-        e.preventDefault();
-        const loginBtn = document.getElementById("btn-login");
-        
-        loginBtn.style.pointerEvents = "none";
-        loginBtn.innerHTML = `
-          <i class="fas fa-spinner fa-spin" style="margin-right: 0.25rem;"></i>
-          <span>Verifying...</span>
-        `;
-        
-        try {
-          await FamDocAPI.auth.me();
-          window.location.href = "/dashboard.html";
-        } catch (err) {
-          localStorage.removeItem("famdoc_token");
-          localStorage.removeItem("famdoc_user");
-          window.location.href = "/login.html";
-        }
-      }
-    });
+    (function() {
+      // 1. Register guest-facing public page routes
+      window.FamDocRouter.add('/', window.FamDocViews.landing, { guestOnly: true });
+      window.FamDocRouter.add('/login', window.FamDocViews.auth.login, { guestOnly: true });
+      window.FamDocRouter.add('/register', window.FamDocViews.auth.register, { guestOnly: true });
+      window.FamDocRouter.add('/join', window.FamDocViews.auth.join, { guestOnly: true });
+
+      // 2. Register core authenticated workspace routes
+      window.FamDocRouter.add('/dashboard', window.FamDocViews.dashboard, { requiresAuth: true });
+      window.FamDocRouter.add('/vault', window.FamDocViews.vault, { requiresAuth: true });
+      window.FamDocRouter.add('/trash', window.FamDocViews.trash, { requiresAuth: true });
+      window.FamDocRouter.add('/family', window.FamDocViews.family, { requiresAuth: true });
+      window.FamDocRouter.add('/profile', window.FamDocViews.profile, { requiresAuth: true });
+      window.FamDocRouter.add('/storage', window.FamDocViews.storage, { requiresAuth: true });
+
+      // 3. Register standalone shared preview route
+      window.FamDocRouter.add('/share/:token', window.FamDocViews.shared, { requiresAuth: false });
+
+      // 4. Resolve the active hash route
+      window.FamDocRouter.init();
+    })();
   </script>
 </body>
 </html>
-
