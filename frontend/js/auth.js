@@ -41,8 +41,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     return;
   }
 
-  // Load user profile
-  let user = null;
+  // 1. Immediately inject layout using cached user from localStorage to prevent layout shifts (FOUC)
+  const cachedUserJson = localStorage.getItem("famdoc_user");
+  let user = cachedUserJson ? JSON.parse(cachedUserJson) : null;
+  if (user) {
+    injectLayout(user);
+  }
+
+  // 2. Fetch fresh user profile in background
   try {
     user = await FamDocAPI.auth.me();
   } catch (error) {
@@ -80,13 +86,50 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
-  // Dynamic layout injection
+  // Dynamic layout injection (updates in-place if already rendered)
   injectLayout(user);
 });
 
 function injectLayout(user) {
   const container = document.getElementById("famdoc-layout-container");
   if (!container) return;
+
+  // If layout is already injected, update dynamic nodes in place to prevent recursive wrapping
+  const existingWrapper = container.querySelector(".layout-wrapper");
+  if (existingWrapper) {
+    const avatars = existingWrapper.querySelectorAll(".user-avatar");
+    avatars.forEach(avatar => {
+      avatar.textContent = user.username ? user.username.substring(0, 2).toUpperCase() : "U";
+    });
+    const names = existingWrapper.querySelectorAll(".user-name");
+    names.forEach(name => {
+      name.textContent = user.username;
+    });
+    const roles = existingWrapper.querySelectorAll(".user-role");
+    roles.forEach(role => {
+      role.textContent = user.role;
+    });
+    
+    const navContainer = existingWrapper.querySelector(".sidebar-nav");
+    if (navContainer) {
+      let storageLink = navContainer.querySelector('a[href="/storage-config.html"]');
+      if (user.role === 'admin' && !storageLink) {
+        const currentPath = window.location.pathname;
+        const isActive = currentPath.includes("storage-config.html") ? "active" : "";
+        const a = document.createElement("a");
+        a.href = "/storage-config.html";
+        a.className = `nav-item ${isActive}`;
+        a.innerHTML = `
+          <i class="fas fa-hdd"></i>
+          <span>Storage Config</span>
+        `;
+        navContainer.appendChild(a);
+      } else if (user.role !== 'admin' && storageLink) {
+        storageLink.remove();
+      }
+    }
+    return;
+  }
 
   const currentPath = window.location.pathname;
   const isActive = (page) => currentPath.includes(page) ? "active" : "";
