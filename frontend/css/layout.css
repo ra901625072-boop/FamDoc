@@ -74,24 +74,24 @@ body::before, body::after {
 body::before {
   top: -10%;
   left: -5%;
-  background: radial-gradient(circle, hsl(235, 75%, 85%) 0%, rgba(255, 255, 255, 0) 70%);
+  background: radial-gradient(circle, hsl(215, 65%, 85%) 0%, rgba(255, 255, 255, 0) 70%);
 }
 
 body::after {
   bottom: -15%;
   right: -5%;
-  background: radial-gradient(circle, hsl(270, 75%, 85%) 0%, rgba(255, 255, 255, 0) 70%);
+  background: radial-gradient(circle, hsl(195, 60%, 85%) 0%, rgba(255, 255, 255, 0) 70%);
   animation-delay: -12s;
 }
 
 [data-theme="dark"] body::before {
   opacity: 0.14;
-  background: radial-gradient(circle, hsl(235, 80%, 40%) 0%, rgba(0, 0, 0, 0) 70%);
+  background: radial-gradient(circle, hsl(215, 80%, 40%) 0%, rgba(0, 0, 0, 0) 70%);
 }
 
 [data-theme="dark"] body::after {
   opacity: 0.1;
-  background: radial-gradient(circle, hsl(270, 80%, 40%) 0%, rgba(0, 0, 0, 0) 70%);
+  background: radial-gradient(circle, hsl(195, 80%, 40%) 0%, rgba(0, 0, 0, 0) 70%);
 }
 
 @keyframes glowFloat {
