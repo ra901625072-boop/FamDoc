@@ -141,37 +141,78 @@ async def upload_file(
         )
 
     manager = StorageManager()
-
-    # Resolve local storage config for this family
     family_config = manager.get_family_config(family, db)
-    local_config  = family_config.get("local", {})
+    provider = family.storage_provider or "local"
 
-    # Write to local storage — always instant
-    result = manager.write_file(
-        content      = content,
-        filename     = file.filename,
-        mimetype     = file.content_type or "application/octet-stream",
-        local_config = local_config,
-    )
+    upload_success = False
+    cloud_result = None
 
-    # Persist DB record with pending_sync=True
-    now     = datetime.now(timezone.utc)
-    db_file = models.File(
-        filename         = file.filename,
-        file_type        = file.content_type or "application/octet-stream",
-        size_bytes       = file_size,
-        _file_id         = result["file_id"], # Legacy column fallback to satisfy NOT NULL constraint
-        local_file_id    = result["file_id"],
-        cloud_file_id    = None,
-        folder_id        = folder_id,
-        family_id        = current_user.family_id,
-        uploader_id      = current_user.id,
-        storage_provider = "local",
-        pending_sync     = True,
-        pending_sync_at  = now,
-        synced_to        = None,
-        cloud_link       = None
-    )
+    if provider in ("google", "mega"):
+        try:
+            target_config = family_config.get(provider, {})
+            manager.initialize_family_storage(family, db)
+            
+            # Direct cloud upload, skipping local storage
+            cloud_result = manager.providers[provider].upload_file(
+                config=target_config,
+                vault_folder_id=family.vault_folder_id,
+                filename=file.filename,
+                file_content=content,
+                mimetype=file.content_type or "application/octet-stream",
+                username=current_user.username,
+                db=db
+            )
+            upload_success = True
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Direct cloud upload to {provider} failed: {e}. Falling back to local storage and background sync.")
+            upload_success = False
+
+    if upload_success and cloud_result:
+        db_file = models.File(
+            filename         = file.filename,
+            file_type        = file.content_type or "application/octet-stream",
+            size_bytes       = file_size,
+            _file_id         = cloud_result["cloud_file_id"],
+            local_file_id    = None,
+            cloud_file_id    = cloud_result["cloud_file_id"],
+            folder_id        = folder_id,
+            family_id        = current_user.family_id,
+            uploader_id      = current_user.id,
+            storage_provider = provider,
+            pending_sync     = False,
+            pending_sync_at  = None,
+            synced_to        = provider,
+            cloud_link       = cloud_result.get("cloud_link")
+        )
+    else:
+        local_config = family_config.get("local", {})
+        result = manager.write_file(
+            content      = content,
+            filename     = file.filename,
+            mimetype     = file.content_type or "application/octet-stream",
+            local_config = local_config,
+        )
+        
+        now = datetime.now(timezone.utc)
+        db_file = models.File(
+            filename         = file.filename,
+            file_type        = file.content_type or "application/octet-stream",
+            size_bytes       = file_size,
+            _file_id         = result["file_id"],
+            local_file_id    = result["file_id"],
+            cloud_file_id    = None,
+            folder_id        = folder_id,
+            family_id        = current_user.family_id,
+            uploader_id      = current_user.id,
+            storage_provider = "local",
+            pending_sync     = (provider != "local"),
+            pending_sync_at  = now if (provider != "local") else None,
+            synced_to        = None,
+            cloud_link       = None
+        )
+
     db.add(db_file)
     db.commit()
     db.refresh(db_file)
