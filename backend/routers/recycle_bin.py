@@ -91,34 +91,36 @@ def restore_item(
     if item_type == "file":
         file = db.query(models.File).filter(
             models.File.id == item_id,
-            models.File.family_id == current_user.family_id,
-            models.File.deleted_at != None
+            models.File.family_id == current_user.family_id
         ).first()
         if not file:
-            raise HTTPException(status_code=404, detail="Deleted file not found")
+            return {"message": "File not found or already restored"}
         
-        file.deleted_at = None
-        file.deletion_batch_id = None
-        db.commit()
+        if file.deleted_at is not None:
+            file.deleted_at = None
+            file.deletion_batch_id = None
+            db.commit()
+            
+            ip = request.client.host if request.client else "127.0.0.1"
+            log_action(db, "RESTORE_FILE", current_user.id, current_user.family_id, ip, f"Restored file: {file.filename}")
         
-        ip = request.client.host if request.client else "127.0.0.1"
-        log_action(db, "RESTORE_FILE", current_user.id, current_user.family_id, ip, f"Restored file: {file.filename}")
         return {"message": f"Successfully restored file: {file.filename}"}
 
     elif item_type == "folder":
         folder = db.query(models.Folder).filter(
             models.Folder.id == item_id,
-            models.Folder.family_id == current_user.family_id,
-            models.Folder.deleted_at != None
+            models.Folder.family_id == current_user.family_id
         ).first()
         if not folder:
-            raise HTTPException(status_code=404, detail="Deleted folder not found")
+            return {"message": "Folder not found or already restored"}
         
-        restore_folder_recursive(item_id, folder.deletion_batch_id, db)
-        db.commit()
+        if folder.deleted_at is not None:
+            restore_folder_recursive(item_id, folder.deletion_batch_id, db)
+            db.commit()
+            
+            ip = request.client.host if request.client else "127.0.0.1"
+            log_action(db, "RESTORE_FOLDER", current_user.id, current_user.family_id, ip, f"Restored folder: {folder.name}")
         
-        ip = request.client.host if request.client else "127.0.0.1"
-        log_action(db, "RESTORE_FOLDER", current_user.id, current_user.family_id, ip, f"Restored folder: {folder.name}")
         return {"message": f"Successfully restored folder: {folder.name}"}
     
     else:
@@ -168,43 +170,45 @@ def purge_item(
     if item_type == "file":
         file = db.query(models.File).filter(
             models.File.id == item_id,
-            models.File.family_id == current_user.family_id,
-            models.File.deleted_at != None
+            models.File.family_id == current_user.family_id
         ).first()
         if not file:
-            raise HTTPException(status_code=404, detail="Deleted file not found")
+            return None
         
-        # Delete from cloud
-        try:
-            manager = StorageManager()
-            family_config = manager.get_family_config(family, db)
-            provider = file.storage_provider or "local"
-            config = family_config.get(provider, {})
-            manager.providers[provider].delete_file(config, file.file_id, db=db)
-        except Exception as e:
-            print(f"Warning: Failed to delete cloud file {file.file_id} during purge: {e}")
+        if file.deleted_at is not None:
+            # Delete from cloud
+            try:
+                manager = StorageManager()
+                family_config = manager.get_family_config(family, db)
+                provider = file.storage_provider or "local"
+                config = family_config.get(provider, {})
+                manager.providers[provider].delete_file(config, file.file_id, db=db)
+            except Exception as e:
+                print(f"Warning: Failed to delete cloud file {file.file_id} during purge: {e}")
+            
+            db.delete(file)
+            db.commit()
+            
+            ip = request.client.host if request.client else "127.0.0.1"
+            log_action(db, "PURGE_FILE", current_user.id, current_user.family_id, ip, f"Permanently deleted file: {file.filename}")
         
-        db.delete(file)
-        db.commit()
-        
-        ip = request.client.host if request.client else "127.0.0.1"
-        log_action(db, "PURGE_FILE", current_user.id, current_user.family_id, ip, f"Permanently deleted file: {file.filename}")
         return None
 
     elif item_type == "folder":
         folder = db.query(models.Folder).filter(
             models.Folder.id == item_id,
-            models.Folder.family_id == current_user.family_id,
-            models.Folder.deleted_at != None
+            models.Folder.family_id == current_user.family_id
         ).first()
         if not folder:
-            raise HTTPException(status_code=404, detail="Deleted folder not found")
+            return None
         
-        purge_folder_recursive(item_id, family, db)
-        db.commit()
+        if folder.deleted_at is not None:
+            purge_folder_recursive(item_id, family, db)
+            db.commit()
+            
+            ip = request.client.host if request.client else "127.0.0.1"
+            log_action(db, "PURGE_FOLDER", current_user.id, current_user.family_id, ip, f"Permanently deleted folder: {folder.name}")
         
-        ip = request.client.host if request.client else "127.0.0.1"
-        log_action(db, "PURGE_FOLDER", current_user.id, current_user.family_id, ip, f"Permanently deleted folder: {folder.name}")
         return None
     
     else:
