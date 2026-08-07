@@ -2372,3 +2372,159 @@ body::after {
     grid-column: span 2 !important;
   }
 }
+
+/* ==========================================================================
+   Multi-Select & Bulk Actions Styling
+   ========================================================================== */
+.fd-select-checkbox-container {
+  display: inline-block;
+  position: relative;
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  user-select: none;
+  margin-right: 0.5rem;
+  flex-shrink: 0;
+}
+
+.fd-select-checkbox-container input {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  height: 0;
+  width: 0;
+}
+
+.fd-select-checkmark {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 20px;
+  width: 20px;
+  background-color: var(--surface-card);
+  border: 2.2px solid var(--border-paper-dark);
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.fd-select-checkbox-container:hover input ~ .fd-select-checkmark {
+  border-color: var(--accent-brand);
+}
+
+.fd-select-checkbox-container input:checked ~ .fd-select-checkmark {
+  background-color: var(--accent-brand);
+  border-color: var(--accent-brand);
+}
+
+.fd-select-checkmark::after {
+  content: "";
+  position: absolute;
+  display: none;
+  left: 6px;
+  top: 2px;
+  width: 5px;
+  height: 10px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.fd-select-checkbox-container input:checked ~ .fd-select-checkmark::after {
+  display: block;
+}
+
+/* Grid checkbox position */
+.items-grid .fd-select-checkbox-container {
+  position: absolute;
+  top: 0.65rem;
+  left: 0.65rem;
+  z-index: 15;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  margin-right: 0;
+}
+
+.items-grid .vault-item:hover .fd-select-checkbox-container,
+.items-grid .vault-item:has(input:checked) .fd-select-checkbox-container {
+  opacity: 1;
+}
+
+.vault-item:has(input:checked) {
+  border-color: var(--accent-brand) !important;
+  background-color: var(--accent-brand-light) !important;
+}
+
+.items-grid .vault-item:has(input:checked)::before {
+  border-color: var(--accent-brand) !important;
+  background-color: var(--accent-brand-light) !important;
+}
+
+.items-grid .vault-item:has(input:checked)::after {
+  border-color: var(--accent-brand) !important;
+}
+
+/* Floating Bulk Actions Bar at the bottom */
+.bulk-actions-bar {
+  position: fixed;
+  bottom: -100px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--surface-card);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--border-paper-dark);
+  border-radius: var(--radius-lg);
+  padding: 0.9rem 1.75rem;
+  display: flex;
+  align-items: center;
+  gap: 1.75rem;
+  box-shadow: 0 16px 40px rgba(0,0,0,0.12);
+  z-index: 1000;
+  transition: bottom 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.bulk-actions-bar.show {
+  bottom: 2rem;
+}
+
+.bulk-selected-count {
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text-ink);
+  white-space: nowrap;
+}
+
+.bulk-action-buttons {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.bulk-action-buttons .btn {
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+@media (max-width: 768px) {
+  .bulk-actions-bar {
+    width: 90%;
+    flex-direction: column;
+    gap: 0.85rem;
+    padding: 1rem;
+    bottom: -150px;
+  }
+  .bulk-actions-bar.show {
+    bottom: calc(var(--bottom-nav-height) + 1rem);
+  }
+  .bulk-action-buttons {
+    width: 100%;
+    justify-content: stretch;
+  }
+  .bulk-action-buttons .btn {
+    flex: 1;
+    justify-content: center;
+  }
+}

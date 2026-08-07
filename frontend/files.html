@@ -84,6 +84,15 @@
           <option value="text">Text Files</option>
         </select>
 
+        <!-- Select All checkbox -->
+        <div style="display: flex; align-items: center; margin-right: 0.75rem;">
+          <label class="fd-select-checkbox-container" style="margin-bottom: 0;" title="Select All Items">
+            <input type="checkbox" id="select-all-checkbox">
+            <span class="fd-select-checkmark"></span>
+          </label>
+          <span style="font-size: 0.85rem; color: var(--text-ink-muted); font-weight: 500; cursor: pointer; user-select: none;" onclick="document.getElementById('select-all-checkbox').click();">Select All</span>
+        </div>
+
         <!-- View Grid/List toggle -->
         <div style="display: flex; gap: 0.25rem;">
           <button id="toggle-grid" class="btn btn-secondary view-toggle-btn active" style="padding: 0.5rem 0.75rem;" title="Grid View">
@@ -305,6 +314,10 @@
     let activeDropdown = null;
     let activePreviewUrl = null;
     let familyStorageConfig = null;
+    let selectedItems = {
+      folders: new Set(),
+      files: new Set()
+    };
 
     async function getPreviewToken(fileId) {
       const data = await FamDocAPI.request(`/api/files/${fileId}/preview-token`);
@@ -502,11 +515,100 @@
     // Navigation trigger
     function navigateToFolder(folderId) {
       currentFolderId = folderId;
+      clearSelectionState();
       // Update browser history state
       const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + 
                      (folderId === "root" ? "" : `?folder_id=${folderId}`);
       window.history.pushState({ path: newUrl }, "", newUrl);
       refreshData();
+    }
+
+    function clearSelectionState() {
+      selectedItems.folders.clear();
+      selectedItems.files.clear();
+      updateBulkActionsBar();
+      const selectAll = document.getElementById("select-all-checkbox");
+      if (selectAll) selectAll.checked = false;
+    }
+
+    function toggleItemSelection(id, type, isSelected, cardElement) {
+      if (type === "folder") {
+        if (isSelected) {
+          selectedItems.folders.add(id);
+          cardElement.classList.add("selected");
+        } else {
+          selectedItems.folders.delete(id);
+          cardElement.classList.remove("selected");
+        }
+      } else {
+        if (isSelected) {
+          selectedItems.files.add(id);
+          cardElement.classList.add("selected");
+        } else {
+          selectedItems.files.delete(id);
+          cardElement.classList.remove("selected");
+        }
+      }
+      updateBulkActionsBar();
+      updateSelectAllCheckboxState();
+    }
+
+    function updateSelectAllCheckboxState() {
+      const selectAll = document.getElementById("select-all-checkbox");
+      if (!selectAll) return;
+      
+      const parentFilter = currentFolderId === "root" ? null : currentFolderId;
+      
+      const pendingDeleteFolderIds = new Set(
+        BackgroundManager.queue
+          .filter(op => (op.status === "pending" || op.status === "running") && op.type === "delete-folder")
+          .map(op => op.itemId)
+      );
+      const pendingDeleteFileIds = new Set(
+        BackgroundManager.queue
+          .filter(op => (op.status === "pending" || op.status === "running") && op.type === "delete-file")
+          .map(op => op.itemId)
+      );
+
+      const visibleFolders = allFolders.filter(f => f.parent_id === parentFilter && !pendingDeleteFolderIds.has(f.id));
+      const visibleFiles = currentFiles.filter(f => !pendingDeleteFileIds.has(f.id));
+
+      const totalVisible = visibleFolders.length + visibleFiles.length;
+      if (totalVisible === 0) {
+        selectAll.checked = false;
+        return;
+      }
+
+      let allSelected = true;
+      for (let f of visibleFolders) {
+        if (!selectedItems.folders.has(f.id)) {
+          allSelected = false;
+          break;
+        }
+      }
+      if (allSelected) {
+        for (let f of visibleFiles) {
+          if (!selectedItems.files.has(f.id)) {
+            allSelected = false;
+            break;
+          }
+        }
+      }
+
+      selectAll.checked = allSelected;
+    }
+
+    function updateBulkActionsBar() {
+      const bar = document.getElementById("bulk-actions-bar");
+      const text = document.getElementById("bulk-selected-text");
+      const count = selectedItems.folders.size + selectedItems.files.size;
+
+      if (count > 0) {
+        text.textContent = `${count} item${count > 1 ? 's' : ''} selected`;
+        bar.classList.add("show");
+      } else {
+        bar.classList.remove("show");
+      }
     }
 
     // Render explorer files and folders
@@ -549,13 +651,13 @@
       subFolders.forEach((folder, index) => {
         const folderCard = document.createElement("div");
         const delay = Math.min(index * 0.05, 0.5);
-        folderCard.className = "vault-item fd-fade-up fd-stagger";
+        folderCard.className = "vault-item fd-fade-up fd-stagger" + (selectedItems.folders.has(folder.id) ? " selected" : "");
         folderCard.style.setProperty("--fd-delay", `${delay}s`);
         folderCard.setAttribute("data-item-id", folder.id);
         folderCard.setAttribute("data-item-type", "folder");
         
         folderCard.addEventListener("click", (e) => {
-          if (e.target.closest("[data-action]") || e.target.closest(".dropdown-menu")) {
+          if (e.target.closest("[data-action]") || e.target.closest(".dropdown-menu") || e.target.closest(".fd-select-checkbox-container")) {
             return;
           }
           navigateToFolder(folder.id);
@@ -582,6 +684,10 @@
 
         if (isList) {
           folderCard.innerHTML = `
+            <label class="fd-select-checkbox-container" style="margin-left: 0.5rem; margin-right: 0;">
+              <input type="checkbox" class="item-select-checkbox" data-id="${folder.id}" data-type="folder" ${selectedItems.folders.has(folder.id) ? 'checked' : ''}>
+              <span class="fd-select-checkmark"></span>
+            </label>
             <i class="item-icon folder fas fa-folder"></i>
             ${detailsHtml}
             <button class="item-actions-trigger" data-action="toggle-dropdown" aria-label="Actions Menu">
@@ -601,6 +707,10 @@
           `;
         } else {
           folderCard.innerHTML = `
+            <label class="fd-select-checkbox-container">
+              <input type="checkbox" class="item-select-checkbox" data-id="${folder.id}" data-type="folder" ${selectedItems.folders.has(folder.id) ? 'checked' : ''}>
+              <span class="fd-select-checkmark"></span>
+            </label>
             <div class="item-preview-area">
               <i class="item-icon folder fas fa-folder"></i>
             </div>
@@ -623,6 +733,14 @@
             </div>
           `;
         }
+
+        const label = folderCard.querySelector(".fd-select-checkbox-container");
+        label.addEventListener("click", (e) => e.stopPropagation());
+        const checkbox = folderCard.querySelector(".item-select-checkbox");
+        checkbox.addEventListener("change", (e) => {
+          toggleItemSelection(folder.id, "folder", checkbox.checked, folderCard);
+        });
+
         wrapper.appendChild(folderCard);
       });
 
@@ -630,13 +748,13 @@
       activeFiles.forEach((file, index) => {
         const fileCard = document.createElement("div");
         const delay = Math.min((subFolders.length + index) * 0.05, 0.5);
-        fileCard.className = "vault-item fd-fade-up fd-stagger";
+        fileCard.className = "vault-item fd-fade-up fd-stagger" + (selectedItems.files.has(file.id) ? " selected" : "");
         fileCard.style.setProperty("--fd-delay", `${delay}s`);
         fileCard.setAttribute("data-item-id", file.id);
         fileCard.setAttribute("data-item-type", "file");
         
         fileCard.addEventListener("click", (e) => {
-          if (e.target.closest("[data-action]") || e.target.closest(".dropdown-menu")) {
+          if (e.target.closest("[data-action]") || e.target.closest(".dropdown-menu") || e.target.closest(".fd-select-checkbox-container")) {
             return;
           }
           openPreview(file.id);
@@ -691,6 +809,10 @@
 
         if (isList) {
           fileCard.innerHTML = `
+            <label class="fd-select-checkbox-container" style="margin-left: 0.5rem; margin-right: 0;">
+              <input type="checkbox" class="item-select-checkbox" data-id="${file.id}" data-type="file" ${selectedItems.files.has(file.id) ? 'checked' : ''}>
+              <span class="fd-select-checkmark"></span>
+            </label>
             ${iconHtml}
             ${detailsHtml}
             <button class="item-actions-trigger" data-action="toggle-dropdown" aria-label="Actions Menu">
@@ -718,6 +840,10 @@
           `;
         } else {
           fileCard.innerHTML = `
+            <label class="fd-select-checkbox-container">
+              <input type="checkbox" class="item-select-checkbox" data-id="${file.id}" data-type="file" ${selectedItems.files.has(file.id) ? 'checked' : ''}>
+              <span class="fd-select-checkmark"></span>
+            </label>
             <div class="item-preview-area">
               ${iconHtml}
             </div>
@@ -748,6 +874,14 @@
             </div>
           `;
         }
+
+        const label = fileCard.querySelector(".fd-select-checkbox-container");
+        label.addEventListener("click", (e) => e.stopPropagation());
+        const checkbox = fileCard.querySelector(".item-select-checkbox");
+        checkbox.addEventListener("change", (e) => {
+          toggleItemSelection(file.id, "file", checkbox.checked, fileCard);
+        });
+
         wrapper.appendChild(fileCard);
       });
     }
@@ -920,6 +1054,57 @@
       document.getElementById("rename-item-id").value = id;
       document.getElementById("rename-input").value = name;
       openModal("modal-rename");
+    }
+
+    function triggerBulkMove() {
+      document.getElementById("move-item-type").value = "bulk";
+      document.getElementById("move-item-id").value = "bulk";
+      
+      const select = document.getElementById("move-dest-select");
+      select.innerHTML = "";
+      
+      const rootOpt = document.createElement("option");
+      rootOpt.value = "root";
+      rootOpt.textContent = "Root Folder ( / )";
+      select.appendChild(rootOpt);
+      
+      function getFolderPath(folderId) {
+        let path = [];
+        let currId = folderId;
+        while (currId) {
+          const f = allFolders.find(x => x.id === currId);
+          if (!f) break;
+          path.unshift(f.name);
+          currId = f.parent_id;
+        }
+        return "/" + path.join("/");
+      }
+      
+      const invalidFolderIds = new Set();
+      selectedItems.folders.forEach(id => {
+        invalidFolderIds.add(id);
+      });
+      
+      let changed = true;
+      while (changed) {
+        changed = false;
+        allFolders.forEach(f => {
+          if (f.parent_id && invalidFolderIds.has(f.parent_id) && !invalidFolderIds.has(f.id)) {
+            invalidFolderIds.add(f.id);
+            changed = true;
+          }
+        });
+      }
+      
+      allFolders.forEach(folder => {
+        if (invalidFolderIds.has(folder.id)) return;
+        const opt = document.createElement("option");
+        opt.value = folder.id;
+        opt.textContent = getFolderPath(folder.id);
+        select.appendChild(opt);
+      });
+      
+      openModal("modal-move");
     }
 
     function triggerMove(type, id, currentName) {
@@ -1177,6 +1362,79 @@
       document.getElementById("toggle-grid").addEventListener("click", () => setView("grid"));
       document.getElementById("toggle-list").addEventListener("click", () => setView("list"));
 
+      // Select All Checkbox Handler
+      const selectAllCheckbox = document.getElementById("select-all-checkbox");
+      if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener("change", (e) => {
+          const isChecked = selectAllCheckbox.checked;
+          const parentFilter = currentFolderId === "root" ? null : currentFolderId;
+
+          const pendingDeleteFolderIds = new Set(
+            BackgroundManager.queue
+              .filter(op => (op.status === "pending" || op.status === "running") && op.type === "delete-folder")
+              .map(op => op.itemId)
+          );
+          const pendingDeleteFileIds = new Set(
+            BackgroundManager.queue
+              .filter(op => (op.status === "pending" || op.status === "running") && op.type === "delete-file")
+              .map(op => op.itemId)
+          );
+
+          const visibleFolders = allFolders.filter(f => f.parent_id === parentFilter && !pendingDeleteFolderIds.has(f.id));
+          const visibleFiles = currentFiles.filter(f => !pendingDeleteFileIds.has(f.id));
+
+          if (isChecked) {
+            visibleFolders.forEach(f => selectedItems.folders.add(f.id));
+            visibleFiles.forEach(f => selectedItems.files.add(f.id));
+          } else {
+            visibleFolders.forEach(f => selectedItems.folders.delete(f.id));
+            visibleFiles.forEach(f => selectedItems.files.delete(f.id));
+          }
+
+          renderExplorer();
+          updateBulkActionsBar();
+        });
+      }
+
+      // Bulk Action Clear Selected
+      document.getElementById("bulk-clear-btn").addEventListener("click", () => {
+        clearSelectionState();
+        renderExplorer();
+      });
+
+      // Bulk Delete Handler
+      document.getElementById("bulk-delete-btn").addEventListener("click", async () => {
+        const count = selectedItems.folders.size + selectedItems.files.size;
+        if (count === 0) return;
+
+        if (confirm(`Move ${count} selected item${count > 1 ? 's' : ''} to the Recycle Bin?`)) {
+          const foldersToDelete = Array.from(selectedItems.folders);
+          const filesToDelete = Array.from(selectedItems.files);
+
+          clearSelectionState();
+
+          foldersToDelete.forEach(folderId => {
+            const folder = allFolders.find(f => f.id === folderId);
+            const folderName = folder ? folder.name : `Folder #${folderId}`;
+            deleteFolder(folderId, folderName);
+          });
+
+          filesToDelete.forEach(fileId => {
+            const file = currentFiles.find(f => f.id === fileId);
+            const fileName = file ? file.filename : `File #${fileId}`;
+            deleteFile(fileId, fileName);
+          });
+
+          FamDocAPI.utils.showToast(`${count} items are being deleted in the background.`, "success");
+        }
+      });
+
+      // Bulk Move trigger
+      document.getElementById("bulk-move-btn").addEventListener("click", () => {
+        if (selectedItems.folders.size + selectedItems.files.size === 0) return;
+        triggerBulkMove();
+      });
+
       // Centralized delegated click handler for folder/file dropdown item actions
       const wrapper = document.getElementById("items-wrapper");
       wrapper.addEventListener("click", (e) => {
@@ -1280,19 +1538,39 @@
       document.getElementById("form-move").addEventListener("submit", async (e) => {
         e.preventDefault();
         const type = document.getElementById("move-item-type").value;
-        const id = parseInt(document.getElementById("move-item-id").value);
+        const idVal = document.getElementById("move-item-id").value;
         const destVal = document.getElementById("move-dest-select").value;
         const destFolderId = destVal === "root" ? null : parseInt(destVal);
 
         try {
-          if (type === "folder") {
-            await FamDocAPI.folders.move(id, destFolderId);
+          if (type === "bulk" || idVal === "bulk") {
+            const foldersToMove = Array.from(selectedItems.folders);
+            const filesToMove = Array.from(selectedItems.files);
+            const count = foldersToMove.length + filesToMove.length;
+
+            clearSelectionState();
+
+            for (let folderId of foldersToMove) {
+              await FamDocAPI.folders.move(folderId, destFolderId);
+            }
+            for (let fileId of filesToMove) {
+              await FamDocAPI.files.move(fileId, destFolderId);
+            }
+
+            closeModal("modal-move");
+            FamDocAPI.utils.showToast(`${count} items moved successfully.`, "success");
+            refreshData();
           } else {
-            await FamDocAPI.files.move(id, destFolderId);
+            const id = parseInt(idVal);
+            if (type === "folder") {
+              await FamDocAPI.folders.move(id, destFolderId);
+            } else {
+              await FamDocAPI.files.move(id, destFolderId);
+            }
+            closeModal("modal-move");
+            FamDocAPI.utils.showToast("Item moved successfully.", "success");
+            refreshData();
           }
-          closeModal("modal-move");
-          FamDocAPI.utils.showToast("Item moved successfully.", "success");
-          refreshData();
         } catch (err) {
           FamDocAPI.utils.showToast(err.message, "error");
         }
@@ -1470,6 +1748,24 @@
       });
     }
   </script>
+
+  <!-- Floating Bulk Actions Bar -->
+  <div id="bulk-actions-bar" class="bulk-actions-bar">
+    <div class="bulk-selected-count">
+      <span id="bulk-selected-text">0 items selected</span>
+    </div>
+    <div class="bulk-action-buttons">
+      <button class="btn btn-secondary" id="bulk-clear-btn">
+        <i class="fas fa-times"></i> Cancel
+      </button>
+      <button class="btn btn-secondary" id="bulk-move-btn">
+        <i class="fas fa-arrows-alt"></i> Move
+      </button>
+      <button class="btn btn-danger" id="bulk-delete-btn" style="background-color: var(--warning-red); color: white; border-color: var(--warning-red);">
+        <i class="fas fa-trash-alt"></i> Delete
+      </button>
+    </div>
+  </div>
 
   <!-- Floating Action Button for Mobile -->
   <div class="mobile-fab-container">
