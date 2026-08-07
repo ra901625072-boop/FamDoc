@@ -379,6 +379,27 @@
     });
 
     async function refreshData() {
+      // 1. Try to load and render cached data immediately to prevent empty/blank screens
+      const cachedFoldersJson = localStorage.getItem("famdoc_cached_folders");
+      const cachedFilesJson = localStorage.getItem("famdoc_cached_files_" + currentFolderId);
+
+      if (cachedFoldersJson) {
+        try {
+          allFolders = JSON.parse(cachedFoldersJson);
+        } catch (e) {}
+      }
+      if (cachedFilesJson) {
+        try {
+          currentFiles = JSON.parse(cachedFilesJson);
+        } catch (e) {}
+      }
+
+      if (allFolders.length > 0 || currentFiles.length > 0) {
+        renderBreadcrumbs();
+        renderExplorer();
+      }
+
+      // 2. Fetch fresh data from backend
       try {
         // Fetch family storage config
         try {
@@ -388,25 +409,33 @@
         }
 
         // Fetch folders
-        allFolders = await FamDocAPI.folders.getFolders();
+        const freshFolders = await FamDocAPI.folders.getFolders();
+        allFolders = freshFolders;
+        localStorage.setItem("famdoc_cached_folders", JSON.stringify(freshFolders));
         
         // Fetch files for current directory
-        currentFiles = await FamDocAPI.files.getFiles(currentFolderId);
+        const freshFiles = await FamDocAPI.files.getFiles(currentFolderId);
+        currentFiles = freshFiles;
+        localStorage.setItem("famdoc_cached_files_" + currentFolderId, JSON.stringify(freshFiles));
         
         renderBreadcrumbs();
         renderExplorer();
       } catch (err) {
         console.error("Failed to load vault items:", err);
-        FamDocAPI.utils.showToast("Failed to load vault files.", "error");
         
-        // Hide skeletons on error
-        const wrapper = document.getElementById("items-wrapper");
-        if (wrapper) wrapper.innerHTML = "";
-        const emptyState = document.getElementById("explorer-empty");
-        if (emptyState) {
-          emptyState.style.display = "flex";
-          emptyState.querySelector(".empty-state-title").textContent = "Failed to load files";
-          emptyState.querySelector(".empty-state-text").textContent = err.message || "Please reload the page to try again.";
+        // Only show error screen if we did not have any cached data to display
+        if (allFolders.length === 0 && currentFiles.length === 0) {
+          FamDocAPI.utils.showToast("Failed to load vault files.", "error");
+          const wrapper = document.getElementById("items-wrapper");
+          if (wrapper) wrapper.innerHTML = "";
+          const emptyState = document.getElementById("explorer-empty");
+          if (emptyState) {
+            emptyState.style.display = "flex";
+            emptyState.querySelector(".empty-state-title").textContent = "Failed to load files";
+            emptyState.querySelector(".empty-state-text").textContent = err.message || "Please reload the page to try again.";
+          }
+        } else {
+          FamDocAPI.utils.showToast("Reconnecting... Using offline/cached view.", "warning");
         }
       }
     }
