@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -259,9 +259,8 @@
 
       // Delay slightly for auth check to finish
       setTimeout(async () => {
-        const userJson = localStorage.getItem("famdoc_user");
-        if (!userJson) return;
-        currentUser = JSON.parse(userJson);
+        currentUser = await FamDocAPI.auth.getUser();
+        if (!currentUser) return;
 
         if (currentUser.role !== "admin") {
           // Restrict non-admins

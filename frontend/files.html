@@ -354,9 +354,8 @@
 
       const previewParam = urlParams.get("preview");
       
-      // Delay slightly for auth check in auth.js
       setTimeout(async () => {
-        const user = JSON.parse(localStorage.getItem("famdoc_user"));
+        const user = await FamDocAPI.auth.getUser();
         if (!user) return;
         
         // Initialize view

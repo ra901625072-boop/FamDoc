@@ -165,7 +165,7 @@
       emptyState.style.display = "none";
 
       try {
-        const user = JSON.parse(localStorage.getItem("famdoc_user"));
+        const user = await FamDocAPI.auth.getUser();
         if (!user) return;
         const isAdmin = user.role === "admin";
 

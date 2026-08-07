@@ -147,6 +147,31 @@ const FamDocAPI = {
       return user;
     },
 
+    async getUser() {
+      let userJson = localStorage.getItem("famdoc_user");
+      if (userJson) {
+        try {
+          return JSON.parse(userJson);
+        } catch (e) {}
+      }
+      // Wait for a short duration in case auth.js is fetching the user in the background
+      for (let i = 0; i < 30; i++) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        userJson = localStorage.getItem("famdoc_user");
+        if (userJson) {
+          try {
+            return JSON.parse(userJson);
+          } catch (e) {}
+        }
+      }
+      // Fallback: fetch directly from API
+      try {
+        return await FamDocAPI.auth.me();
+      } catch (e) {
+        return null;
+      }
+    },
+
     async updateProfile(username, password) {
       const payload = {};
       if (username) payload.username = username;

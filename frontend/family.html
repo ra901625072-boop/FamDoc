@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -81,8 +81,8 @@
 
     document.addEventListener("DOMContentLoaded", () => {
       // Delay slightly for auth check to finish
-      setTimeout(() => {
-        const user = JSON.parse(localStorage.getItem("famdoc_user"));
+      setTimeout(async () => {
+        const user = await FamDocAPI.auth.getUser();
         if (!user) return;
 
         if (user.role === "admin") {

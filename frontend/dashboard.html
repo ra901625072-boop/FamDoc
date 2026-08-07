@@ -255,9 +255,8 @@
     document.addEventListener("DOMContentLoaded", async () => {
       // Wait slightly to ensure auth token check is processed in auth.js
       setTimeout(async () => {
-        const userJson = localStorage.getItem("famdoc_user");
-        if (!userJson) return;
-        const user = JSON.parse(userJson);
+        const user = await FamDocAPI.auth.getUser();
+        if (!user) return;
 
         // Customize greeting
         const welcome = document.getElementById("welcome-message");

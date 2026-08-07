@@ -5,12 +5,23 @@ from config import DATABASE_URL
 
 # Create database engine
 # check_same_thread: False is needed only for SQLite to allow multiple threads
-connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
-
-engine = create_engine(
-    DATABASE_URL,
-    connect_args=connect_args
-)
+if DATABASE_URL.startswith("sqlite"):
+    connect_args = {"check_same_thread": False}
+    engine = create_engine(
+        DATABASE_URL,
+        connect_args=connect_args
+    )
+else:
+    connect_args = {}
+    engine = create_engine(
+        DATABASE_URL,
+        connect_args=connect_args,
+        pool_size=3,
+        max_overflow=2,
+        pool_timeout=30,
+        pool_recycle=1800,
+        pool_pre_ping=True
+    )
 
 # Enable foreign key support and optimize performance for SQLite
 if DATABASE_URL.startswith("sqlite"):
