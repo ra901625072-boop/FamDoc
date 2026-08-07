@@ -423,13 +423,23 @@
 
         // Fetch folders
         const freshFolders = await FamDocAPI.folders.getFolders();
-        allFolders = freshFolders;
-        localStorage.setItem("famdoc_cached_folders", JSON.stringify(freshFolders));
+        const activeDeleteFolderIds = new Set(
+          BackgroundManager.queue
+            .filter(op => (op.status === "pending" || op.status === "running" || op.status === "completed") && op.type === "delete-folder")
+            .map(op => op.itemId)
+        );
+        allFolders = freshFolders.filter(f => !activeDeleteFolderIds.has(f.id));
+        localStorage.setItem("famdoc_cached_folders", JSON.stringify(allFolders));
         
         // Fetch files for current directory
         const freshFiles = await FamDocAPI.files.getFiles(currentFolderId);
-        currentFiles = freshFiles;
-        localStorage.setItem("famdoc_cached_files_" + currentFolderId, JSON.stringify(freshFiles));
+        const activeDeleteFileIds = new Set(
+          BackgroundManager.queue
+            .filter(op => (op.status === "pending" || op.status === "running" || op.status === "completed") && op.type === "delete-file")
+            .map(op => op.itemId)
+        );
+        currentFiles = freshFiles.filter(f => !activeDeleteFileIds.has(f.id));
+        localStorage.setItem("famdoc_cached_files_" + currentFolderId, JSON.stringify(currentFiles));
         
         renderBreadcrumbs();
         renderExplorer();
@@ -561,12 +571,12 @@
       
       const pendingDeleteFolderIds = new Set(
         BackgroundManager.queue
-          .filter(op => (op.status === "pending" || op.status === "running") && op.type === "delete-folder")
+          .filter(op => (op.status === "pending" || op.status === "running" || op.status === "completed") && op.type === "delete-folder")
           .map(op => op.itemId)
       );
       const pendingDeleteFileIds = new Set(
         BackgroundManager.queue
-          .filter(op => (op.status === "pending" || op.status === "running") && op.type === "delete-file")
+          .filter(op => (op.status === "pending" || op.status === "running" || op.status === "completed") && op.type === "delete-file")
           .map(op => op.itemId)
       );
 
@@ -623,12 +633,12 @@
       // Filter out items currently in the background deletion queue
       const pendingDeleteFolderIds = new Set(
         BackgroundManager.queue
-          .filter(op => (op.status === "pending" || op.status === "running") && op.type === "delete-folder")
+          .filter(op => (op.status === "pending" || op.status === "running" || op.status === "completed") && op.type === "delete-folder")
           .map(op => op.itemId)
       );
       const pendingDeleteFileIds = new Set(
         BackgroundManager.queue
-          .filter(op => (op.status === "pending" || op.status === "running") && op.type === "delete-file")
+          .filter(op => (op.status === "pending" || op.status === "running" || op.status === "completed") && op.type === "delete-file")
           .map(op => op.itemId)
       );
       
@@ -1371,12 +1381,12 @@
 
           const pendingDeleteFolderIds = new Set(
             BackgroundManager.queue
-              .filter(op => (op.status === "pending" || op.status === "running") && op.type === "delete-folder")
+              .filter(op => (op.status === "pending" || op.status === "running" || op.status === "completed") && op.type === "delete-folder")
               .map(op => op.itemId)
           );
           const pendingDeleteFileIds = new Set(
             BackgroundManager.queue
-              .filter(op => (op.status === "pending" || op.status === "running") && op.type === "delete-file")
+              .filter(op => (op.status === "pending" || op.status === "running" || op.status === "completed") && op.type === "delete-file")
               .map(op => op.itemId)
           );
 
