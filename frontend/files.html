@@ -295,6 +295,7 @@
 
   <script src="/js/api.js"></script>
   <script src="/js/auth.js"></script>
+  <script src="/js/background-manager.js"></script>
   <script>
     // Component level state
     let currentFolderId = "root"; 
@@ -517,10 +518,24 @@
       
       // Filter folders belonging to current folder parent
       const parentFilter = currentFolderId === "root" ? null : currentFolderId;
-      const subFolders = allFolders.filter(f => f.parent_id === parentFilter);
+
+      // Filter out items currently in the background deletion queue
+      const pendingDeleteFolderIds = new Set(
+        BackgroundManager.queue
+          .filter(op => (op.status === "pending" || op.status === "running") && op.type === "delete-folder")
+          .map(op => op.itemId)
+      );
+      const pendingDeleteFileIds = new Set(
+        BackgroundManager.queue
+          .filter(op => (op.status === "pending" || op.status === "running") && op.type === "delete-file")
+          .map(op => op.itemId)
+      );
+      
+      const subFolders = allFolders.filter(f => f.parent_id === parentFilter && !pendingDeleteFolderIds.has(f.id));
+      const activeFiles = currentFiles.filter(f => !pendingDeleteFileIds.has(f.id));
 
       // Check if folder is empty
-      if (subFolders.length === 0 && currentFiles.length === 0) {
+      if (subFolders.length === 0 && activeFiles.length === 0) {
         wrapper.style.display = "none";
         emptyState.style.display = "flex";
         return;
@@ -537,6 +552,8 @@
         const delay = Math.min(index * 0.05, 0.5);
         folderCard.className = "vault-item fd-fade-up fd-stagger";
         folderCard.style.setProperty("--fd-delay", `${delay}s`);
+        folderCard.setAttribute("data-item-id", folder.id);
+        folderCard.setAttribute("data-item-type", "folder");
         
         folderCard.addEventListener("click", (e) => {
           if (e.target.closest("[data-action]") || e.target.closest(".dropdown-menu")) {
@@ -611,11 +628,13 @@
       });
 
       // 2. Render Files
-      currentFiles.forEach((file, index) => {
+      activeFiles.forEach((file, index) => {
         const fileCard = document.createElement("div");
         const delay = Math.min((subFolders.length + index) * 0.05, 0.5);
         fileCard.className = "vault-item fd-fade-up fd-stagger";
         fileCard.style.setProperty("--fd-delay", `${delay}s`);
+        fileCard.setAttribute("data-item-id", file.id);
+        fileCard.setAttribute("data-item-type", "file");
         
         fileCard.addEventListener("click", (e) => {
           if (e.target.closest("[data-action]") || e.target.closest(".dropdown-menu")) {
@@ -794,28 +813,106 @@
 
     // Folder Actions
     async function deleteFolder(id, name) {
-      if (confirm(`Are you sure you want to delete folder "${name}"? This soft-deletes the folder and all its contents recursively.`)) {
-        try {
-          await FamDocAPI.folders.delete(id);
-          FamDocAPI.utils.showToast("Folder deleted successfully.", "success");
-          refreshData();
-        } catch (err) {
-          FamDocAPI.utils.showToast(err.message, "error");
-        }
+      const element = document.querySelector(`.vault-item[data-item-id="${id}"][data-item-type="folder"]`);
+      if (element) {
+        element.classList.add("deleting");
       }
+      
+      // Wait for exit animation (300ms)
+      setTimeout(() => {
+        // Find folder details for undo
+        const folderIndex = allFolders.findIndex(f => f.id === id);
+        if (folderIndex === -1) return;
+        const deletedFolder = allFolders[folderIndex];
+
+        // Optimistically remove it from local array and update cache
+        allFolders.splice(folderIndex, 1);
+        localStorage.setItem("famdoc_cached_folders", JSON.stringify(allFolders));
+
+        // Add to background manager queue
+        BackgroundManager.addOperation({
+          type: "delete-folder",
+          itemId: id,
+          name: name,
+          onExecute: async () => {
+            await FamDocAPI.folders.delete(id);
+          },
+          onUndo: () => {
+            // Restore folder in array
+            if (!allFolders.some(f => f.id === id)) {
+              allFolders.splice(folderIndex, 0, deletedFolder);
+              localStorage.setItem("famdoc_cached_folders", JSON.stringify(allFolders));
+              renderExplorer();
+              
+              // Highlight restoration
+              setTimeout(() => {
+                const restoredEl = document.querySelector(`.vault-item[data-item-id="${id}"][data-item-type="folder"]`);
+                if (restoredEl) {
+                  restoredEl.classList.add("restoring");
+                  restoredEl.addEventListener("animationend", () => {
+                    restoredEl.classList.remove("restoring");
+                  }, { once: true });
+                }
+              }, 50);
+            }
+          }
+        });
+
+        // Trigger immediate UI update
+        renderExplorer();
+      }, 300);
     }
 
     // File Actions
     async function deleteFile(id, name) {
-      if (confirm(`Are you sure you want to move "${name}" to the recycle bin?`)) {
-        try {
-          await FamDocAPI.files.delete(id);
-          FamDocAPI.utils.showToast("File moved to recycle bin.", "success");
-          refreshData();
-        } catch (err) {
-          FamDocAPI.utils.showToast(err.message, "error");
-        }
+      const element = document.querySelector(`.vault-item[data-item-id="${id}"][data-item-type="file"]`);
+      if (element) {
+        element.classList.add("deleting");
       }
+      
+      // Wait for exit animation (300ms)
+      setTimeout(() => {
+        // Find file details for undo
+        const fileIndex = currentFiles.findIndex(f => f.id === id);
+        if (fileIndex === -1) return;
+        const deletedFile = currentFiles[fileIndex];
+
+        // Optimistically remove it from local array and update cache
+        currentFiles.splice(fileIndex, 1);
+        localStorage.setItem("famdoc_cached_files_" + currentFolderId, JSON.stringify(currentFiles));
+
+        // Add to background manager queue
+        BackgroundManager.addOperation({
+          type: "delete-file",
+          itemId: id,
+          name: name,
+          onExecute: async () => {
+            await FamDocAPI.files.delete(id);
+          },
+          onUndo: () => {
+            // Restore file in array
+            if (!currentFiles.some(f => f.id === id)) {
+              currentFiles.splice(fileIndex, 0, deletedFile);
+              localStorage.setItem("famdoc_cached_files_" + currentFolderId, JSON.stringify(currentFiles));
+              renderExplorer();
+              
+              // Highlight restoration
+              setTimeout(() => {
+                const restoredEl = document.querySelector(`.vault-item[data-item-id="${id}"][data-item-type="file"]`);
+                if (restoredEl) {
+                  restoredEl.classList.add("restoring");
+                  restoredEl.addEventListener("animationend", () => {
+                    restoredEl.classList.remove("restoring");
+                  }, { once: true });
+                }
+              }, 50);
+            }
+          }
+        });
+
+        // Trigger immediate UI update
+        renderExplorer();
+      }, 300);
     }
 
     // Trigger Modals
