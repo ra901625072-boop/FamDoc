@@ -79,6 +79,19 @@ async def upload_file(
         if not folder:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Target folder not found")
 
+    # Check for duplicate filename in the same folder
+    existing_file = db.query(models.File).filter(
+        models.File.filename == file.filename,
+        models.File.folder_id == folder_id,
+        models.File.family_id == current_user.family_id,
+        models.File.deleted_at == None
+    ).first()
+    if existing_file:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="A file with this name already exists in this folder."
+        )
+
     # Enforce file type validation
     allowed_extensions = {".pdf", ".jpg", ".jpeg", ".png", ".docx", ".doc", ".xlsx", ".xls", ".txt"}
     _, ext = os.path.splitext(file.filename.lower())
@@ -279,6 +292,20 @@ def rename_file(
             detail="Filename contains unsupported characters. Use only letters, numbers, spaces, and ._-()[]."
         )
     
+    # Check for duplicate filename in the same folder
+    duplicate_file = db.query(models.File).filter(
+        models.File.filename == new_name,
+        models.File.folder_id == file.folder_id,
+        models.File.family_id == current_user.family_id,
+        models.File.deleted_at == None,
+        models.File.id != file.id
+    ).first()
+    if duplicate_file:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="A file with this name already exists in this folder."
+        )
+    
     try:
         manager = StorageManager()
         family_config = manager.get_family_config(family, db)
@@ -361,6 +388,20 @@ def move_file(
         ).first()
         if not folder:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Destination folder not found")
+
+    # Check for duplicate filename in the target folder
+    duplicate_file = db.query(models.File).filter(
+        models.File.filename == file.filename,
+        models.File.folder_id == file_in.folder_id,
+        models.File.family_id == current_user.family_id,
+        models.File.deleted_at == None,
+        models.File.id != file.id
+    ).first()
+    if duplicate_file:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="A file with this name already exists in the destination folder."
+        )
 
     file.folder_id = file_in.folder_id
     db.commit()
