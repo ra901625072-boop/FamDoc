@@ -318,4 +318,12 @@ function injectLayout(user) {
 
   // Close on main content click
   mainContent.addEventListener("click", closeSidebar);
+
+  // 9. Load the background upload manager if not already loaded
+  if (!document.getElementById("famdoc-upload-manager-script")) {
+    const uploadScript = document.createElement("script");
+    uploadScript.id = "famdoc-upload-manager-script";
+    uploadScript.src = "/js/upload-manager.js";
+    document.body.appendChild(uploadScript);
+  }
 }

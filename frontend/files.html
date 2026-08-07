@@ -1301,6 +1301,16 @@
 
     // Sequential File Upload Helper
     async function uploadFilesSequentially(files) {
+      if (typeof window.FamDocUploadManager !== "undefined") {
+        try {
+          await window.FamDocUploadManager.enqueueFiles(files, currentFolderId);
+          document.getElementById("file-picker").value = "";
+          return;
+        } catch (managerErr) {
+          console.error("Failed to enqueue files in UploadManager, falling back:", managerErr);
+        }
+      }
+
       const progressOverlay = document.getElementById("upload-progress-overlay");
       const progressName = document.getElementById("upload-file-name");
       const progressBar = document.getElementById("upload-progress-bar");
