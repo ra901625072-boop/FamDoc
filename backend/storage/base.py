@@ -27,7 +27,7 @@ class StorageProvider(ABC):
         pass
 
     @abstractmethod
-    def upload_file(self, config: dict, vault_folder_id: str, filename: str, file_content: bytes, mimetype: str, username: str = None) -> dict:
+    def upload_file(self, config: dict, vault_folder_id: str, filename: str, file_content: bytes, mimetype: str, username: str = None, db = None) -> dict:
         """
         Uploads file content to the cloud vault folder.
         Returns a dictionary containing:
@@ -37,7 +37,7 @@ class StorageProvider(ABC):
         pass
 
     @abstractmethod
-    def download_file(self, config: dict, cloud_file_id: str) -> bytes:
+    def download_file(self, config: dict, cloud_file_id: str, db = None) -> bytes:
         """
         Downloads a file from the cloud by its cloud file ID.
         Returns the raw binary bytes of the file.
@@ -45,7 +45,7 @@ class StorageProvider(ABC):
         pass
 
     @abstractmethod
-    def delete_file(self, config: dict, cloud_file_id: str) -> bool:
+    def delete_file(self, config: dict, cloud_file_id: str, db = None) -> bool:
         """
         Deletes a file from the cloud storage by its cloud file ID.
         Returns True if successful.
@@ -53,7 +53,7 @@ class StorageProvider(ABC):
         pass
 
     @abstractmethod
-    def rename_file(self, config: dict, cloud_file_id: str, new_name: str) -> bool:
+    def rename_file(self, config: dict, cloud_file_id: str, new_name: str, db = None) -> bool:
         """
         Renames a file in the cloud storage.
         Returns True if successful.

@@ -143,7 +143,7 @@ class MegaProvider(StorageProvider):
             
         return node_id
 
-    def upload_file(self, config: dict, vault_folder_id: str, filename: str, file_content: bytes, mimetype: str, username: str = None) -> dict:
+    def upload_file(self, config: dict, vault_folder_id: str, filename: str, file_content: bytes, mimetype: str, username: str = None, db = None) -> dict:
         client = self._get_client(config)
         
         # Write content to local temporary file to upload
@@ -201,7 +201,7 @@ class MegaProvider(StorageProvider):
                 os.remove(temp_file_path)
             shutil.rmtree(temp_dir, ignore_errors=True)
 
-    def download_file(self, config: dict, cloud_file_id: str) -> bytes:
+    def download_file(self, config: dict, cloud_file_id: str, db = None) -> bytes:
         client = self._get_client(config)
         
         files = client.get_files()
@@ -243,7 +243,7 @@ class MegaProvider(StorageProvider):
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
 
-    def delete_file(self, config: dict, cloud_file_id: str) -> bool:
+    def delete_file(self, config: dict, cloud_file_id: str, db = None) -> bool:
         client = self._get_client(config)
         files = client.get_files()
         file_info = files.get(cloud_file_id)
@@ -257,7 +257,7 @@ class MegaProvider(StorageProvider):
                 client.destroy(file_obj)
         return True
 
-    def rename_file(self, config: dict, cloud_file_id: str, new_name: str) -> bool:
+    def rename_file(self, config: dict, cloud_file_id: str, new_name: str, db = None) -> bool:
         client = self._get_client(config)
         files = client.get_files()
         file_info = files.get(cloud_file_id)

@@ -16,7 +16,7 @@ class LocalStorageProvider(StorageProvider):
         os.makedirs(vault_dir, exist_ok=True)
         return vault_dir
 
-    def upload_file(self, config: dict, vault_folder_id: str, filename: str, file_content: bytes, mimetype: str, username: str = None) -> dict:
+    def upload_file(self, config: dict, vault_folder_id: str, filename: str, file_content: bytes, mimetype: str, username: str = None, db = None) -> dict:
         import uuid
         os.makedirs(vault_folder_id, exist_ok=True)
         unique_filename = f"{uuid.uuid4()}_{filename}"
@@ -28,7 +28,7 @@ class LocalStorageProvider(StorageProvider):
             "cloud_link": None
         }
 
-    def download_file(self, config: dict, cloud_file_id: str) -> bytes:
+    def download_file(self, config: dict, cloud_file_id: str, db = None) -> bytes:
         vault_dir = config.get("vault_folder_id")
         if not vault_dir:
             raise Exception("Local vault directory is not configured")
@@ -38,7 +38,7 @@ class LocalStorageProvider(StorageProvider):
         with open(file_path, "rb") as f:
             return f.read()
 
-    def delete_file(self, config: dict, cloud_file_id: str) -> bool:
+    def delete_file(self, config: dict, cloud_file_id: str, db = None) -> bool:
         vault_dir = config.get("vault_folder_id")
         if vault_dir:
             file_path = os.path.join(vault_dir, cloud_file_id)
@@ -46,7 +46,7 @@ class LocalStorageProvider(StorageProvider):
                 os.remove(file_path)
         return True
 
-    def rename_file(self, config: dict, cloud_file_id: str, new_name: str) -> bool:
+    def rename_file(self, config: dict, cloud_file_id: str, new_name: str, db = None) -> bool:
         # Local files are identified on disk using their unique cloud_file_id (which contains a UUID prefix).
         # We keep the physical file name unchanged on rename to avoid collisions and preserve uniqueness.
         # The database record tracks the user-facing name in file.filename.
