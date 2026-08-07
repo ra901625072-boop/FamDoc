@@ -3,7 +3,24 @@ import httpx
 from config import VIRUSTOTAL_API_KEY
 from logging_config import logger
 
-async def scan_file_for_viruses(file_content: bytes, filename: str) -> bool:
+async def submit_file_to_virustotal_bg(file_content: bytes, filename: str):
+    """Submits a file to VirusTotal in the background."""
+    if not VIRUSTOTAL_API_KEY:
+        return
+    url = "https://www.virustotal.com/api/v3/files"
+    headers = {"x-apikey": VIRUSTOTAL_API_KEY}
+    try:
+        async with httpx.AsyncClient(timeout=30) as client:
+            await client.post(
+                url,
+                headers=headers,
+                files={"file": (filename, file_content)}
+            )
+            logger.info(f"Info: File '{filename}' successfully submitted to VirusTotal in the background.")
+    except Exception as upload_err:
+        logger.warning(f"Warning: Failed to submit unknown file '{filename}' to VirusTotal in the background: {upload_err}")
+
+async def scan_file_for_viruses(file_content: bytes, filename: str, background_tasks = None) -> bool:
     """
     Checks if a file is malicious using VirusTotal API.
     Uses SHA-256 hash lookup to perform rapid O(1) synchronous check.
@@ -37,15 +54,20 @@ async def scan_file_for_viruses(file_content: bytes, filename: str) -> bool:
                     return False
             elif response.status_code == 404:
                 # File is unknown to VirusTotal, submit it for async scan in the background
-                try:
-                    await client.post(
-                        "https://www.virustotal.com/api/v3/files",
-                        headers=headers,
-                        files={"file": (filename, file_content)}
-                    )
-                    logger.info(f"Info: File '{filename}' is unknown to VirusTotal. Submitted for analysis.")
-                except Exception as upload_err:
-                    logger.warning(f"Warning: Failed to submit unknown file '{filename}' to VirusTotal: {upload_err}")
+                if background_tasks:
+                    background_tasks.add_task(submit_file_to_virustotal_bg, file_content, filename)
+                    logger.info(f"Info: File '{filename}' is unknown to VirusTotal. Scheduled background submission.")
+                else:
+                    # Fallback to sync submit if no background task manager is provided
+                    try:
+                        await client.post(
+                            "https://www.virustotal.com/api/v3/files",
+                            headers=headers,
+                            files={"file": (filename, file_content)}
+                        )
+                        logger.info(f"Info: File '{filename}' is unknown to VirusTotal. Submitted for analysis (synchronous fallback).")
+                    except Exception as upload_err:
+                        logger.warning(f"Warning: Failed to submit unknown file '{filename}' to VirusTotal: {upload_err}")
                 return True
             else:
                 # If rate limited or other error, fallback to True but log

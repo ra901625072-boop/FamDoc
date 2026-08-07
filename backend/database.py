@@ -12,12 +12,16 @@ engine = create_engine(
     connect_args=connect_args
 )
 
-# Enable foreign key support for SQLite
+# Enable foreign key support and optimize performance for SQLite
 if DATABASE_URL.startswith("sqlite"):
     @event.listens_for(engine, "connect")
     def set_sqlite_pragma(dbapi_connection, connection_record):
         cursor = dbapi_connection.cursor()
         cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.execute("PRAGMA journal_mode=WAL")
+        cursor.execute("PRAGMA synchronous=NORMAL")
+        cursor.execute("PRAGMA busy_timeout=5000")
+        cursor.execute("PRAGMA cache_size=-64000")  # 64MB cache size
         cursor.close()
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -123,3 +127,12 @@ def run_migrations():
                     logger.info("Migration: Successfully added storage_provider column to files table.")
                 except Exception as e:
                     logger.error(f"Migration error (files storage_provider): {str(e)}")
+
+        # Add index on pending_sync_at to optimize order_by queries
+        with engine.connect() as conn:
+            try:
+                conn.execute(text("CREATE INDEX IF NOT EXISTS ix_files_pending_sync_at ON files(pending_sync_at)"))
+                logger.info("Migration: Successfully created index ix_files_pending_sync_at.")
+            except Exception as e:
+                # SQLite supports "IF NOT EXISTS", but we wrap it in try-except in case other engines don't
+                pass

@@ -74,23 +74,9 @@ def search_files(
 
     shared_file_ids = {sl.file_id for sl in db.query(models.SharedLink.file_id).filter(models.SharedLink.family_id == current_user.family_id).all()}
 
-    # Format output
-    result = []
-    for file in files:
-        uploader_email = file.uploader.email if file.uploader else None
-        result.append({
-            "id": file.id,
-            "filename": file.filename,
-            "file_type": file.file_type,
-            "size_bytes": file.size_bytes,
-            "uploader_id": file.uploader_id,
-            "uploader_email": uploader_email,
-            "folder_id": file.folder_id,
-            "family_id": file.family_id,
-            "upload_date": file.upload_date,
-            "storage_provider": file.storage_provider,
-            "cloud_file_id": file.file_id,
-            "cloud_link": file.cloud_link,
-            "is_shared": file.id in shared_file_ids
-        })
+    from serializers import serialize_file
+    result = [
+        serialize_file(file, is_shared=(file.id in shared_file_ids), current_user_id=current_user.id)
+        for file in files
+    ]
     return result

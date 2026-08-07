@@ -48,8 +48,8 @@ def get_files(
     
     shared_file_ids = {sl.file_id for sl in db.query(models.SharedLink.file_id).filter(models.SharedLink.family_id == current_user.family_id).all()}
     
-    # Format files responses to include uploader email
-    result = [serialize_file(file, is_shared=(file.id in shared_file_ids)) for file in files]
+    # Format files responses to include uploader email and preview token
+    result = [serialize_file(file, is_shared=(file.id in shared_file_ids), current_user_id=current_user.id) for file in files]
         
     return result
 
@@ -107,7 +107,7 @@ async def upload_file(
 
     # Enforce virus scanning check
     from utils.virus_scan import scan_file_for_viruses
-    if not await scan_file_for_viruses(content, file.filename):
+    if not await scan_file_for_viruses(content, file.filename, background_tasks):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Security error: Upload blocked. The file matches a known malware signature."
@@ -151,7 +151,7 @@ async def upload_file(
     ip = request.client.host if request.client else "127.0.0.1"
     log_action(db, "UPLOAD_FILE", current_user.id, current_user.family_id, ip, f"Uploaded file: {db_file.filename} ({db_file.size_bytes} bytes)")
 
-    return serialize_file(db_file)
+    return serialize_file(db_file, current_user_id=current_user.id)
 
 @router.get("/{file_id}/preview-token")
 def get_preview_token(
@@ -298,7 +298,7 @@ def rename_file(
     ip = request.client.host if request.client else "127.0.0.1"
     log_action(db, "RENAME_FILE", current_user.id, current_user.family_id, ip, f"Renamed file '{old_name}' to '{new_name}'")
     
-    return serialize_file(file)
+    return serialize_file(file, current_user_id=current_user.id)
 
 @router.delete("/{file_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_file(
@@ -371,4 +371,4 @@ def move_file(
     dest_name = "Root" if file.folder_id is None else f"Folder ID {file.folder_id}"
     log_action(db, "MOVE_FILE", current_user.id, current_user.family_id, ip, f"Moved file '{file.filename}' to '{dest_name}'")
     
-    return serialize_file(file)
+    return serialize_file(file, current_user_id=current_user.id)

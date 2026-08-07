@@ -181,6 +181,7 @@ class FileResponse(BaseModel):
     cloud_file_id: str
     cloud_link: Optional[str]
     is_shared: bool = False
+    preview_token: Optional[str] = None
 
     class Config:
         from_attributes = True

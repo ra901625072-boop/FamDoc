@@ -39,13 +39,21 @@ class StorageManager:
         """
         Returns { "google": bool, "mega": bool }.
         """
+        import json
+        import hashlib
+
         now = datetime.now(timezone.utc).timestamp()
 
+        # Normalize config to use as a partition-safe cache key
+        config_str = json.dumps(config, sort_keys=True, default=str)
+        cache_key = hashlib.md5(config_str.encode()).hexdigest()
+
         with _cache_lock:
-            cached_result = _availability_cache.get("result")
-            cached_ts     = _availability_cache.get("ts", 0)
-            if cached_result and (now - cached_ts) < cache_ttl:
-                return cached_result
+            cached_entry = _availability_cache.get(cache_key)
+            if cached_entry:
+                cached_result, cached_ts = cached_entry
+                if (now - cached_ts) < cache_ttl:
+                    return cached_result
 
         result = {
             "google": self.providers["google"].health_check(config.get("google", {})),
@@ -53,8 +61,7 @@ class StorageManager:
         }
 
         with _cache_lock:
-            _availability_cache["result"] = result
-            _availability_cache["ts"]     = now
+            _availability_cache[cache_key] = (result, now)
 
         return result
 

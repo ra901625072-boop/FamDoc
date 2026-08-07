@@ -20,22 +20,29 @@ def _patched_get_files(self):
 Mega.get_files = _patched_get_files
 
 
-# In-memory session cache: (email, password) -> Mega logged-in instance
+# In-memory session cache: (email, password) -> (Mega logged-in instance, last_verified_timestamp)
 _mega_sessions = {}
 
 class MegaProvider(StorageProvider):
     def _get_client(self, config: dict):
+        import time
         email = config.get("email")
         password = config.get("password")
         if not email or not password:
             raise Exception("Email and password are required for Mega configuration")
             
         cache_key = f"{email}:{password}"
+        now = time.time()
+        
         if cache_key in _mega_sessions:
-            client = _mega_sessions[cache_key]
-            # Verify session is still active
+            client, last_verified = _mega_sessions[cache_key]
+            # Only verify session with the API if more than 5 minutes (300 seconds) have passed
+            if now - last_verified < 300:
+                return client
             try:
                 client.get_user()
+                # Update verification time
+                _mega_sessions[cache_key] = (client, now)
                 return client
             except Exception:
                 _mega_sessions.pop(cache_key, None)
@@ -54,7 +61,7 @@ class MegaProvider(StorageProvider):
                 client._trash_folder_node_id = data.get("trash_node")
                 
                 client.get_user()
-                _mega_sessions[cache_key] = client
+                _mega_sessions[cache_key] = (client, now)
                 return client
             except Exception:
                 pass
@@ -67,7 +74,7 @@ class MegaProvider(StorageProvider):
                 raise Exception("Mega account or IP is temporarily blocked (EBLOCKED). Please wait before trying again.") from e
             raise
             
-        _mega_sessions[cache_key] = client
+        _mega_sessions[cache_key] = (client, now)
         
         try:
             with open(session_file, "w") as f:

@@ -63,7 +63,7 @@ class GoogleDriveProvider(StorageProvider):
             client_id=client_id,
             client_secret=client_secret
         )
-        service = build('drive', 'v3', credentials=creds)
+        service = build('drive', 'v3', credentials=creds, static_discovery=True)
         return service
 
     def health_check(self, config: dict) -> bool:

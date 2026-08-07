@@ -60,18 +60,9 @@ def get_dashboard_stats(
 
     shared_file_ids = {sl.file_id for sl in db.query(models.SharedLink.file_id).filter(models.SharedLink.family_id == current_user.family_id).all()}
 
+    from serializers import serialize_file
     recent_uploads = [
-        {
-            "id": f.id,
-            "filename": f.filename,
-            "file_type": f.file_type,
-            "size_bytes": f.size_bytes,
-            "uploader_id": f.uploader_id,
-            "uploader_email": f.uploader.email if f.uploader else None,
-            "folder_id": f.folder_id,
-            "upload_date": f.upload_date,
-            "is_shared": f.id in shared_file_ids
-        }
+        serialize_file(f, is_shared=(f.id in shared_file_ids), current_user_id=current_user.id)
         for f in recent_files
     ]
 

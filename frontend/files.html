@@ -326,7 +326,8 @@
 
     async function downloadFileAuthenticated(fileId, filename) {
       try {
-        const fileToken = await getPreviewToken(fileId);
+        const file = currentFiles.find(f => f.id === fileId);
+        const fileToken = (file && file.preview_token) || await getPreviewToken(fileId);
         let downloadUrl = FamDocAPI.files.getDownloadUrl(fileId);
         if (fileToken) {
           downloadUrl += `?token=${fileToken}`;
@@ -600,11 +601,9 @@
 
         let iconHtml = "";
         if (isImage) {
-          const svgPlaceholder = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 24 24' fill='none' stroke='%234B86F4' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='3' y='3' width='18' height='18' rx='2' ry='2'/><circle cx='8.5' cy='8.5' r='1.5'/><polyline points='21 15 16 10 5 21'/></svg>";
-          iconHtml = `<img class="item-icon item-thumbnail" data-file-id="${file.id}" src="${svgPlaceholder}" onload="this.classList.add('loaded')" alt="${FamDocAPI.utils.escapeHtml(file.filename)}">`;
-          setTimeout(() => {
-            loadThumbnail(file.id);
-          }, 0);
+          const previewUrl = FamDocAPI.files.getPreviewUrl(file.id);
+          const authenticatedPreviewUrl = previewUrl + (file.preview_token ? `?token=${file.preview_token}` : "");
+          iconHtml = `<img class="item-icon item-thumbnail loaded" data-file-id="${file.id}" src="${authenticatedPreviewUrl}" alt="${FamDocAPI.utils.escapeHtml(file.filename)}">`;
         } else {
           const iconClass = FamDocAPI.utils.getFileIconClass(file.file_type, file.filename);
           iconHtml = `<i class="item-icon ${iconClass}"></i>`;
