@@ -226,7 +226,7 @@ def download_file(
     family_config = manager.get_family_config(family, db)
 
     try:
-        content = manager.read_file(file, family_config)
+        content = manager.read_file(file, family_config, db=db)
     except FileNotFoundError as e:
         raise HTTPException(status_code=503, detail=str(e))
 
@@ -265,7 +265,7 @@ def preview_file(
     family_config = manager.get_family_config(family, db)
 
     try:
-        content = manager.read_file(file, family_config)
+        content = manager.read_file(file, family_config, db=db)
     except FileNotFoundError as e:
         raise HTTPException(status_code=503, detail=str(e))
 

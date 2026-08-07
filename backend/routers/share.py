@@ -208,7 +208,7 @@ def download_public_shared_file(
     try:
         manager = StorageManager()
         family_config = manager.get_family_config(family, db)
-        file_bytes = manager.read_file(file, family_config)
+        file_bytes = manager.read_file(file, family_config, db=db)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
