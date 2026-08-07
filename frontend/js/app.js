@@ -238,6 +238,12 @@
       }
       if (drawerBackdrop) drawerBackdrop.addEventListener("click", closeSidebar);
       mainContent.addEventListener("click", closeSidebar);
+      
+      // Auto close sidebar drawer on mobile after clicking navigation links
+      sidebar.querySelectorAll(".nav-item").forEach(item => {
+        item.addEventListener("click", closeSidebar);
+      });
+      document.getElementById("sidebar-profile-badge").addEventListener("click", closeSidebar);
 
       // Force update theme icons
       if (window.FamDocTheme) {

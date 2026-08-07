@@ -97,6 +97,11 @@
       // 3. Execute view renderer
       try {
         await match.route.handler(match.params);
+        
+        // Synchronize toggle icons to the current active theme after page content loads
+        if (window.FamDocTheme) {
+          window.FamDocTheme.updateToggleIcons(window.FamDocTheme.getCurrentTheme());
+        }
       } catch (err) {
         console.error(`Error rendering view for route ${currentPath}:`, err);
         FamDocAPI.utils.showToast("Failed to render page view.", "error");

@@ -959,8 +959,13 @@
   function triggerRename(type, id, name) {
     document.getElementById("rename-item-type").value = type;
     document.getElementById("rename-item-id").value = id;
-    document.getElementById("rename-input").value = name;
+    const input = document.getElementById("rename-input");
+    input.value = name;
     openModal("modal-rename");
+    setTimeout(() => {
+      input.focus();
+      input.select();
+    }, 100);
   }
 
   function triggerBulkMove() {
@@ -1368,6 +1373,9 @@
     document.getElementById("btn-new-folder").addEventListener("click", () => {
       document.getElementById("new-folder-name").value = "";
       openModal("modal-create-folder");
+      setTimeout(() => {
+        document.getElementById("new-folder-name").focus();
+      }, 100);
     });
 
     // Close buttons
