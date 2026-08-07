@@ -594,6 +594,68 @@ const FamDocAPI = {
           }
         });
       }, 4000);
+    },
+
+    confirm(options = {}) {
+      return new Promise((resolve) => {
+        const title = options.title || "Confirm Action";
+        const message = options.message || "Are you sure you want to proceed?";
+        const confirmText = options.confirmText || "Confirm";
+        const cancelText = options.cancelText || "Cancel";
+        const type = options.type || "primary"; // primary, danger, warning
+
+        const overlay = document.createElement("div");
+        overlay.className = "modal-overlay";
+        overlay.style.zIndex = "2500";
+
+        let confirmBtnClass = "btn-primary";
+        if (type === "danger") {
+          confirmBtnClass = "btn-danger";
+        }
+
+        overlay.innerHTML = `
+          <div class="famdoc-modal" style="max-width: 420px;">
+            <div class="modal-header">
+              <h3 class="modal-title">${title}</h3>
+              <button class="modal-close" id="custom-confirm-close" aria-label="Close modal"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body" style="padding: 1.5rem;">
+              <p style="font-size: 0.95rem; color: var(--text-ink); line-height: 1.5; margin: 0;">${message}</p>
+            </div>
+            <div class="modal-footer" style="padding: 1rem 1.5rem;">
+              <button class="btn btn-secondary" id="custom-confirm-cancel">${cancelText}</button>
+              <button class="btn ${confirmBtnClass}" id="custom-confirm-ok">${confirmText}</button>
+            </div>
+          </div>
+        `;
+
+        document.body.appendChild(overlay);
+
+        setTimeout(() => {
+          overlay.classList.add("show");
+        }, 10);
+
+        const cleanup = (result) => {
+          overlay.classList.remove("show");
+          setTimeout(() => {
+            overlay.remove();
+            resolve(result);
+          }, 250);
+        };
+
+        overlay.querySelector("#custom-confirm-ok").addEventListener("click", () => cleanup(true));
+        overlay.querySelector("#custom-confirm-cancel").addEventListener("click", () => cleanup(false));
+        overlay.querySelector("#custom-confirm-close").addEventListener("click", () => cleanup(false));
+
+        overlay.addEventListener("click", (e) => {
+          if (e.target === overlay) cleanup(false);
+        });
+
+        setTimeout(() => {
+          const okBtn = overlay.querySelector("#custom-confirm-ok");
+          if (okBtn) okBtn.focus();
+        }, 50);
+      });
     }
   }
 };

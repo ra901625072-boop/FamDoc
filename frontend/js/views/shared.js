@@ -72,7 +72,12 @@
               <p style="font-size: 0.85rem; color: var(--warning-red-dark); margin-bottom: 1rem;">This download link requires a verification password.</p>
               
               <div class="form-group" style="margin-bottom: 0;">
-                <input type="password" id="share-passcode" class="form-control" placeholder="Enter password to unlock" style="border-color: var(--warning-red-border);">
+                <div class="password-input-wrapper">
+                  <input type="password" id="share-passcode" class="form-control" placeholder="Enter password to unlock" style="border-color: var(--warning-red-border); width: 100%; box-sizing: border-box;">
+                  <button type="button" class="password-toggle-btn" aria-label="Toggle visibility">
+                    <i class="fas fa-eye"></i>
+                  </button>
+                </div>
               </div>
             </div>
 

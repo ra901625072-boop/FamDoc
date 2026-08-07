@@ -24,9 +24,12 @@ def get_storage_config(
     manager = StorageManager()
     config = manager.get_family_config(family, db)
     
-    email = config.get("email") if family.storage_provider == "mega" else None
-    folder_id = config.get("folder_id") if family.storage_provider == "google" else None
-    client_id = config.get("client_id") if family.storage_provider == "google" else None
+    provider = family.storage_provider or "local"
+    provider_config = config.get(provider, {})
+    
+    email = provider_config.get("email") if provider == "mega" else None
+    folder_id = provider_config.get("folder_id") if provider == "google" else None
+    client_id = provider_config.get("client_id") if provider == "google" else None
     
     return {
         "storage_provider": family.storage_provider,

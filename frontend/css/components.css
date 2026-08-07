@@ -297,6 +297,7 @@
 /* Multi-Select & Bulk Actions Styling */
 .fd-select-checkbox-container {
   display: inline-block;
+  vertical-align: middle;
   position: relative;
   width: 20px;
   height: 20px;

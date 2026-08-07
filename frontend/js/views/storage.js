@@ -60,8 +60,8 @@
                 <label class="form-label" for="google-client-id">Google Client ID</label>
                 <div class="password-input-wrapper">
                   <input type="password" id="google-client-id" class="form-control" placeholder="Enter Client ID" required style="width: 100%; box-sizing: border-box;">
-                  <button type="button" class="password-toggle-btn" onclick="window.togglePasswordVisibility('google-client-id')" aria-label="Toggle visibility">
-                    <i class="far fa-eye"></i>
+                  <button type="button" class="password-toggle-btn" aria-label="Toggle visibility">
+                    <i class="fas fa-eye"></i>
                   </button>
                 </div>
               </div>
@@ -69,8 +69,8 @@
                 <label class="form-label" for="google-client-secret">Google Client Secret</label>
                 <div class="password-input-wrapper">
                   <input type="password" id="google-client-secret" class="form-control" placeholder="Enter Client Secret" required style="width: 100%; box-sizing: border-box;">
-                  <button type="button" class="password-toggle-btn" onclick="window.togglePasswordVisibility('google-client-secret')" aria-label="Toggle visibility">
-                    <i class="far fa-eye"></i>
+                  <button type="button" class="password-toggle-btn" aria-label="Toggle visibility">
+                    <i class="fas fa-eye"></i>
                   </button>
                 </div>
               </div>
@@ -99,8 +99,8 @@
                 <label class="form-label" for="mega-password">MEGA Password</label>
                 <div class="password-input-wrapper">
                   <input type="password" id="mega-password" class="form-control" placeholder="••••••••" required style="width: 100%; box-sizing: border-box;">
-                  <button type="button" class="password-toggle-btn" onclick="window.togglePasswordVisibility('mega-password')" aria-label="Toggle visibility">
-                    <i class="far fa-eye"></i>
+                  <button type="button" class="password-toggle-btn" aria-label="Toggle visibility">
+                    <i class="fas fa-eye"></i>
                   </button>
                 </div>
               </div>
@@ -184,19 +184,6 @@
     }
   }
 
-  window.togglePasswordVisibility = function(inputId) {
-    const input = document.getElementById(inputId);
-    if (!input) return;
-    const btn = input.nextElementSibling;
-    const icon = btn.querySelector("i");
-    if (input.type === "password") {
-      input.type = "text";
-      icon.className = "far fa-eye-slash";
-    } else {
-      input.type = "password";
-      icon.className = "far fa-eye";
-    }
-  };
 
   function setupEvents() {
     const googleForm = document.getElementById("google-storage-form");

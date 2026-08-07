@@ -17,6 +17,11 @@
           <h1 class="page-title">Family Group & Settings</h1>
           <p class="page-subtitle">Manage vault members and access privileges.</p>
         </div>
+        <div class="toolbar-actions" id="family-toolbar-actions" style="display: none;">
+          <a href="#/profile" class="btn btn-primary">
+            <i class="fas fa-user-plus"></i> Invite Members
+          </a>
+        </div>
       </div>
 
       <!-- Single Full-Width Card for Member Roster -->
@@ -69,6 +74,8 @@
     if (currentUser.role === "admin") {
       const thActions = document.getElementById("th-actions");
       if (thActions) thActions.style.display = "table-cell";
+      const toolbarActions = document.getElementById("family-toolbar-actions");
+      if (toolbarActions) toolbarActions.style.display = "block";
     }
 
     await loadMembers();
@@ -124,7 +131,14 @@
   }
 
   async function removeMember(userId, name) {
-    if (confirm(`Are you sure you want to remove "${name}" from the family vault? They will immediately lose all access rights.`)) {
+    const confirmed = await FamDocAPI.utils.confirm({
+      title: "Remove Family Member",
+      message: `Are you sure you want to remove "${name}" from the family vault? They will immediately lose all access rights and session keys.`,
+      confirmText: "Remove Member",
+      cancelText: "Cancel",
+      type: "danger"
+    });
+    if (confirmed) {
       try {
         await FamDocAPI.family.removeMember(userId);
         FamDocAPI.utils.showToast(`Removed "${name}" from family group.`, "success");

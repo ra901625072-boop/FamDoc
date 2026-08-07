@@ -96,6 +96,9 @@
 
       // 3. Execute view renderer
       try {
+        // Reset scroll position on route change to prevent cut-off headers
+        window.scrollTo(0, 0);
+        
         await match.route.handler(match.params);
         
         // Synchronize toggle icons to the current active theme after page content loads

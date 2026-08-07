@@ -39,7 +39,12 @@
 
               <div class="form-group">
                 <label for="password" class="form-label">Password</label>
-                <input type="password" id="password" class="form-control" placeholder="••••••••" required>
+                <div class="password-input-wrapper">
+                  <input type="password" id="password" class="form-control" placeholder="••••••••" required>
+                  <button type="button" class="password-toggle-btn" aria-label="Toggle visibility">
+                    <i class="fas fa-eye"></i>
+                  </button>
+                </div>
               </div>
 
               <button type="submit" id="btn-submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
@@ -158,7 +163,12 @@
 
               <div class="form-group">
                 <label for="password" class="form-label">Password</label>
-                <input type="password" id="password" class="form-control" placeholder="••••••••" required>
+                <div class="password-input-wrapper">
+                  <input type="password" id="password" class="form-control" placeholder="••••••••" required>
+                  <button type="button" class="password-toggle-btn" aria-label="Toggle visibility">
+                    <i class="fas fa-eye"></i>
+                  </button>
+                </div>
                 <span style="font-size: 0.75rem; color: var(--text-ink-muted); display: block; margin-top: 0.25rem;">Min. 8 characters with 1 uppercase letter and 1 number</span>
               </div>
 
@@ -301,7 +311,12 @@
 
               <div class="form-group">
                 <label for="password" class="form-label">Create Password</label>
-                <input type="password" id="password" class="form-control" placeholder="Choose a strong password" required minlength="8">
+                <div class="password-input-wrapper">
+                  <input type="password" id="password" class="form-control" placeholder="Choose a strong password" required minlength="8">
+                  <button type="button" class="password-toggle-btn" aria-label="Toggle visibility">
+                    <i class="fas fa-eye"></i>
+                  </button>
+                </div>
                 <span style="font-size: 0.75rem; color: var(--text-ink-muted);">Must be at least 8 characters and contain at least one uppercase letter and one number</span>
               </div>
 

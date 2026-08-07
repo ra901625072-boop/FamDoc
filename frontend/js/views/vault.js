@@ -214,7 +214,12 @@
               
               <div class="form-group">
                 <label for="share-password" class="form-label">Password Protection (Optional)</label>
-                <input type="password" id="share-password" class="form-control" placeholder="Choose a strong password" minlength="4" maxlength="50">
+                <div class="password-input-wrapper">
+                  <input type="password" id="share-password" class="form-control" placeholder="Choose a strong password" minlength="4" maxlength="50">
+                  <button type="button" class="password-toggle-btn" aria-label="Toggle visibility">
+                    <i class="fas fa-eye"></i>
+                  </button>
+                </div>
               </div>
               
               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
@@ -716,7 +721,7 @@
       if (isImage) {
         const previewUrl = FamDocAPI.files.getPreviewUrl(file.id);
         const authenticatedPreviewUrl = previewUrl + (file.preview_token ? `?token=${file.preview_token}` : "");
-        iconHtml = `<img class="item-icon item-thumbnail loaded" data-file-id="${file.id}" src="${authenticatedPreviewUrl}" alt="${FamDocAPI.utils.escapeHtml(file.filename)}">`;
+        iconHtml = `<img class="item-icon item-thumbnail loaded" data-file-id="${file.id}" src="${authenticatedPreviewUrl}" alt="${FamDocAPI.utils.escapeHtml(file.filename)}" onerror="this.onerror=null; this.outerHTML='<i class=\'item-icon fas fa-file-image file-image\'></i>';">`;
       } else {
         const iconClass = FamDocAPI.utils.getFileIconClass(file.file_type, file.filename);
         iconHtml = `<i class="item-icon ${iconClass}"></i>`;
@@ -1128,7 +1133,7 @@
             <div>${metaText}</div>
           </div>
           <div style="display: flex; gap: 0.25rem;">
-            <button class="btn btn-secondary" onclick="navigator.clipboard.writeText('${link.share_link}'); FamDocAPI.utils.showToast('Copied to clipboard', 'success');" style="padding: 0.35rem 0.5rem; font-size: 0.75rem;">
+            <button class="btn btn-secondary" data-copy-text="${link.share_link}" style="padding: 0.35rem 0.5rem; font-size: 0.75rem;">
               <i class="far fa-copy"></i>
             </button>
             <button class="btn btn-danger" onclick="window.revokeShareLink('${link.token}', ${fileId})" style="padding: 0.35rem 0.5rem; font-size: 0.75rem;">
@@ -1145,7 +1150,14 @@
 
   // Exposed globally on window because of dynamic HTML generation
   window.revokeShareLink = async function(token, fileId) {
-    if (confirm("Revoke this link? Anyone using it will immediately lose access to this file.")) {
+    const confirmed = await FamDocAPI.utils.confirm({
+      title: "Revoke Share Link",
+      message: "Are you sure you want to revoke this link? Anyone using it will immediately lose access to this file.",
+      confirmText: "Revoke Link",
+      cancelText: "Cancel",
+      type: "danger"
+    });
+    if (confirmed) {
       try {
         await FamDocAPI.sharing.revokeLink(token);
         FamDocAPI.utils.showToast("Link revoked successfully.", "success");
@@ -1300,11 +1312,19 @@
     });
 
     // Bulk Delete
-    document.getElementById("bulk-delete-btn").addEventListener("click", () => {
+    document.getElementById("bulk-delete-btn").addEventListener("click", async () => {
       const count = selectedItems.folders.size + selectedItems.files.size;
       if (count === 0) return;
 
-      if (confirm(`Move ${count} selected item${count > 1 ? 's' : ''} to the Recycle Bin?`)) {
+      const confirmed = await FamDocAPI.utils.confirm({
+        title: "Delete Items",
+        message: `Are you sure you want to move ${count} selected item${count > 1 ? 's' : ''} to the Recycle Bin?`,
+        confirmText: "Move to Trash",
+        cancelText: "Cancel",
+        type: "danger"
+      });
+
+      if (confirmed) {
         const foldersToDelete = Array.from(selectedItems.folders);
         const filesToDelete = Array.from(selectedItems.files);
 

@@ -323,7 +323,14 @@
   }
 
   async function purgeItem(type, id, name) {
-    if (confirm(`CRITICAL: Are you sure you want to permanently delete "${name}"? This physical deletion cannot be undone!`)) {
+    const confirmed = await FamDocAPI.utils.confirm({
+      title: "Permanently Delete Item",
+      message: `CRITICAL: Are you sure you want to permanently delete "${name}"? This physical cloud/disk deletion cannot be undone!`,
+      confirmText: "Delete Permanently",
+      cancelText: "Cancel",
+      type: "danger"
+    });
+    if (confirmed) {
       try {
         await FamDocAPI.recycleBin.purge(type, id);
         FamDocAPI.utils.showToast(`Permanently deleted "${name}".`, "success");
@@ -396,7 +403,15 @@
       const count = selectedItems.folders.size + selectedItems.files.size;
       if (count === 0) return;
 
-      if (confirm(`CRITICAL: Are you sure you want to permanently delete the ${count} selected items? This physical deletion cannot be undone!`)) {
+      const confirmed = await FamDocAPI.utils.confirm({
+        title: "Permanently Purge Items",
+        message: `CRITICAL: Are you sure you want to permanently delete the ${count} selected items? This physical deletion cannot be undone!`,
+        confirmText: "Purge All",
+        cancelText: "Cancel",
+        type: "danger"
+      });
+
+      if (confirmed) {
         try {
           const foldersToPurge = Array.from(selectedItems.folders);
           const filesToPurge = Array.from(selectedItems.files);

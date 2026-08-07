@@ -155,7 +155,7 @@
         if (isImage) {
           const previewUrl = FamDocAPI.files.getPreviewUrl(file.id);
           const authenticatedPreviewUrl = previewUrl + (file.preview_token ? `?token=${file.preview_token}` : "");
-          iconHtml = `<img class="item-icon item-thumbnail loaded" data-file-id="${file.id}" src="${authenticatedPreviewUrl}" alt="${FamDocAPI.utils.escapeHtml(file.filename)}">`;
+          iconHtml = `<img class="item-icon item-thumbnail loaded" data-file-id="${file.id}" src="${authenticatedPreviewUrl}" alt="${FamDocAPI.utils.escapeHtml(file.filename)}" onerror="this.onerror=null; this.outerHTML='<i class=\'item-icon fas fa-file-image file-image\'></i>';">`;
         } else {
           const iconClass = FamDocAPI.utils.getFileIconClass(file.file_type, file.filename);
           iconHtml = `<i class="item-icon ${iconClass}"></i>`;

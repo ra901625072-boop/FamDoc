@@ -295,6 +295,14 @@
   box-shadow: none;
 }
 
+.items-list .item-icon.item-thumbnail {
+  width: 32px;
+  height: 32px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-paper);
+}
+
 /* Hover Menu Actions Toggle */
 .item-actions-trigger {
   position: absolute;
@@ -1291,7 +1299,8 @@
 
 /* Storage Configuration Active States */
 .active-card {
-  border: 2px solid var(--accent-brand) !important;
+  border: 1px solid var(--accent-brand) !important;
+  box-shadow: 0 0 0 3px rgba(var(--accent-brand-rgb), 0.16), var(--shadow-md) !important;
   background-color: var(--surface-paper-tint) !important;
 }
 
@@ -1363,4 +1372,127 @@
     grid-template-columns: 1fr !important;
     gap: 1.5rem !important;
   }
+}
+
+/* Mobile Floating Action Button (FAB) Menu & Spacing */
+.mobile-fab-container {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .mobile-fab-container {
+    display: block;
+    position: fixed;
+    bottom: calc(var(--bottom-nav-height) + 1.5rem);
+    right: 1.5rem;
+    z-index: 999;
+  }
+
+  .fab-btn {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--accent-gradient);
+    border: none;
+    color: #ffffff;
+    font-size: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: var(--shadow-fab);
+    cursor: pointer;
+    transition: var(--transition-smooth);
+    outline: none;
+  }
+
+  .fab-btn.active {
+    transform: rotate(135deg);
+    background: var(--warning-red) !important;
+    box-shadow: 0 6px 18px rgba(224, 98, 98, 0.4);
+  }
+
+  .fab-menu {
+    position: absolute;
+    bottom: 70px;
+    right: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(15px) scale(0.95);
+    transition: var(--transition-smooth);
+  }
+
+  .fab-menu.open {
+    pointer-events: auto;
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  .fab-menu-item {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    outline: none;
+    padding: 0.25rem;
+  }
+
+  .fab-menu-item i {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background-color: var(--surface-card);
+    border: 1px solid var(--border-paper);
+    color: var(--text-ink);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    box-shadow: var(--shadow-md);
+    transition: var(--transition-smooth);
+  }
+
+  .fab-menu-item span {
+    background-color: var(--text-ink);
+    color: var(--bg-linen);
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 0.35rem 0.65rem;
+    border-radius: 6px;
+    box-shadow: var(--shadow-sm);
+    white-space: nowrap;
+  }
+
+  .fab-menu-item:hover i {
+    background-color: var(--accent-brand-light);
+    color: var(--accent-brand);
+    border-color: rgba(var(--accent-brand-rgb), 0.2);
+    transform: scale(1.05);
+  }
+}
+
+/* Cloud Storage Config Symmetrization */
+.storage-grid {
+  align-items: stretch !important;
+}
+
+.storage-config-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.storage-config-card form {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+}
+
+.storage-config-card form button[type="submit"] {
+  margin-top: auto !important;
 }

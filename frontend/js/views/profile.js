@@ -44,13 +44,23 @@
 
             <div class="form-group">
               <label for="profile-password" class="form-label">Update Password (Optional)</label>
-              <input type="password" id="profile-password" class="form-control" placeholder="••••••••">
+              <div class="password-input-wrapper">
+                <input type="password" id="profile-password" class="form-control" placeholder="••••••••">
+                <button type="button" class="password-toggle-btn" aria-label="Toggle visibility">
+                  <i class="fas fa-eye"></i>
+                </button>
+              </div>
               <span style="font-size: 0.75rem; color: var(--text-ink-muted);">Min. 8 characters with 1 uppercase letter and 1 number</span>
             </div>
 
             <div class="form-group">
               <label for="profile-confirm-password" class="form-label">Confirm New Password</label>
-              <input type="password" id="profile-confirm-password" class="form-control" placeholder="••••••••">
+              <div class="password-input-wrapper">
+                <input type="password" id="profile-confirm-password" class="form-control" placeholder="••••••••">
+                <button type="button" class="password-toggle-btn" aria-label="Toggle visibility">
+                  <i class="fas fa-eye"></i>
+                </button>
+              </div>
             </div>
 
             <button type="submit" id="btn-save-profile" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
@@ -394,23 +404,11 @@
           ticketContainer.style.display = "block";
         }
 
-        // Setup copy button click
-        document.getElementById("btn-copy-code").onclick = () => {
-          navigator.clipboard.writeText(result.secret_code);
-          const copyBtn = document.getElementById("btn-copy-code");
-          const copySpan = copyBtn.querySelector("span");
-          const copyIcon = copyBtn.querySelector("i");
-          
-          copySpan.textContent = "Copied!";
-          copyIcon.className = "fas fa-check";
-          
-          FamDocAPI.utils.showToast("Invitation code copied!", "success");
-          
-          setTimeout(() => {
-            copySpan.textContent = "Copy";
-            copyIcon.className = "far fa-copy";
-          }, 2000);
-        };
+        // Setup copy button target
+        const copyBtn = document.getElementById("btn-copy-code");
+        if (copyBtn) {
+          copyBtn.setAttribute("data-copy-text", result.secret_code);
+        }
 
         await loadFamilyDetails();
 

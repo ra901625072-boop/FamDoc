@@ -173,7 +173,7 @@
 
       // 6. View Mount Point
       const mainContent = document.createElement("main");
-      mainContent.className = "main-content fd-page-enter";
+      mainContent.className = "main-content";
       mainContent.id = "mainContent";
       mainContent.innerHTML = `<div id="view-mount-point"></div>`;
 
