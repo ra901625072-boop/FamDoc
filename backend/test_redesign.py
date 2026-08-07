@@ -287,6 +287,7 @@ class TestBackendRedesign(unittest.TestCase):
             folder_id=None,
             family_id=self.family.id,
             storage_provider="local",
+            _file_id="local-uuid-prefixed-safe_handoff.pdf",
             local_file_id="local-uuid-prefixed-safe_handoff.pdf",
             pending_sync=True,
             pending_sync_at=datetime.now(timezone.utc),

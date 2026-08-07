@@ -160,6 +160,7 @@ async def upload_file(
         filename         = file.filename,
         file_type        = file.content_type or "application/octet-stream",
         size_bytes       = file_size,
+        _file_id         = result["file_id"], # Legacy column fallback to satisfy NOT NULL constraint
         local_file_id    = result["file_id"],
         cloud_file_id    = None,
         folder_id        = folder_id,
