@@ -2,7 +2,7 @@
    FamDoc Design System - Luxurious Keepsake Heritage Theme Variables
    ========================================================================== */
 
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 :root {
   /* HSL Tailored Colors - Light Theme (Warm Heritage Linen) */
@@ -59,7 +59,7 @@
   --radius-md: 14px;
   --radius-lg: 20px;
   --transition-smooth: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-  --font-serif: 'Fraunces', Georgia, serif;
+  --font-serif: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
 

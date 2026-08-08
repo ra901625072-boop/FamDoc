@@ -448,3 +448,39 @@
     justify-content: center;
   }
 }
+
+/* FamDoc Standardized Card Component */
+.famdoc-card {
+  background-color: var(--surface-card);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border-paper);
+  border-radius: var(--radius-lg);
+  padding: 1.75rem;
+  box-shadow: var(--shadow-sm);
+  transition: var(--transition-smooth);
+}
+
+@media (max-width: 576px) {
+  .famdoc-card {
+    padding: 1.25rem;
+  }
+}
+
+/* Consistency override for autofilled inputs to match theme */
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus, 
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px var(--surface-paper-tint) inset !important;
+  -webkit-text-fill-color: var(--text-ink) !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+[data-theme="dark"] input:-webkit-autofill,
+[data-theme="dark"] input:-webkit-autofill:hover,
+[data-theme="dark"] input:-webkit-autofill:focus,
+[data-theme="dark"] input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px var(--surface-paper-tint) inset !important;
+  -webkit-text-fill-color: var(--text-ink) !important;
+}

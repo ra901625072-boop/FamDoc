@@ -1530,7 +1530,7 @@
 /* Profile and Storage Configuration Grids */
 .profile-grid, .storage-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 2rem;
 }
 
@@ -1642,5 +1642,50 @@
   font-family: var(--font-mono);
   color: var(--text-ink-muted);
   font-size: 0.72rem;
+}
+
+/* Scrollable Dashboard Cards lists */
+.scrollable-dashboard-list {
+  max-height: 380px;
+  overflow-y: auto;
+  padding-right: 0.25rem;
+}
+
+/* Custom Scrollbar for dashboard scrollable lists */
+.scrollable-dashboard-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.scrollable-dashboard-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollable-dashboard-list::-webkit-scrollbar-thumb {
+  background: var(--border-paper-dark);
+  border-radius: 4px;
+}
+
+.scrollable-dashboard-list::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-brand);
+}
+
+/* Edge-Anchored Bottom Progress Bar for Space Occupied Stat Card */
+.stat-card-bottom-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 6px;
+  background-color: var(--surface-paper-tint);
+  border-top: 1px solid var(--border-paper);
+  overflow: hidden;
+  display: flex;
+  z-index: 1;
+}
+
+.progress-bar-fill {
+  display: flex;
+  height: 100%;
+  width: 100%;
 }
 

@@ -28,8 +28,8 @@
           <div class="icon-chip stat-icon"><i class="fas fa-database"></i></div>
           <div class="stat-label">Space Occupied</div>
           <div class="stat-val" id="stat-size"><span class="fd-skel" style="width: 100px; height: 30px; border-radius: 4px;"></span></div>
-          <div id="dashboard-progress-container" style="display: none; background-color: var(--surface-paper-tint); border: 1px solid var(--border-paper); border-radius: var(--radius-sm); height: 8px; overflow: hidden; margin-top: 1rem; width: 100%; box-shadow: inset 0 1px 2px rgba(0,0,0,0.02);">
-            <div id="dashboard-progress-bar" style="display: flex; height: 100%; width: 100%;"></div>
+          <div id="dashboard-progress-container" class="stat-card-bottom-progress" style="display: none;">
+            <div id="dashboard-progress-bar" class="progress-bar-fill"></div>
           </div>
         </div>
         <div class="famdoc-card stat-card fd-fade-up fd-stagger" style="--fd-delay: 0.15s;">
@@ -48,7 +48,7 @@
             <a href="#/vault" style="font-size: 0.85rem; font-weight: 600;">Browse All <i class="fas fa-chevron-right" style="font-size: 0.75rem;"></i></a>
           </div>
           
-          <div id="recent-uploads-list" class="items-list">
+          <div id="recent-uploads-list" class="items-list scrollable-dashboard-list">
             <!-- Skeleton Loading State -->
             <div class="fd-skel-uploads-placeholder">
               <div class="skel-row">
@@ -77,7 +77,7 @@
             <h2 class="famdoc-card-title"><i class="fas fa-history" style="color: var(--accent-brand); margin-right: 0.5rem;"></i>Vault Activity</h2>
           </div>
           
-          <div id="activity-feed-list" class="activity-feed">
+          <div id="activity-feed-list" class="activity-feed scrollable-dashboard-list">
             <!-- Skeleton Loading State -->
             <div class="fd-skel-activity-placeholder">
               <div class="activity-item">
@@ -328,7 +328,7 @@
       return;
     }
     
-    progressContainer.style.display = "block";
+    progressContainer.style.display = "flex";
     progressBar.innerHTML = "";
     
     const breakdown = stats.storage_breakdown || {};

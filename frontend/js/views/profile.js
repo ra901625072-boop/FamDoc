@@ -103,7 +103,7 @@
               <div id="admin-family-members" style="font-weight: 700; font-size: 1.1rem; color: var(--text-ink);">—</div>
             </div>
 
-            <button class="btn btn-secondary" id="btn-regen-family-code" style="width: 100%;">
+            <button class="btn btn-secondary" id="btn-regen-family-code" style="width: fit-content;">
               <i class="fas fa-sync-alt"></i> Regenerate Vault Invitation Code
             </button>
 
