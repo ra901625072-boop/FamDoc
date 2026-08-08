@@ -90,7 +90,7 @@ def create_folder(
     db: Session = Depends(get_db)
 ):
     # Fetch family record
-    family = db.query(models.Family).filter(models.Family.id == current_user.family_id).first()
+    family = current_user.family
     if not family:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Family record not found")
 
@@ -185,7 +185,7 @@ def rename_folder(
             detail="Folder name contains unsupported characters. Use only letters, numbers, spaces, and ._-()[]."
         )
         
-    family = db.query(models.Family).filter(models.Family.id == current_user.family_id).first()
+    family = current_user.family
     if not family:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Family record not found")
 
@@ -320,7 +320,7 @@ def move_folder(
                 models.Folder.deleted_at == None
             ).first()
 
-    family = db.query(models.Family).filter(models.Family.id == current_user.family_id).first()
+    family = current_user.family
     if not family:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Family record not found")
 

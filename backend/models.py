@@ -25,6 +25,11 @@ class User(Base):
             return self.family_memberships[0].family_id
         return None
 
+    @property
+    def family(self) -> Optional['Family']:
+        if self.family_memberships:
+            return self.family_memberships[0].family
+
 
 class Family(Base):
     __tablename__ = "families"

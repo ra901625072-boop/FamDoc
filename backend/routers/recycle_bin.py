@@ -182,7 +182,9 @@ def purge_item(
             detail="Only family administrators can permanently delete items from the recycle bin."
         )
 
-    family = db.query(models.Family).filter(models.Family.id == current_user.family_id).first()
+    family = current_user.family
+    if not family:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Family record not found")
 
     if item_type == "file":
         file = auth.verify_resource_access(

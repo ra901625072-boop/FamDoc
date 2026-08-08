@@ -126,7 +126,10 @@ def get_current_user_with_scopes(
     except JWTError:
         raise credentials_exception
         
-    user = db.query(models.User).filter(models.User.id == token_data.user_id).first()
+    from sqlalchemy.orm import joinedload
+    user = db.query(models.User).options(
+        joinedload(models.User.family_memberships).joinedload(models.FamilyMember.family)
+    ).filter(models.User.id == token_data.user_id).first()
     if user is None:
         raise credentials_exception
     return user

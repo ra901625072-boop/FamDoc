@@ -72,7 +72,7 @@ async def upload_file(
     Upload a file. Always writes to local storage first and responds
     immediately. Cloud promotion happens silently in the background.
     """
-    family = db.query(models.Family).filter(models.Family.id == current_user.family_id).first()
+    family = current_user.family
     if not family:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Family record not found")
 
@@ -267,7 +267,7 @@ def download_file(
         db
     )
         
-    family = db.query(models.Family).filter(models.Family.id == current_user.family_id).first()
+    family = current_user.family
     
     # Audit log
     ip = request.client.host if request.client else "127.0.0.1"
@@ -304,7 +304,7 @@ def preview_file(
         db
     )
         
-    family = db.query(models.Family).filter(models.Family.id == current_user.family_id).first()
+    family = current_user.family
     
     # Audit log
     ip = request.client.host if request.client else "127.0.0.1"
@@ -345,7 +345,7 @@ def rename_file(
             detail="You do not have permission to rename files uploaded by other family members"
         )
         
-    family = db.query(models.Family).filter(models.Family.id == current_user.family_id).first()
+    family = current_user.family
     old_name = file.filename
     new_name = file_in.filename.strip()
     
@@ -410,7 +410,7 @@ def delete_file(
             detail="You do not have permission to delete files uploaded by other family members"
         )
         
-    family = db.query(models.Family).filter(models.Family.id == current_user.family_id).first()
+    family = current_user.family
     if not family:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Family record not found")
 
@@ -461,7 +461,7 @@ def move_file(
             detail="A file with this name already exists in the destination folder."
         )
 
-    family = db.query(models.Family).filter(models.Family.id == current_user.family_id).first()
+    family = current_user.family
     if not family:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Family record not found")
 
