@@ -440,6 +440,8 @@
 .preview-modal {
   max-width: 900px;
   height: 88vh;
+  display: flex;
+  flex-direction: column;
 }
 
 .preview-body {
