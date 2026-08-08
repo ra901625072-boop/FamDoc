@@ -193,7 +193,7 @@ async def upload_file(
             # Direct cloud upload, skipping local storage
             if folder_id is not None:
                 from routers.folders import ensure_folder_cloud_id
-                target_vault_id = ensure_folder_cloud_id(folder_id, family, db)
+                target_vault_id = ensure_folder_cloud_id(folder_id, provider, family, db)
                 target_username = None
             else:
                 target_vault_id = family.vault_folder_id
@@ -230,7 +230,11 @@ async def upload_file(
             pending_sync     = False,
             pending_sync_at  = None,
             synced_to        = provider,
-            cloud_link       = cloud_result.get("cloud_link")
+            cloud_link       = cloud_result.get("cloud_link"),
+            google_drive_file_id = cloud_result["cloud_file_id"] if provider == "google" else None,
+            mega_file_id     = cloud_result["cloud_file_id"] if provider == "mega" else None,
+            primary_storage  = provider,
+            backup_status    = "none"
         )
     else:
         local_config = family_config.get("local", {})
@@ -256,7 +260,9 @@ async def upload_file(
             pending_sync     = (provider != "local"),
             pending_sync_at  = now if (provider != "local") else None,
             synced_to        = None,
-            cloud_link       = None
+            cloud_link       = None,
+            primary_storage  = family_config.get("primary_provider") if provider == "dual" else provider,
+            backup_status    = "pending" if provider == "dual" else "none"
         )
 
     db.add(db_file)
@@ -404,9 +410,30 @@ def rename_file(
     try:
         manager = StorageManager()
         family_config = manager.get_family_config(family, db)
-        provider_name = file.storage_provider or "local"
-        cfg = family_config.get(provider_name, {})
-        manager.providers[provider_name].rename_file(cfg, file.file_id, new_name, db=db)
+        renamed_somewhere = False
+        
+        if file.google_drive_file_id:
+            try:
+                cfg = family_config.get("google", {})
+                manager.providers["google"].rename_file(cfg, file.google_drive_file_id, new_name, db=db)
+                renamed_somewhere = True
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).warning(f"Failed to rename file in Google Drive: {e}")
+                
+        if file.mega_file_id:
+            try:
+                cfg = family_config.get("mega", {})
+                manager.providers["mega"].rename_file(cfg, file.mega_file_id, new_name, db=db)
+                renamed_somewhere = True
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).warning(f"Failed to rename file in MEGA: {e}")
+                
+        if not renamed_somewhere:
+            provider_name = file.storage_provider or "local"
+            cfg = family_config.get(provider_name, {})
+            manager.providers[provider_name].rename_file(cfg, file.file_id, new_name, db=db)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -498,20 +525,41 @@ def move_file(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Family record not found")
 
     # Move in cloud storage if already synced
-    if file.cloud_file_id and family.storage_provider != "local":
+    moved_somewhere = False
+    if family.storage_provider != "local":
         try:
             from storage.storage_manager import StorageManager
             from storage import get_storage_provider
-            manager = StorageManager()
-            provider = get_storage_provider(family.storage_provider)
-            family_config = manager.get_family_config(family, db)
-            provider_config = family_config.get(family.storage_provider, {})
-
-            # Ensure target folder has a cloud ID
             from routers.folders import ensure_folder_cloud_id
-            dest_cloud_id = ensure_folder_cloud_id(file_in.folder_id, family, db)
+            manager = StorageManager()
+            family_config = manager.get_family_config(family, db)
 
-            provider.move_file(provider_config, file.cloud_file_id, dest_cloud_id, db=db)
+            if file.google_drive_file_id:
+                try:
+                    dest_google_id = ensure_folder_cloud_id(file_in.folder_id, "google", family, db)
+                    provider = get_storage_provider("google")
+                    provider.move_file(family_config.get("google", {}), file.google_drive_file_id, dest_google_id, db=db)
+                    moved_somewhere = True
+                except Exception as e:
+                    import logging
+                    logging.getLogger(__name__).warning(f"Failed to move file in Google Drive: {e}")
+
+            if file.mega_file_id:
+                try:
+                    dest_mega_id = ensure_folder_cloud_id(file_in.folder_id, "mega", family, db)
+                    provider = get_storage_provider("mega")
+                    provider.move_file(family_config.get("mega", {}), file.mega_file_id, dest_mega_id, db=db)
+                    moved_somewhere = True
+                except Exception as e:
+                    import logging
+                    logging.getLogger(__name__).warning(f"Failed to move file in MEGA: {e}")
+
+            if not moved_somewhere and file.cloud_file_id:
+                provider_name = family.storage_provider
+                provider = get_storage_provider(provider_name)
+                provider_config = family_config.get(provider_name, {})
+                dest_cloud_id = ensure_folder_cloud_id(file_in.folder_id, provider_name, family, db)
+                provider.move_file(provider_config, file.cloud_file_id, dest_cloud_id, db=db)
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

@@ -19,13 +19,33 @@ def purge_old_recycle_bin_items(db: Session, retention_days: int = 30):
         for file in old_files:
             try:
                 manager = StorageManager()
-                provider = manager.providers.get(file.storage_provider or "local")
-                config = manager.get_file_config(file, db)
-                if provider:
-                    provider.delete_file(config, file.file_id, db=db)
-                logger.info(f"Cleanup Job: Purged file {file.file_id} for {file.filename}")
+                family_config = manager.get_family_config(file.family, db)
+                deleted_somewhere = False
+                
+                if file.google_drive_file_id:
+                    try:
+                        cfg = family_config.get("google", {})
+                        manager.providers["google"].delete_file(cfg, file.google_drive_file_id, db=db)
+                        deleted_somewhere = True
+                    except Exception as e:
+                        logger.warning(f"Cleanup Job: Failed to delete Google Drive file {file.google_drive_file_id}: {e}")
+                        
+                if file.mega_file_id:
+                    try:
+                        cfg = family_config.get("mega", {})
+                        manager.providers["mega"].delete_file(cfg, file.mega_file_id, db=db)
+                        deleted_somewhere = True
+                    except Exception as e:
+                        logger.warning(f"Cleanup Job: Failed to delete MEGA file {file.mega_file_id}: {e}")
+                        
+                if not deleted_somewhere:
+                    provider = manager.providers.get(file.storage_provider or "local")
+                    config = family_config.get(file.storage_provider or "local", {})
+                    if provider:
+                        provider.delete_file(config, file.file_id, db=db)
+                logger.info(f"Cleanup Job: Purged file {file.filename}")
             except Exception as e:
-                logger.warning(f"Warning: Cleanup Job failed to delete file {file.file_id} ({file.filename}): {e}")
+                logger.warning(f"Warning: Cleanup Job failed to delete file {file.filename}: {e}")
             db.delete(file)
         db.commit()
 

@@ -249,6 +249,17 @@ const FamDocAPI = {
         method: "POST",
         body: JSON.stringify({ email, password })
       });
+    },
+
+    async updateMode(storageProvider, storageMode, primaryProvider) {
+      return FamDocAPI.request("/api/storage/config/mode", {
+        method: "POST",
+        body: JSON.stringify({
+          storage_provider: storageProvider,
+          storage_mode: storageMode,
+          primary_provider: primaryProvider
+        })
+      });
     }
   },
 

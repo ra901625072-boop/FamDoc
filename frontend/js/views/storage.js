@@ -44,7 +44,7 @@
           </div>
         </div>
 
-        <!-- Storage Space Breakdown Card (New UI Element) -->
+        <!-- Storage Space Breakdown Card -->
         <div class="famdoc-card storage-breakdown-card fd-fade-up" id="storage-breakdown-panel" style="display: none; margin-bottom: 2rem;">
           <h3 style="font-family: var(--font-serif); font-size: 1.25rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
             <i class="fas fa-chart-pie" style="color: var(--accent-brand);"></i>
@@ -62,6 +62,90 @@
           <div class="storage-legend-grid" id="storage-legend">
             <!-- Legend items will be injected dynamically -->
           </div>
+        </div>
+
+        <!-- Storage Mode Selector Card -->
+        <div class="famdoc-card fd-fade-up" id="storage-mode-selector-panel" style="margin-bottom: 2rem; padding: 1.5rem 2rem;">
+          <h3 style="font-family: var(--font-serif); font-size: 1.25rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+            <i class="fas fa-server" style="color: var(--accent-brand);"></i>
+            Active Storage Mode Selection
+          </h3>
+          <p style="font-size: 0.85rem; color: var(--text-ink-muted); margin-bottom: 1.5rem;">
+            Choose how your family documents are stored. Connecting both Google Drive and MEGA enables robust dual-cloud synchronization modes.
+          </p>
+          
+          <form id="storage-mode-form">
+            <div class="storage-modes-list" style="display: flex; flex-direction: column; gap: 1rem;">
+              
+              <!-- Local Mode -->
+              <label class="storage-mode-option" style="display: flex; align-items: flex-start; gap: 1rem; padding: 1rem; border: 1px solid var(--border-paper-dark); border-radius: var(--radius-md); cursor: pointer; transition: var(--transition-smooth);">
+                <input type="radio" name="storage_provider" value="local" style="margin-top: 0.25rem;" checked>
+                <div>
+                  <strong style="display: block; font-size: 0.95rem; color: var(--text-ink);">Local Storage Only</strong>
+                  <span style="font-size: 0.82rem; color: var(--text-ink-muted);">Keep all files on the local vault without uploading to external cloud drives.</span>
+                </div>
+              </label>
+
+              <!-- Google Drive Only -->
+              <label class="storage-mode-option" id="mode-opt-google" style="display: flex; align-items: flex-start; gap: 1rem; padding: 1rem; border: 1px solid var(--border-paper-dark); border-radius: var(--radius-md); cursor: pointer; transition: var(--transition-smooth);">
+                <input type="radio" name="storage_provider" value="google" style="margin-top: 0.25rem;">
+                <div>
+                  <strong style="display: block; font-size: 0.95rem; color: var(--text-ink);"><i class="fab fa-google" style="color: #4285F4; margin-right: 0.25rem;"></i> Google Drive Only</strong>
+                  <span style="font-size: 0.82rem; color: var(--text-ink-muted);">Store files on your linked Google Drive account. Requires Google Drive to be connected.</span>
+                </div>
+              </label>
+
+              <!-- MEGA Only -->
+              <label class="storage-mode-option" id="mode-opt-mega" style="display: flex; align-items: flex-start; gap: 1rem; padding: 1rem; border: 1px solid var(--border-paper-dark); border-radius: var(--radius-md); cursor: pointer; transition: var(--transition-smooth);">
+                <input type="radio" name="storage_provider" value="mega" style="margin-top: 0.25rem;">
+                <div>
+                  <strong style="display: block; font-size: 0.95rem; color: var(--text-ink);"><i class="fas fa-cloud" style="color: #D32F2F; margin-right: 0.25rem;"></i> MEGA Only</strong>
+                  <span style="font-size: 0.82rem; color: var(--text-ink-muted);">Store files on your linked MEGA cloud storage. Requires MEGA to be configured.</span>
+                </div>
+              </label>
+
+              <!-- Dual Mode -->
+              <label class="storage-mode-option" id="mode-opt-dual" style="display: flex; align-items: flex-start; gap: 1rem; padding: 1rem; border: 1px solid var(--border-paper-dark); border-radius: var(--radius-md); cursor: pointer; transition: var(--transition-smooth);">
+                <input type="radio" name="storage_provider" value="dual" style="margin-top: 0.25rem;">
+                <div style="width: 100%;">
+                  <strong style="display: block; font-size: 0.95rem; color: var(--text-ink);"><i class="fas fa-shield-alt" style="color: var(--success-sage); margin-right: 0.25rem;"></i> Dual Cloud Storage (Google Drive + MEGA)</strong>
+                  <span style="font-size: 0.82rem; color: var(--text-ink-muted); display: block; margin-bottom: 0.75rem;">Enable multi-cloud storage modes for complete redundancy. Requires both Google Drive and MEGA to be connected.</span>
+                  
+                  <!-- Nested Dual Options -->
+                  <div id="dual-options-container" style="display: none; padding-top: 0.75rem; border-top: 1px dashed var(--border-paper-dark); margin-top: 0.5rem; flex-direction: column; gap: 1rem;">
+                    
+                    <div>
+                      <span style="font-size: 0.85rem; font-weight: 600; display: block; margin-bottom: 0.5rem; color: var(--text-ink);">Select Dual Sync Option:</span>
+                      <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-left: 0.5rem;">
+                        <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.82rem; color: var(--text-ink); cursor: pointer;">
+                          <input type="radio" name="storage_mode" value="mirror" checked>
+                          Option 1: Mirror Sync (Upload every file to both clouds simultaneously)
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.82rem; color: var(--text-ink); cursor: pointer;">
+                          <input type="radio" name="storage_mode" value="failover">
+                          Option 2: Active-Passive Failover (Upload to Primary, fallback to Backup if down)
+                        </label>
+                      </div>
+                    </div>
+
+                    <div id="primary-provider-selection" style="display: flex; align-items: center; gap: 1rem; margin-left: 0.5rem; margin-top: 0.25rem;">
+                      <span style="font-size: 0.82rem; font-weight: 600; color: var(--text-ink);">Primary Cloud Provider:</span>
+                      <select id="primary-provider-dropdown" class="form-control" style="width: auto; padding: 0.25rem 0.5rem; height: auto; font-size: 0.82rem;">
+                        <option value="google">Google Drive (MEGA as Backup)</option>
+                        <option value="mega">MEGA (Google Drive as Backup)</option>
+                      </select>
+                    </div>
+
+                  </div>
+                </div>
+              </label>
+
+            </div>
+
+            <button type="submit" id="btn-save-storage-mode" class="btn btn-primary" style="margin-top: 1.5rem; width: 100%; justify-content: center; gap: 0.5rem;">
+              <i class="fas fa-save"></i> Apply Storage Mode Settings
+            </button>
+          </form>
         </div>
 
         <div class="storage-grid">
@@ -184,20 +268,102 @@
       activeProviderEl.style.cssText = "font-size: 0.85rem; padding: 0.25rem 0.6rem; vertical-align: middle;";
       activeProviderEl.textContent = provider.toUpperCase();
       
+      // Populate inputs regardless of whether they are active
+      if (config.client_id) {
+        document.getElementById("google-client-id").value = config.client_id;
+      }
+      if (config.email) {
+        document.getElementById("mega-email").value = config.email;
+      }
+
       if (provider === "google") {
         activeDetailEl.textContent = `Google Drive connected. Client ID: ${config.client_id || "Not set"}`;
-        document.getElementById("google-client-id").value = config.client_id || "";
-        
         googleCard.classList.add("active-card");
         googleBadgeContainer.innerHTML = `<span class="active-badge"><i class="fas fa-check-circle"></i> Active</span>`;
       } else if (provider === "mega") {
         activeDetailEl.textContent = `Email: ${config.email || "Not set"}`;
-        document.getElementById("mega-email").value = config.email || "";
+        megaCard.classList.add("active-card");
+        megaBadgeContainer.innerHTML = `<span class="active-badge"><i class="fas fa-check-circle"></i> Active</span>`;
+      } else if (provider === "dual") {
+        const modeLabel = config.storage_mode === "mirror" ? "Mirror Sync" : `Failover Sync (Primary: ${config.primary_provider === "google" ? "Google Drive" : "MEGA"})`;
+        activeDetailEl.textContent = `Dual Storage enabled. Mode: ${modeLabel}`;
         
+        googleCard.classList.add("active-card");
+        googleBadgeContainer.innerHTML = `<span class="active-badge"><i class="fas fa-check-circle"></i> Active</span>`;
         megaCard.classList.add("active-card");
         megaBadgeContainer.innerHTML = `<span class="active-badge"><i class="fas fa-check-circle"></i> Active</span>`;
       } else {
         activeDetailEl.textContent = "Currently using local database storage folder.";
+      }
+
+      // Configure Storage Mode Panel elements state based on provider status
+      const googleConfigured = config.google_configured;
+      const megaConfigured = config.mega_configured;
+
+      const optGoogle = document.getElementById("mode-opt-google");
+      const optMega = document.getElementById("mode-opt-mega");
+      const optDual = document.getElementById("mode-opt-dual");
+
+      if (optGoogle) {
+        if (!googleConfigured) {
+          optGoogle.style.opacity = "0.5";
+          optGoogle.style.pointerEvents = "none";
+          optGoogle.querySelector("input").disabled = true;
+        } else {
+          optGoogle.style.opacity = "1";
+          optGoogle.style.pointerEvents = "auto";
+          optGoogle.querySelector("input").disabled = false;
+        }
+      }
+
+      if (optMega) {
+        if (!megaConfigured) {
+          optMega.style.opacity = "0.5";
+          optMega.style.pointerEvents = "none";
+          optMega.querySelector("input").disabled = true;
+        } else {
+          optMega.style.opacity = "1";
+          optMega.style.pointerEvents = "auto";
+          optMega.querySelector("input").disabled = false;
+        }
+      }
+
+      if (optDual) {
+        if (!googleConfigured || !megaConfigured) {
+          optDual.style.opacity = "0.5";
+          optDual.style.pointerEvents = "none";
+          optDual.querySelector("input").disabled = true;
+        } else {
+          optDual.style.opacity = "1";
+          optDual.style.pointerEvents = "auto";
+          optDual.querySelector("input").disabled = false;
+        }
+      }
+
+      // Set active values in the form
+      const radioInput = document.querySelector(`input[name="storage_provider"][value="${provider}"]`);
+      if (radioInput) {
+        radioInput.checked = true;
+        const container = document.getElementById("dual-options-container");
+        if (container) {
+          if (provider === "dual") {
+            container.style.display = "flex";
+          } else {
+            container.style.display = "none";
+          }
+        }
+      }
+
+      const activeMode = config.storage_mode || "failover";
+      const modeInput = document.querySelector(`input[name="storage_mode"][value="${activeMode}"]`);
+      if (modeInput) {
+        modeInput.checked = true;
+      }
+
+      const primaryProvider = config.primary_provider || "google";
+      const primarySelect = document.getElementById("primary-provider-dropdown");
+      if (primarySelect) {
+        primarySelect.value = primaryProvider;
       }
 
       // Fetch stats and render visual breakdown
@@ -268,6 +434,52 @@
         } finally {
           submitBtn.disabled = false;
           submitBtn.innerHTML = '<i class="fas fa-save"></i> Configure MEGA Cloud';
+        }
+      });
+    }
+
+    // Toggle Dual Options visibility
+    const providerRadios = document.querySelectorAll('input[name="storage_provider"]');
+    providerRadios.forEach(radio => {
+      radio.addEventListener("change", (e) => {
+        const container = document.getElementById("dual-options-container");
+        if (container) {
+          if (e.target.value === "dual") {
+            container.style.display = "flex";
+          } else {
+            container.style.display = "none";
+          }
+        }
+      });
+    });
+
+    // Handle Storage Mode Form Submit
+    const modeForm = document.getElementById("storage-mode-form");
+    if (modeForm) {
+      modeForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const submitBtn = document.getElementById("btn-save-storage-mode");
+        
+        const checkedProvider = document.querySelector('input[name="storage_provider"]:checked');
+        const checkedMode = document.querySelector('input[name="storage_mode"]:checked');
+        const primarySelect = document.getElementById("primary-provider-dropdown");
+
+        const selectedProvider = checkedProvider ? checkedProvider.value : "local";
+        const selectedMode = checkedMode ? checkedMode.value : "failover";
+        const primaryProvider = primarySelect ? primarySelect.value : "google";
+        
+        try {
+          submitBtn.disabled = true;
+          submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+          
+          await FamDocAPI.storage.updateMode(selectedProvider, selectedMode, primaryProvider);
+          FamDocAPI.utils.showToast("Storage mode updated successfully!", "success");
+          await loadStorageConfig();
+        } catch (err) {
+          FamDocAPI.utils.showToast(err.message || "Failed to update storage mode.", "error");
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = '<i class="fas fa-save"></i> Apply Storage Mode Settings';
         }
       });
     }

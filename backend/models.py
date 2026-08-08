@@ -111,6 +111,8 @@ class Folder(Base):
     deleted_at = Column(DateTime(timezone=True), nullable=True, index=True)
     deletion_batch_id = Column(String(36), nullable=True, index=True)
     cloud_folder_id = Column(String(255), nullable=True)
+    google_drive_folder_id = Column(String(255), nullable=True)
+    mega_folder_id = Column(String(255), nullable=True)
 
     # Relationships
     family = relationship("Family", back_populates="folders")
@@ -139,6 +141,10 @@ class File(Base):
     _file_id = Column("file_id", String(255), nullable=True) # Legacy DB column
     local_file_id = Column(String(255), nullable=True)
     cloud_file_id = Column(String(255), nullable=True)
+    google_drive_file_id = Column(String(255), nullable=True)
+    mega_file_id = Column(String(255), nullable=True)
+    primary_storage = Column(String(50), nullable=True)
+    backup_status = Column(String(50), nullable=True)
     
     @property
     def file_id(self) -> str:

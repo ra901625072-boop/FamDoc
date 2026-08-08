@@ -131,6 +131,16 @@ class StorageConfigResponse(BaseModel):
     email: Optional[str] = None # For mega configuration verification (redacted password)
     folder_id: Optional[str] = None # For Google Drive configuration verification
     client_id: Optional[str] = None # For Google OAuth client verification
+    google_configured: Optional[bool] = False
+    mega_configured: Optional[bool] = False
+    storage_mode: Optional[str] = "failover"
+    primary_provider: Optional[str] = "google"
+
+class StorageModeUpdate(BaseModel):
+    storage_provider: str # "local", "google", "mega", "dual"
+    storage_mode: Optional[str] = "failover" # "mirror" or "failover"
+    primary_provider: Optional[str] = "google" # "google" or "mega"
+
 
 # ==========================================
 # Folder Schemas (Legacy/Existing)

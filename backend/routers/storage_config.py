@@ -24,19 +24,24 @@ def get_storage_config(
     manager = StorageManager()
     config = manager.get_family_config(family, db)
     
-    provider = family.storage_provider or "local"
-    provider_config = config.get(provider, {})
+    google_config = config.get("google", {})
+    mega_config = config.get("mega", {})
     
-    email = provider_config.get("email") if provider == "mega" else None
-    folder_id = provider_config.get("folder_id") if provider == "google" else None
-    client_id = provider_config.get("client_id") if provider == "google" else None
+    google_configured = bool(google_config.get("client_id") and google_config.get("refresh_token"))
+    mega_configured = bool(mega_config.get("email") and mega_config.get("password"))
+    
+    provider = family.storage_provider or "local"
     
     return {
-        "storage_provider": family.storage_provider,
-        "is_configured": family.storage_provider is not None,
-        "email": email,
-        "folder_id": folder_id,
-        "client_id": client_id
+        "storage_provider": provider,
+        "is_configured": provider != "local",
+        "email": mega_config.get("email"),
+        "folder_id": google_config.get("folder_id"),
+        "client_id": google_config.get("client_id"),
+        "google_configured": google_configured,
+        "mega_configured": mega_configured,
+        "storage_mode": config.get("storage_mode", "failover"),
+        "primary_provider": config.get("primary_provider", "google")
     }
 
 
@@ -171,9 +176,33 @@ def oauth2callback(
     except Exception as err:
         return RedirectResponse(url=f"{FRONTEND_URL.rstrip('/')}/?google_auth=error&detail={urllib.parse.quote(str(err))}#/storage")
         
-    family.storage_provider = "google"
-    family.storage_config = active_config
-    family.vault_folder_id = vault_id
+    config_data = family.storage_config or {}
+    migrated_config = {}
+    if "client_id" in config_data or "refresh_token" in config_data:
+        migrated_config["google"] = {k: v for k, v in config_data.items() if k not in ("google", "mega", "storage_mode", "primary_provider")}
+    elif "google" in config_data:
+        migrated_config["google"] = config_data["google"].copy()
+    else:
+        migrated_config["google"] = {}
+        
+    if "email" in config_data:
+        migrated_config["mega"] = {k: v for k, v in config_data.items() if k not in ("google", "mega", "storage_mode", "primary_provider")}
+    elif "mega" in config_data:
+        migrated_config["mega"] = config_data["mega"].copy()
+    else:
+        migrated_config["mega"] = {}
+        
+    for k, v in config_data.items():
+        if k not in ("google", "mega", "storage_mode", "primary_provider", "client_id", "client_secret", "access_token", "refresh_token", "expires_at", "email", "password"):
+            migrated_config[k] = v
+
+    migrated_config["google"] = active_config
+    migrated_config["google_vault_folder_id"] = vault_id
+    
+    family.storage_config = migrated_config
+    if family.storage_provider not in ("mega", "dual"):
+        family.storage_provider = "google"
+        family.vault_folder_id = vault_id
     db.commit()
     
     return RedirectResponse(url=f"{FRONTEND_URL.rstrip('/')}/?google_auth=success#/storage")
@@ -210,15 +239,111 @@ def setup_mega(
         )
 
     # Save to database
-    family.storage_provider = "mega"
-    family.storage_config = config
-    family.vault_folder_id = vault_id
+    config_data = family.storage_config or {}
+    migrated_config = {}
+    if "client_id" in config_data or "refresh_token" in config_data:
+        migrated_config["google"] = {k: v for k, v in config_data.items() if k not in ("google", "mega", "storage_mode", "primary_provider")}
+    elif "google" in config_data:
+        migrated_config["google"] = config_data["google"].copy()
+    else:
+        migrated_config["google"] = {}
+        
+    if "email" in config_data:
+        migrated_config["mega"] = {k: v for k, v in config_data.items() if k not in ("google", "mega", "storage_mode", "primary_provider")}
+    elif "mega" in config_data:
+        migrated_config["mega"] = config_data["mega"].copy()
+    else:
+        migrated_config["mega"] = {}
+        
+    for k, v in config_data.items():
+        if k not in ("google", "mega", "storage_mode", "primary_provider", "client_id", "client_secret", "access_token", "refresh_token", "expires_at", "email", "password"):
+            migrated_config[k] = v
+
+    migrated_config["mega"] = config
+    migrated_config["mega_vault_folder_id"] = vault_id
+    
+    family.storage_config = migrated_config
+    if family.storage_provider not in ("google", "dual"):
+        family.storage_provider = "mega"
+        family.vault_folder_id = vault_id
     db.commit()
     
-    return {
-        "storage_provider": "mega",
-        "is_configured": True,
-        "email": setup_in.email
-    }
+    return get_storage_config(current_user=current_user, db=db)
+
+
+@router.post("/config/mode", response_model=schemas.StorageConfigResponse)
+def update_storage_mode(
+    req: schemas.StorageModeUpdate,
+    current_user: models.User = Depends(auth.get_admin_user),
+    db: Session = Depends(get_db)
+):
+    family = db.query(models.Family).filter(models.Family.id == current_user.family_id).first()
+    if not family:
+        raise HTTPException(status_code=404, detail="Family record not found")
+        
+    provider = req.storage_provider
+    if provider not in ("local", "google", "mega", "dual"):
+        raise HTTPException(status_code=400, detail="Invalid storage provider")
+        
+    # Verify requested provider is configured
+    config_data = family.storage_config or {}
+    
+    # Handle legacy flat configs
+    google_configured = "google" in config_data or "client_id" in config_data
+    mega_configured = "mega" in config_data or "email" in config_data
+    
+    if provider == "google" and not google_configured:
+        raise HTTPException(status_code=400, detail="Google Drive must be connected before setting as active provider")
+    if provider == "mega" and not mega_configured:
+        raise HTTPException(status_code=400, detail="MEGA must be configured before setting as active provider")
+    if provider == "dual":
+        if not google_configured or not mega_configured:
+            raise HTTPException(status_code=400, detail="Both Google Drive and MEGA must be connected before enabling Dual Mode")
+            
+    family.storage_provider = provider
+    
+    # Merge existing configs
+    migrated_config = {}
+    if "client_id" in config_data or "refresh_token" in config_data:
+        migrated_config["google"] = {k: v for k, v in config_data.items() if k not in ("google", "mega", "storage_mode", "primary_provider")}
+    elif "google" in config_data:
+        migrated_config["google"] = config_data["google"].copy()
+    else:
+        migrated_config["google"] = {}
+        
+    if "email" in config_data:
+        migrated_config["mega"] = {k: v for k, v in config_data.items() if k not in ("google", "mega", "storage_mode", "primary_provider")}
+    elif "mega" in config_data:
+        migrated_config["mega"] = config_data["mega"].copy()
+    else:
+        migrated_config["mega"] = {}
+        
+    for k, v in config_data.items():
+        if k not in ("google", "mega", "storage_mode", "primary_provider", "client_id", "client_secret", "access_token", "refresh_token", "expires_at", "email", "password"):
+            migrated_config[k] = v
+            
+    migrated_config["storage_mode"] = req.storage_mode or "failover"
+    migrated_config["primary_provider"] = req.primary_provider or "google"
+    
+    # Synchronize vault_folder_id in family model based on selected/primary provider
+    if provider == "google":
+        family.vault_folder_id = migrated_config.get("google_vault_folder_id")
+    elif provider == "mega":
+        family.vault_folder_id = migrated_config.get("mega_vault_folder_id")
+    elif provider == "dual":
+        primary = req.primary_provider or "google"
+        if primary == "google":
+            family.vault_folder_id = migrated_config.get("google_vault_folder_id")
+        else:
+            family.vault_folder_id = migrated_config.get("mega_vault_folder_id")
+            
+    family.storage_config = migrated_config
+    db.commit()
+    
+    # Initialize family storage to ensure vault folders exist
+    from storage.storage_manager import StorageManager
+    StorageManager().initialize_family_storage(family, db)
+    
+    return get_storage_config(current_user=current_user, db=db)
 
 

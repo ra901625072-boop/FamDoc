@@ -12,14 +12,21 @@ from serializers import serialize_folder
 
 SAFE_FILENAME_PATTERN = re.compile(r'^[\w\-. ()\[\]]+$', re.UNICODE)
 
-def ensure_folder_cloud_id(folder_id: int, family: models.Family, db: Session) -> str:
+def ensure_folder_cloud_id(folder_id: int, provider_name: str, family: models.Family, db: Session) -> str:
     """
-    Ensures that a database folder has a corresponding cloud folder ID.
+    Ensures that a database folder has a corresponding cloud folder ID for the specified provider.
     If not, creates it in the cloud storage (resolving parent folders recursively if needed).
     Returns the cloud folder ID.
     """
+    if provider_name == "local":
+        return None
+
+    from storage.storage_manager import StorageManager
+    manager = StorageManager()
+    family_config = manager.get_family_config(family, db)
+
     if folder_id is None:
-        return family.vault_folder_id
+        return family_config.get(provider_name, {}).get("vault_folder_id") or family.vault_folder_id
 
     folder = db.query(models.Folder).filter(
         models.Folder.id == folder_id,
@@ -28,19 +35,30 @@ def ensure_folder_cloud_id(folder_id: int, family: models.Family, db: Session) -
     if not folder:
         raise Exception("Folder not found")
 
-    if folder.cloud_folder_id:
+    # Check provider-specific folder ID
+    if provider_name == "google":
+        if folder.google_drive_folder_id:
+            return folder.google_drive_folder_id
+    elif provider_name == "mega":
+        if folder.mega_folder_id:
+            return folder.mega_folder_id
+
+    # Fallback to legacy cloud_folder_id if it exists and matches current provider
+    if folder.cloud_folder_id and family.storage_provider == provider_name:
+        if provider_name == "google":
+            folder.google_drive_folder_id = folder.cloud_folder_id
+        elif provider_name == "mega":
+            folder.mega_folder_id = folder.cloud_folder_id
+        db.commit()
         return folder.cloud_folder_id
 
-    # Recursively ensure parent has a cloud folder ID
-    parent_cloud_id = ensure_folder_cloud_id(folder.parent_id, family, db)
+    # Recursively ensure parent has a cloud folder ID for this provider
+    parent_cloud_id = ensure_folder_cloud_id(folder.parent_id, provider_name, family, db)
 
     # Create folder in the cloud storage
     from storage import get_storage_provider
-    from storage.storage_manager import StorageManager
-    manager = StorageManager()
-    provider = get_storage_provider(family.storage_provider or "local")
-    family_config = manager.get_family_config(family, db)
-    provider_config = family_config.get(family.storage_provider or "local", {})
+    provider = get_storage_provider(provider_name)
+    provider_config = family_config.get(provider_name, {})
 
     cloud_folder_id = provider.create_folder(
         config=provider_config,
@@ -48,7 +66,17 @@ def ensure_folder_cloud_id(folder_id: int, family: models.Family, db: Session) -
         folder_name=folder.name,
         db=db
     )
-    folder.cloud_folder_id = cloud_folder_id
+
+    if provider_name == "google":
+        folder.google_drive_folder_id = cloud_folder_id
+    elif provider_name == "mega":
+        folder.mega_folder_id = cloud_folder_id
+
+    # Keep legacy column synchronized for backward compatibility if it's the primary provider
+    primary = family_config.get("primary_provider", "google")
+    if provider_name == primary or family.storage_provider == provider_name:
+        folder.cloud_folder_id = cloud_folder_id
+
     db.commit()
     db.refresh(folder)
     return cloud_folder_id
@@ -116,39 +144,92 @@ def create_folder(
     manager = StorageManager()
     manager.initialize_family_storage(family, db)
 
-    # Get parent cloud folder ID (recursive lazy init if parent cloud ID is missing)
-    try:
-        parent_cloud_id = ensure_folder_cloud_id(folder_in.parent_id, family, db)
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to resolve parent cloud directory: {str(e)}"
-        )
-
-    # Create folder on the storage provider
     provider_name = family.storage_provider or "local"
-    provider = get_storage_provider(provider_name)
-    family_config = manager.get_family_config(family, db)
-    provider_config = family_config.get(provider_name, {})
+    google_drive_folder_id = None
+    mega_folder_id = None
+    cloud_folder_id = None
 
-    try:
-        cloud_folder_id = provider.create_folder(
-            config=provider_config,
-            parent_folder_id=parent_cloud_id,
-            folder_name=folder_name,
-            db=db
-        )
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to create directory in cloud storage: {str(e)}"
-        )
+    if provider_name == "dual":
+        # Create in Google Drive
+        try:
+            parent_google_id = ensure_folder_cloud_id(folder_in.parent_id, "google", family, db)
+            provider = get_storage_provider("google")
+            family_config = manager.get_family_config(family, db)
+            google_drive_folder_id = provider.create_folder(
+                config=family_config.get("google", {}),
+                parent_folder_id=parent_google_id,
+                folder_name=folder_name,
+                db=db
+            )
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"Dual: Failed to create folder in Google Drive: {e}")
+
+        # Create in MEGA
+        try:
+            parent_mega_id = ensure_folder_cloud_id(folder_in.parent_id, "mega", family, db)
+            provider = get_storage_provider("mega")
+            family_config = manager.get_family_config(family, db)
+            mega_folder_id = provider.create_folder(
+                config=family_config.get("mega", {}),
+                parent_folder_id=parent_mega_id,
+                folder_name=folder_name,
+                db=db
+            )
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"Dual: Failed to create folder in MEGA: {e}")
+
+        if not google_drive_folder_id and not mega_folder_id:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to create folder on both Google Drive and MEGA."
+            )
+            
+        primary = family_config.get("primary_provider", "google")
+        cloud_folder_id = google_drive_folder_id if primary == "google" else mega_folder_id
+        if not cloud_folder_id:
+            cloud_folder_id = google_drive_folder_id or mega_folder_id
+
+    else:
+        # Get parent cloud folder ID (recursive lazy init if parent cloud ID is missing)
+        try:
+            parent_cloud_id = ensure_folder_cloud_id(folder_in.parent_id, provider_name, family, db)
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to resolve parent cloud directory: {str(e)}"
+            )
+
+        # Create folder on the storage provider
+        provider = get_storage_provider(provider_name)
+        family_config = manager.get_family_config(family, db)
+        provider_config = family_config.get(provider_name, {})
+
+        try:
+            cloud_folder_id = provider.create_folder(
+                config=provider_config,
+                parent_folder_id=parent_cloud_id,
+                folder_name=folder_name,
+                db=db
+            )
+            if provider_name == "google":
+                google_drive_folder_id = cloud_folder_id
+            elif provider_name == "mega":
+                mega_folder_id = cloud_folder_id
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to create directory in cloud storage: {str(e)}"
+            )
 
     new_folder = models.Folder(
         name=folder_name,
         parent_id=folder_in.parent_id,
         family_id=current_user.family_id,
-        cloud_folder_id=cloud_folder_id
+        cloud_folder_id=cloud_folder_id,
+        google_drive_folder_id=google_drive_folder_id,
+        mega_folder_id=mega_folder_id
     )
     
     db.add(new_folder)
@@ -193,21 +274,41 @@ def rename_folder(
     db.commit()
     db.refresh(folder)
     
-    # Sync rename to cloud storage provider
-    if folder.cloud_folder_id and family.storage_provider != "local":
-        try:
-            from storage import get_storage_provider
-            from storage.storage_manager import StorageManager
-            manager = StorageManager()
-            provider = get_storage_provider(family.storage_provider)
-            family_config = manager.get_family_config(family, db)
-            provider_config = family_config.get(family.storage_provider, {})
-            provider.rename_file(provider_config, folder.cloud_folder_id, new_name, db=db)
-        except Exception as e:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Failed to rename folder in cloud storage: {str(e)}"
-            )
+    # Sync rename to cloud storage provider(s)
+    renamed_somewhere = False
+    if family.storage_provider != "local":
+        from storage import get_storage_provider
+        from storage.storage_manager import StorageManager
+        manager = StorageManager()
+        family_config = manager.get_family_config(family, db)
+
+        if folder.google_drive_folder_id:
+            try:
+                provider = get_storage_provider("google")
+                provider.rename_file(family_config.get("google", {}), folder.google_drive_folder_id, new_name, db=db)
+                renamed_somewhere = True
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).warning(f"Failed to rename folder in Google Drive: {e}")
+
+        if folder.mega_folder_id:
+            try:
+                provider = get_storage_provider("mega")
+                provider.rename_file(family_config.get("mega", {}), folder.mega_folder_id, new_name, db=db)
+                renamed_somewhere = True
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).warning(f"Failed to rename folder in MEGA: {e}")
+
+        if not renamed_somewhere and folder.cloud_folder_id:
+            try:
+                provider = get_storage_provider(family.storage_provider)
+                provider.rename_file(family_config.get(family.storage_provider, {}), folder.cloud_folder_id, new_name, db=db)
+            except Exception as e:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Failed to rename folder in cloud storage: {str(e)}"
+                )
     
     # Audit log
     ip = request.client.host if request.client else "127.0.0.1"
@@ -325,25 +426,43 @@ def move_folder(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Family record not found")
 
     # Move in cloud storage
+    moved_somewhere = False
     if family.storage_provider != "local":
-        try:
-            from storage import get_storage_provider
-            from storage.storage_manager import StorageManager
-            manager = StorageManager()
-            provider = get_storage_provider(family.storage_provider)
-            family_config = manager.get_family_config(family, db)
-            provider_config = family_config.get(family.storage_provider, {})
+        from storage import get_storage_provider
+        from storage.storage_manager import StorageManager
+        manager = StorageManager()
+        family_config = manager.get_family_config(family, db)
 
-            # Ensure both the current folder and the destination parent have cloud IDs
-            folder_cloud_id = ensure_folder_cloud_id(folder.id, family, db)
-            dest_cloud_id = ensure_folder_cloud_id(folder_in.parent_id, family, db)
+        if folder.google_drive_folder_id:
+            try:
+                dest_google_id = ensure_folder_cloud_id(folder_in.parent_id, "google", family, db)
+                provider = get_storage_provider("google")
+                provider.move_file(family_config.get("google", {}), folder.google_drive_folder_id, dest_google_id, db=db)
+                moved_somewhere = True
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).warning(f"Failed to move folder in Google Drive: {e}")
 
-            provider.move_file(provider_config, folder_cloud_id, dest_cloud_id, db=db)
-        except Exception as e:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Failed to move folder in cloud storage: {str(e)}"
-            )
+        if folder.mega_folder_id:
+            try:
+                dest_mega_id = ensure_folder_cloud_id(folder_in.parent_id, "mega", family, db)
+                provider = get_storage_provider("mega")
+                provider.move_file(family_config.get("mega", {}), folder.mega_folder_id, dest_mega_id, db=db)
+                moved_somewhere = True
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).warning(f"Failed to move folder in MEGA: {e}")
+
+        if not moved_somewhere and folder.cloud_folder_id:
+            try:
+                provider = get_storage_provider(family.storage_provider)
+                dest_cloud_id = ensure_folder_cloud_id(folder_in.parent_id, family.storage_provider, family, db)
+                provider.move_file(family_config.get(family.storage_provider, {}), folder.cloud_folder_id, dest_cloud_id, db=db)
+            except Exception as e:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Failed to move folder in cloud storage: {str(e)}"
+                )
 
     folder.parent_id = folder_in.parent_id
     db.commit()

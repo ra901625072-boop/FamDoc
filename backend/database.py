@@ -100,6 +100,28 @@ def run_migrations():
                     logger.info("Migration: Successfully added cloud_folder_id column to folders table.")
                 except Exception as e:
                     logger.error(f"Migration error (folders cloud_folder_id): {str(e)}")
+        if "google_drive_folder_id" not in columns:
+            with engine.begin() as conn:
+                try:
+                    conn.execute(text("ALTER TABLE folders ADD COLUMN google_drive_folder_id VARCHAR(255)"))
+                    logger.info("Migration: Successfully added google_drive_folder_id column to folders table.")
+                except Exception as e:
+                    logger.error(f"Migration error (folders google_drive_folder_id): {str(e)}")
+        if "mega_folder_id" not in columns:
+            with engine.begin() as conn:
+                try:
+                    conn.execute(text("ALTER TABLE folders ADD COLUMN mega_folder_id VARCHAR(255)"))
+                    logger.info("Migration: Successfully added mega_folder_id column to folders table.")
+                except Exception as e:
+                    logger.error(f"Migration error (folders mega_folder_id): {str(e)}")
+
+        # Data migration for folders
+        with engine.begin() as conn:
+            try:
+                conn.execute(text("UPDATE folders SET google_drive_folder_id = cloud_folder_id WHERE google_drive_folder_id IS NULL AND cloud_folder_id IS NOT NULL AND id IN (SELECT f.id FROM folders f JOIN families fam ON f.family_id = fam.id WHERE fam.storage_provider = 'google')"))
+                conn.execute(text("UPDATE folders SET mega_folder_id = cloud_folder_id WHERE mega_folder_id IS NULL AND cloud_folder_id IS NOT NULL AND id IN (SELECT f.id FROM folders f JOIN families fam ON f.family_id = fam.id WHERE fam.storage_provider = 'mega')"))
+            except Exception as e:
+                logger.error(f"Migration error (folders data migration): {str(e)}")
 
     # 3. Migrate files table
     if "files" in table_names:
@@ -204,6 +226,38 @@ def run_migrations():
                 except Exception as e:
                     logger.error(f"Migration error (files cloud_file_id): {str(e)}")
 
+        if "google_drive_file_id" not in columns:
+            with engine.begin() as conn:
+                try:
+                    conn.execute(text("ALTER TABLE files ADD COLUMN google_drive_file_id VARCHAR(255)"))
+                    logger.info("Migration: Successfully added google_drive_file_id column to files table.")
+                except Exception as e:
+                    logger.error(f"Migration error (files google_drive_file_id): {str(e)}")
+
+        if "mega_file_id" not in columns:
+            with engine.begin() as conn:
+                try:
+                    conn.execute(text("ALTER TABLE files ADD COLUMN mega_file_id VARCHAR(255)"))
+                    logger.info("Migration: Successfully added mega_file_id column to files table.")
+                except Exception as e:
+                    logger.error(f"Migration error (files mega_file_id): {str(e)}")
+
+        if "primary_storage" not in columns:
+            with engine.begin() as conn:
+                try:
+                    conn.execute(text("ALTER TABLE files ADD COLUMN primary_storage VARCHAR(50)"))
+                    logger.info("Migration: Successfully added primary_storage column to files table.")
+                except Exception as e:
+                    logger.error(f"Migration error (files primary_storage): {str(e)}")
+
+        if "backup_status" not in columns:
+            with engine.begin() as conn:
+                try:
+                    conn.execute(text("ALTER TABLE files ADD COLUMN backup_status VARCHAR(50)"))
+                    logger.info("Migration: Successfully added backup_status column to files table.")
+                except Exception as e:
+                    logger.error(f"Migration error (files backup_status): {str(e)}")
+
         # Run data migration to populate local_file_id and cloud_file_id if either was newly added
         if local_file_id_added or cloud_file_id_added:
             with engine.begin() as conn:
@@ -215,6 +269,14 @@ def run_migrations():
                     logger.info("Migration: Successfully completed data migration for files.local_file_id and files.cloud_file_id.")
                 except Exception as e:
                     logger.error(f"Migration error during files column data migration: {str(e)}")
+
+        # Dual-storage specific data migration
+        with engine.begin() as conn:
+            try:
+                conn.execute(text("UPDATE files SET google_drive_file_id = cloud_file_id WHERE google_drive_file_id IS NULL AND storage_provider = 'google' AND cloud_file_id IS NOT NULL"))
+                conn.execute(text("UPDATE files SET mega_file_id = cloud_file_id WHERE mega_file_id IS NULL AND storage_provider = 'mega' AND cloud_file_id IS NOT NULL"))
+            except Exception as e:
+                logger.error(f"Migration error during dual-storage specific data migration: {str(e)}")
 
         # Add index on pending_sync_at to optimize order_by queries
         with engine.begin() as conn:
