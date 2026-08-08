@@ -101,17 +101,35 @@ class GoogleDriveProvider(StorageProvider):
 
     def ensure_vault_folder(self, family_id: str, config: dict, db = None) -> str:
         service = self._get_client(config, db)
-        folder_name = "famdoc"
         
-        # Look for the folder 'famdoc' in My Drive root
-        query = f"mimeType = 'application/vnd.google-apps.folder' and name = '{folder_name}' and 'root' in parents and trashed = false"
+        # 1. Fetch family name
+        family_name = "Unknown"
+        if db:
+            import models
+            family = db.query(models.Family).filter(models.Family.id == family_id).first()
+            if family:
+                family_name = family.name
+        else:
+            from database import SessionLocal
+            import models
+            db_session = SessionLocal()
+            try:
+                family = db_session.query(models.Family).filter(models.Family.id == family_id).first()
+                if family:
+                    family_name = family.name
+            finally:
+                db_session.close()
+
+        # 2. Find or create the root 'Famdoc' project folder
+        project_folder_name = "Famdoc"
+        project_query = f"mimeType = 'application/vnd.google-apps.folder' and name = '{project_folder_name}' and 'root' in parents and trashed = false"
         
         from storage.base import SimpleRetry
         results = None
         for attempt in SimpleRetry(attempts=3, wait=1):
             with attempt:
                 results = service.files().list(
-                    q=query,
+                    q=project_query,
                     spaces='drive',
                     fields='files(id, name)',
                     pageSize=1,
@@ -119,23 +137,88 @@ class GoogleDriveProvider(StorageProvider):
                     includeItemsFromAllDrives=True
                 ).execute()
                 
-        files = results.get('files', [])
-        if files:
-            return files[0]['id']
+        project_files = results.get('files', [])
+        if project_files:
+            project_root_id = project_files[0]['id']
+        else:
+            file_metadata = {
+                'name': project_folder_name,
+                'mimeType': 'application/vnd.google-apps.folder',
+                'parents': ['root']
+            }
+            new_project_folder = None
+            for attempt in SimpleRetry(attempts=3, wait=1):
+                with attempt:
+                    new_project_folder = service.files().create(body=file_metadata, fields='id', supportsAllDrives=True).execute()
+            project_root_id = new_project_folder.get('id')
+
+        # 3. Find or create the family-specific subfolder under 'Famdoc'
+        family_folder_name = f"{family_name} Family"
+        family_query = f"mimeType = 'application/vnd.google-apps.folder' and name = '{family_folder_name}' and '{project_root_id}' in parents and trashed = false"
+        
+        results = None
+        for attempt in SimpleRetry(attempts=3, wait=1):
+            with attempt:
+                results = service.files().list(
+                    q=family_query,
+                    spaces='drive',
+                    fields='files(id, name)',
+                    pageSize=1,
+                    supportsAllDrives=True,
+                    includeItemsFromAllDrives=True
+                ).execute()
+                
+        family_files = results.get('files', [])
+        if family_files:
+            return family_files[0]['id']
             
-        # Create folder in My Drive root
+        file_metadata = {
+            'name': family_folder_name,
+            'mimeType': 'application/vnd.google-apps.folder',
+            'parents': [project_root_id]
+        }
+        
+        new_family_folder = None
+        for attempt in SimpleRetry(attempts=3, wait=1):
+            with attempt:
+                new_family_folder = service.files().create(body=file_metadata, fields='id', supportsAllDrives=True).execute()
+                
+        return new_family_folder.get('id')
+
+    def create_folder(self, config: dict, parent_folder_id: str, folder_name: str, db = None) -> str:
+        service = self._get_client(config, db)
         file_metadata = {
             'name': folder_name,
             'mimeType': 'application/vnd.google-apps.folder',
-            'parents': ['root']
+            'parents': [parent_folder_id]
         }
         
+        from storage.base import SimpleRetry
         new_folder = None
         for attempt in SimpleRetry(attempts=3, wait=1):
             with attempt:
                 new_folder = service.files().create(body=file_metadata, fields='id', supportsAllDrives=True).execute()
                 
         return new_folder.get('id')
+
+    def move_file(self, config: dict, cloud_file_id: str, new_parent_id: str, db = None) -> bool:
+        service = self._get_client(config, db)
+        
+        # Retrieve the existing parents to remove
+        file_metadata = service.files().get(fileId=cloud_file_id, fields='parents', supportsAllDrives=True).execute()
+        previous_parents = ",".join(file_metadata.get('parents', []))
+        
+        from storage.base import SimpleRetry
+        for attempt in SimpleRetry(attempts=3, wait=1):
+            with attempt:
+                service.files().update(
+                    fileId=cloud_file_id,
+                    addParents=new_parent_id,
+                    removeParents=previous_parents,
+                    fields='id, parents',
+                    supportsAllDrives=True
+                ).execute()
+        return True
 
     def upload_file(self, config: dict, vault_folder_id: str, filename: str, file_content: bytes, mimetype: str, username: str = None, db = None) -> dict:
         service = self._get_client(config, db)

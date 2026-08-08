@@ -114,34 +114,118 @@ class MegaProvider(StorageProvider):
         except Exception as e:
             raise Exception(f"Failed to authenticate with Mega: {str(e)}")
 
-    def ensure_vault_folder(self, family_id: str, config: dict) -> str:
+    def ensure_vault_folder(self, family_id: str, config: dict, db = None) -> str:
         client = self._get_client(config)
-        folder_name = f"FamilyVault_{family_id}"
         
-        # Get all files and look for the folder
+        # 1. Fetch family name
+        family_name = "Unknown"
+        if db:
+            import models
+            family = db.query(models.Family).filter(models.Family.id == family_id).first()
+            if family:
+                family_name = family.name
+        else:
+            from database import SessionLocal
+            import models
+            db_session = SessionLocal()
+            try:
+                family = db_session.query(models.Family).filter(models.Family.id == family_id).first()
+                if family:
+                    family_name = family.name
+            finally:
+                db_session.close()
+
+        # 2. Find or create the root 'Famdoc' project folder
+        project_folder_name = "Famdoc"
         files = client.get_files()
-        for node_id, file_info in files.items():
-            # t=1 represents a directory in Mega
-            if file_info.get("a", {}).get("n") == folder_name and file_info.get("t") == 1:
-                return node_id
+        project_node_id = None
+        for nid, file_info in files.items():
+            if file_info.get("a", {}).get("n") == project_folder_name and file_info.get("t") == 1:
+                project_node_id = nid
+                break
                 
-        # Create folder if it doesn't exist (with retries)
+        if not project_node_id:
+            from storage.base import SimpleRetry
+            res = None
+            for attempt in SimpleRetry(attempts=3, wait=1):
+                with attempt:
+                    res = client.create_folder(project_folder_name)
+            project_node_id = res.get(project_folder_name)
+            if not project_node_id:
+                files = client.get_files()
+                for nid, file_info in files.items():
+                    if file_info.get("a", {}).get("n") == project_folder_name and file_info.get("t") == 1:
+                        project_node_id = nid
+                        break
+            if not project_node_id:
+                raise Exception("Failed to create project root folder 'Famdoc' in Mega")
+
+        # 3. Find or create the family subfolder under 'Famdoc'
+        family_folder_name = f"{family_name} Family"
+        files = client.get_files()
+        family_node_id = None
+        for nid, file_info in files.items():
+            if file_info.get("p") == project_node_id and file_info.get("a", {}).get("n") == family_folder_name and file_info.get("t") == 1:
+                family_node_id = nid
+                break
+                
+        if not family_node_id:
+            from storage.base import SimpleRetry
+            res = None
+            for attempt in SimpleRetry(attempts=3, wait=1):
+                with attempt:
+                    res = client.create_folder(family_folder_name, dest=project_node_id)
+            family_node_id = res.get(family_folder_name)
+            if not family_node_id:
+                files = client.get_files()
+                for nid, file_info in files.items():
+                    if file_info.get("p") == project_node_id and file_info.get("a", {}).get("n") == family_folder_name and file_info.get("t") == 1:
+                        family_node_id = nid
+                        break
+            if not family_node_id:
+                raise Exception(f"Failed to create family folder '{family_folder_name}' in Mega")
+                
+        return family_node_id
+
+    def create_folder(self, config: dict, parent_folder_id: str, folder_name: str, db = None) -> str:
+        client = self._get_client(config)
+        
         from storage.base import SimpleRetry
         res = None
         for attempt in SimpleRetry(attempts=3, wait=1):
             with attempt:
-                res = client.create_folder(folder_name)
+                res = client.create_folder(folder_name, dest=parent_folder_id)
         node_id = res.get(folder_name)
         
         if not node_id:
-            # Retrieve node_id by scanning files again if not directly in dict
             files = client.get_files()
             for nid, file_info in files.items():
-                if file_info.get("a", {}).get("n") == folder_name and file_info.get("t") == 1:
+                if file_info.get("p") == parent_folder_id and file_info.get("a", {}).get("n") == folder_name and file_info.get("t") == 1:
                     return nid
-            raise Exception("Failed to retrieve created folder ID from Mega")
+            raise Exception(f"Failed to create folder '{folder_name}' in Mega")
             
         return node_id
+
+    def move_file(self, config: dict, cloud_file_id: str, new_parent_id: str, db = None) -> bool:
+        client = self._get_client(config)
+        files = client.get_files()
+        file_info = files.get(cloud_file_id)
+        if not file_info:
+            raise Exception("File/folder not found in Mega cloud to move")
+            
+        file_obj = (cloud_file_id, file_info)
+        
+        dest_info = files.get(new_parent_id)
+        if not dest_info:
+            raise Exception("Destination folder not found in Mega cloud")
+            
+        dest_obj = (new_parent_id, dest_info)
+        
+        from storage.base import SimpleRetry
+        for attempt in SimpleRetry(attempts=3, wait=1):
+            with attempt:
+                client.move(file_obj, dest_obj)
+        return True
 
     def upload_file(self, config: dict, vault_folder_id: str, filename: str, file_content: bytes, mimetype: str, username: str = None, db = None) -> dict:
         client = self._get_client(config)

@@ -372,5 +372,175 @@ class TestBackendRedesign(unittest.TestCase):
         # Production + key set -> returns "booted"
         self.assertEqual(run_key_validation("production", "securekey123"), "booted")
 
+    def test_secure_hierarchy_and_boundary_protection(self):
+        # 1. Generate auth header for admin
+        admin_token = auth.create_access_token(data={"sub": self.admin.email, "id": self.admin.id, "role": self.admin.role})
+        headers = {"Authorization": f"Bearer {admin_token}"}
+        
+        # 2. Setup mock cloud provider in StorageManager
+        manager = StorageManager()
+        # Mock providers and availability
+        manager.check_availability = lambda config, cache_ttl=30, db=None: {"google": True, "mega": False}
+        
+        class HierarchyMockProvider:
+            def __init__(self):
+                self.created_folders = []
+                self.moved_items = []
+                self.renamed_items = []
+                self.deleted_items = []
+                
+            def ensure_vault_folder(self, family_id: str, config: dict, db=None):
+                return "google-family-root-folder-id"
+                
+            def create_folder(self, config, parent_folder_id, folder_name, db=None):
+                folder_id = f"google-folder-id-{folder_name}"
+                self.created_folders.append((parent_folder_id, folder_name, folder_id))
+                return folder_id
+                
+            def move_file(self, config, cloud_file_id, new_parent_id, db=None):
+                self.moved_items.append((cloud_file_id, new_parent_id))
+                return True
+                
+            def rename_file(self, config, cloud_file_id, new_name, db=None):
+                self.renamed_items.append((cloud_file_id, new_name))
+                return True
+                
+            def delete_file(self, config, cloud_file_id, db=None):
+                self.deleted_items.append(cloud_file_id)
+                return True
+
+            def upload_file(self, config, vault_folder_id, filename, file_content, mimetype, username=None, db=None):
+                return {"cloud_file_id": f"google-file-id-{filename}", "cloud_link": "http://google.com"}
+
+        mock_google = HierarchyMockProvider()
+        manager.providers["google"] = mock_google
+        
+        import storage
+        original_get_provider = storage.get_storage_provider
+        storage.get_storage_provider = lambda name: mock_google
+        
+        original_init = StorageManager.__init__
+        def mocked_init(sm_self):
+            sm_self.providers = {
+                "google": mock_google,
+                "mega": mock_google,
+                "local": mock_google
+            }
+        StorageManager.__init__ = mocked_init
+        
+        try:
+            # 3. Test Folder Creation
+            # Create root folder (parent_id = None)
+            res = self.client.post("/api/folders", json={"name": "Documents", "parent_id": None}, headers=headers)
+            if res.status_code != 201:
+                print("DEBUG Response code:", res.status_code)
+                print("DEBUG Response text:", res.text)
+            self.assertEqual(res.status_code, 201)
+            folder_data = res.json()
+            self.assertEqual(folder_data["name"], "Documents")
+            self.assertEqual(folder_data["cloud_folder_id"], "google-folder-id-Documents")
+            
+            # Verify the provider received the call with the family root folder ID
+            self.assertIn(("google-family-root-folder-id", "Documents", "google-folder-id-Documents"), mock_google.created_folders)
+            
+            # Create subfolder inside "Documents"
+            parent_id = folder_data["id"]
+            res = self.client.post("/api/folders", json={"name": "Education", "parent_id": parent_id}, headers=headers)
+            self.assertEqual(res.status_code, 201)
+            subfolder_data = res.json()
+            self.assertEqual(subfolder_data["name"], "Education")
+            self.assertEqual(subfolder_data["cloud_folder_id"], "google-folder-id-Education")
+            self.assertIn(("google-folder-id-Documents", "Education", "google-folder-id-Education"), mock_google.created_folders)
+
+            # 4. Test Folder Rename
+            res = self.client.put(f"/api/folders/{subfolder_data['id']}", json={"name": "Academia"}, headers=headers)
+            self.assertEqual(res.status_code, 200)
+            self.assertIn(("google-folder-id-Education", "Academia"), mock_google.renamed_items)
+
+            # 5. Test Folder Move
+            # Create another top-level folder "Photos"
+            res = self.client.post("/api/folders", json={"name": "Photos", "parent_id": None}, headers=headers)
+            photos_data = res.json()
+            # Move "Academia" (subfolder) under "Photos"
+            res = self.client.patch(f"/api/folders/{subfolder_data['id']}/move", json={"parent_id": photos_data["id"]}, headers=headers)
+            self.assertEqual(res.status_code, 200)
+            self.assertIn(("google-folder-id-Education", "google-folder-id-Photos"), mock_google.moved_items)
+
+            # 6. Test Family Isolation / Boundary Protection
+            # Create another family and family user
+            other_user = models.User(
+                username="other_admin",
+                email="other@test.com",
+                password_hash=auth.get_password_hash("Password123"),
+                role="admin"
+            )
+            self.db.add(other_user)
+            self.db.flush()
+            other_family = models.Family(
+                id="otherfam999",
+                name="Other Family",
+                admin_id=other_user.id,
+                secret_code_hash="hashed_other",
+                max_members=10
+            )
+            self.db.add(other_family)
+            self.db.flush()
+            other_member = models.FamilyMember(
+                family_id=other_family.id,
+                user_id=other_user.id,
+                role="admin"
+            )
+            self.db.add(other_member)
+            self.db.commit()
+            
+            # Authenticate other_user
+            other_token = auth.create_access_token(data={"sub": other_user.email, "id": other_user.id, "role": other_user.role})
+            other_headers = {"Authorization": f"Bearer {other_token}"}
+            
+            # Other user attempts to create a folder under Test Family's "Photos" folder -> Should be rejected with 404
+            res = self.client.post("/api/folders", json={"name": "HackedPhotos", "parent_id": photos_data["id"]}, headers=other_headers)
+            self.assertEqual(res.status_code, 404)
+            self.assertIn("Parent folder not found", res.json().get("detail", ""))
+
+            # Other user attempts to move their own folder inside Test Family's "Photos" folder -> Should be rejected with 404
+            # Create a folder for other family first
+            res = self.client.post("/api/folders", json={"name": "MyOtherFolder", "parent_id": None}, headers=other_headers)
+            other_folder = res.json()
+            res = self.client.patch(f"/api/folders/{other_folder['id']}/move", json={"parent_id": photos_data["id"]}, headers=other_headers)
+            self.assertEqual(res.status_code, 404)
+
+            # 7. Test Soft Delete does NOT call provider's delete_file immediately
+            # Add a file in photos
+            test_file = models.File(
+                filename="photo.jpg",
+                file_type="image/jpeg",
+                size_bytes=2048,
+                uploader_id=self.admin.id,
+                folder_id=photos_data["id"],
+                family_id=self.family.id,
+                storage_provider="google",
+                cloud_file_id="google-file-id-photo.jpg",
+                pending_sync=False
+            )
+            self.db.add(test_file)
+            self.db.commit()
+            self.db.refresh(test_file)
+
+            # Delete the file
+            res = self.client.delete(f"/api/files/{test_file.id}", headers=headers)
+            self.assertEqual(res.status_code, 204)
+            # Verify it is not physically deleted from mock google provider yet
+            self.assertNotIn("google-file-id-photo.jpg", mock_google.deleted_items)
+
+            # 8. Test Purge physically deletes the file from provider
+            res = self.client.delete(f"/api/recycle-bin/file/{test_file.id}/purge", headers=headers)
+            self.assertEqual(res.status_code, 204)
+            # Verify it is now deleted from cloud provider
+            self.assertIn("google-file-id-photo.jpg", mock_google.deleted_items)
+            
+        finally:
+            StorageManager.__init__ = original_init
+            storage.get_storage_provider = original_get_provider
+
 if __name__ == "__main__":
     unittest.main()

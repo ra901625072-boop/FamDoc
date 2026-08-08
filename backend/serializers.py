@@ -41,5 +41,6 @@ def serialize_folder(folder: models.Folder, file_count: int = 0, total_size: int
         "created_at": folder.created_at,
         "file_count": file_count,
         "total_size_bytes": total_size,
-        "last_modified": last_modified
+        "last_modified": last_modified,
+        "cloud_folder_id": folder.cloud_folder_id
     }

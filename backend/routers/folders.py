@@ -12,6 +12,47 @@ from serializers import serialize_folder
 
 SAFE_FILENAME_PATTERN = re.compile(r'^[\w\-. ()\[\]]+$', re.UNICODE)
 
+def ensure_folder_cloud_id(folder_id: int, family: models.Family, db: Session) -> str:
+    """
+    Ensures that a database folder has a corresponding cloud folder ID.
+    If not, creates it in the cloud storage (resolving parent folders recursively if needed).
+    Returns the cloud folder ID.
+    """
+    if folder_id is None:
+        return family.vault_folder_id
+
+    folder = db.query(models.Folder).filter(
+        models.Folder.id == folder_id,
+        models.Folder.family_id == family.id
+    ).first()
+    if not folder:
+        raise Exception("Folder not found")
+
+    if folder.cloud_folder_id:
+        return folder.cloud_folder_id
+
+    # Recursively ensure parent has a cloud folder ID
+    parent_cloud_id = ensure_folder_cloud_id(folder.parent_id, family, db)
+
+    # Create folder in the cloud storage
+    from storage import get_storage_provider
+    from storage.storage_manager import StorageManager
+    manager = StorageManager()
+    provider = get_storage_provider(family.storage_provider or "local")
+    family_config = manager.get_family_config(family, db)
+    provider_config = family_config.get(family.storage_provider or "local", {})
+
+    cloud_folder_id = provider.create_folder(
+        config=provider_config,
+        parent_folder_id=parent_cloud_id,
+        folder_name=folder.name,
+        db=db
+    )
+    folder.cloud_folder_id = cloud_folder_id
+    db.commit()
+    db.refresh(folder)
+    return cloud_folder_id
+
 router = APIRouter(prefix="/api/folders", tags=["Folders"])
 
 @router.get("", response_model=List[schemas.FolderResponse])
@@ -42,6 +83,11 @@ def create_folder(
     current_user: models.User = Depends(auth.get_current_user),
     db: Session = Depends(get_db)
 ):
+    # Fetch family record
+    family = db.query(models.Family).filter(models.Family.id == current_user.family_id).first()
+    if not family:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Family record not found")
+
     # If parent folder is specified, verify it exists, belongs to the family, and is not deleted
     if folder_in.parent_id is not None:
         parent = db.query(models.Folder).filter(
@@ -62,10 +108,45 @@ def create_folder(
             detail="Folder name contains unsupported characters. Use only letters, numbers, spaces, and ._-()[]."
         )
 
+    # Initialize family storage to ensure family.vault_folder_id is populated
+    from storage.storage_manager import StorageManager
+    from storage import get_storage_provider
+    manager = StorageManager()
+    manager.initialize_family_storage(family, db)
+
+    # Get parent cloud folder ID (recursive lazy init if parent cloud ID is missing)
+    try:
+        parent_cloud_id = ensure_folder_cloud_id(folder_in.parent_id, family, db)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to resolve parent cloud directory: {str(e)}"
+        )
+
+    # Create folder on the storage provider
+    provider_name = family.storage_provider or "local"
+    provider = get_storage_provider(provider_name)
+    family_config = manager.get_family_config(family, db)
+    provider_config = family_config.get(provider_name, {})
+
+    try:
+        cloud_folder_id = provider.create_folder(
+            config=provider_config,
+            parent_folder_id=parent_cloud_id,
+            folder_name=folder_name,
+            db=db
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create directory in cloud storage: {str(e)}"
+        )
+
     new_folder = models.Folder(
         name=folder_name,
         parent_id=folder_in.parent_id,
-        family_id=current_user.family_id
+        family_id=current_user.family_id,
+        cloud_folder_id=cloud_folder_id
     )
     
     db.add(new_folder)
@@ -106,9 +187,30 @@ def rename_folder(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Folder name contains unsupported characters. Use only letters, numbers, spaces, and ._-()[]."
         )
+        
+    family = db.query(models.Family).filter(models.Family.id == current_user.family_id).first()
+    if not family:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Family record not found")
+
     folder.name = new_name
     db.commit()
     db.refresh(folder)
+    
+    # Sync rename to cloud storage provider
+    if folder.cloud_folder_id and family.storage_provider != "local":
+        try:
+            from storage import get_storage_provider
+            from storage.storage_manager import StorageManager
+            manager = StorageManager()
+            provider = get_storage_provider(family.storage_provider)
+            family_config = manager.get_family_config(family, db)
+            provider_config = family_config.get(family.storage_provider, {})
+            provider.rename_file(provider_config, folder.cloud_folder_id, new_name, db=db)
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to rename folder in cloud storage: {str(e)}"
+            )
     
     # Audit log
     ip = request.client.host if request.client else "127.0.0.1"
@@ -234,6 +336,31 @@ def move_folder(
                 models.Folder.id == curr_parent.parent_id,
                 models.Folder.deleted_at == None
             ).first()
+
+    family = db.query(models.Family).filter(models.Family.id == current_user.family_id).first()
+    if not family:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Family record not found")
+
+    # Move in cloud storage
+    if family.storage_provider != "local":
+        try:
+            from storage import get_storage_provider
+            from storage.storage_manager import StorageManager
+            manager = StorageManager()
+            provider = get_storage_provider(family.storage_provider)
+            family_config = manager.get_family_config(family, db)
+            provider_config = family_config.get(family.storage_provider, {})
+
+            # Ensure both the current folder and the destination parent have cloud IDs
+            folder_cloud_id = ensure_folder_cloud_id(folder.id, family, db)
+            dest_cloud_id = ensure_folder_cloud_id(folder_in.parent_id, family, db)
+
+            provider.move_file(provider_config, folder_cloud_id, dest_cloud_id, db=db)
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to move folder in cloud storage: {str(e)}"
+            )
 
     folder.parent_id = folder_in.parent_id
     db.commit()

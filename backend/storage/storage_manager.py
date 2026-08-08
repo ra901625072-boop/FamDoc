@@ -224,13 +224,22 @@ class StorageManager:
 
                 uploader_username = file.uploader.username if file.uploader else None
                 target_config = config.get(target, {})
+                
+                if file.folder_id is not None:
+                    from routers.folders import ensure_folder_cloud_id
+                    target_vault_id = ensure_folder_cloud_id(file.folder_id, file.family, db)
+                    target_username = None
+                else:
+                    target_vault_id = file.family.vault_folder_id
+                    target_username = uploader_username
+
                 cloud_result = self.providers[target].upload_file(
                     config=target_config,
-                    vault_folder_id=file.family.vault_folder_id,
+                    vault_folder_id=target_vault_id,
                     filename=file.filename,
                     file_content=local_content,
                     mimetype=file.file_type or "application/octet-stream",
-                    username=uploader_username,
+                    username=target_username,
                     db=db
                 )
 
@@ -302,37 +311,9 @@ class StorageManager:
         file.deleted_at   = datetime.now(timezone.utc)
         file.pending_sync = False
         db.commit()
-
-        provider = file.storage_provider or "local"
-        cfg      = family_config.get(provider, {})
-
-        try:
-            f_id = file.cloud_file_id if provider != "local" else file.local_file_id
-            if f_id:
-                self.providers[provider].delete_file(cfg, f_id, db=db)
-            
-            # Delete any residual local copies if they still exist
-            if provider != "local" and file.local_file_id:
-                local_cfg = family_config.get("local", {})
-                self.providers["local"].delete_file(local_cfg, file.local_file_id, db=db)
-                file.local_file_id = None
-                db.commit()
-                
-            status = "success"
-        except Exception as e:
-            status = "storage_delete_failed"
-            logger.warning({
-                "message":   "Storage delete failed after DB soft-delete",
-                "error":     str(e),
-                "service":   provider,
-                "file_id":   file.file_id,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-            })
-
         return {
             "operation": "delete",
-            "status":    status,
-            "tier":      provider,
+            "status":    "success",
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 

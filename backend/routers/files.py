@@ -153,13 +153,21 @@ async def upload_file(
             manager.initialize_family_storage(family, db)
             
             # Direct cloud upload, skipping local storage
+            if folder_id is not None:
+                from routers.folders import ensure_folder_cloud_id
+                target_vault_id = ensure_folder_cloud_id(folder_id, family, db)
+                target_username = None
+            else:
+                target_vault_id = family.vault_folder_id
+                target_username = current_user.username
+
             cloud_result = manager.providers[provider].upload_file(
                 config=target_config,
-                vault_folder_id=family.vault_folder_id,
+                vault_folder_id=target_vault_id,
                 filename=file.filename,
                 file_content=content,
                 mimetype=file.content_type or "application/octet-stream",
-                username=current_user.username,
+                username=target_username,
                 db=db
             )
             upload_success = True
@@ -459,6 +467,31 @@ def move_file(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="A file with this name already exists in the destination folder."
         )
+
+    family = db.query(models.Family).filter(models.Family.id == current_user.family_id).first()
+    if not family:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Family record not found")
+
+    # Move in cloud storage if already synced
+    if file.cloud_file_id and family.storage_provider != "local":
+        try:
+            from storage.storage_manager import StorageManager
+            from storage import get_storage_provider
+            manager = StorageManager()
+            provider = get_storage_provider(family.storage_provider)
+            family_config = manager.get_family_config(family, db)
+            provider_config = family_config.get(family.storage_provider, {})
+
+            # Ensure target folder has a cloud ID
+            from routers.folders import ensure_folder_cloud_id
+            dest_cloud_id = ensure_folder_cloud_id(file_in.folder_id, family, db)
+
+            provider.move_file(provider_config, file.cloud_file_id, dest_cloud_id, db=db)
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to move file in cloud storage: {str(e)}"
+            )
 
     file.folder_id = file_in.folder_id
     db.commit()

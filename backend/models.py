@@ -105,6 +105,7 @@ class Folder(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     deleted_at = Column(DateTime(timezone=True), nullable=True, index=True)
     deletion_batch_id = Column(String(36), nullable=True, index=True)
+    cloud_folder_id = Column(String(255), nullable=True)
 
     # Relationships
     family = relationship("Family", back_populates="folders")

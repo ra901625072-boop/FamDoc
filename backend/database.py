@@ -93,6 +93,13 @@ def run_migrations():
                     logger.info("Migration: Successfully added deletion_batch_id column and index to folders table.")
                 except Exception as e:
                     logger.error(f"Migration error (folders deletion_batch_id): {str(e)}")
+        if "cloud_folder_id" not in columns:
+            with engine.begin() as conn:
+                try:
+                    conn.execute(text("ALTER TABLE folders ADD COLUMN cloud_folder_id VARCHAR(255)"))
+                    logger.info("Migration: Successfully added cloud_folder_id column to folders table.")
+                except Exception as e:
+                    logger.error(f"Migration error (folders cloud_folder_id): {str(e)}")
 
     # 3. Migrate files table
     if "files" in table_names:

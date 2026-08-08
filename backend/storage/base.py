@@ -19,10 +19,25 @@ class StorageProvider(ABC):
         pass
 
     @abstractmethod
-    def ensure_vault_folder(self, family_id: str, config: dict) -> str:
+    def ensure_vault_folder(self, family_id: str, config: dict, db = None) -> str:
         """
         Ensures that a root family vault folder exists in the storage provider.
         Returns the unique ID of the vault folder.
+        """
+        pass
+
+    @abstractmethod
+    def create_folder(self, config: dict, parent_folder_id: str, folder_name: str, db = None) -> str:
+        """
+        Creates a folder in the cloud storage under the specified parent folder.
+        Returns the unique ID of the created folder.
+        """
+        pass
+
+    @abstractmethod
+    def move_file(self, config: dict, cloud_file_id: str, new_parent_id: str, db = None) -> bool:
+        """
+        Moves a file or folder from one parent folder to another in the cloud storage.
         """
         pass
 

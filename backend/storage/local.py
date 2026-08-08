@@ -9,12 +9,22 @@ class LocalStorageProvider(StorageProvider):
     def verify_credentials(self, config: dict) -> bool:
         return True
 
-    def ensure_vault_folder(self, family_id: str, config: dict) -> str:
+    def ensure_vault_folder(self, family_id: str, config: dict, db = None) -> str:
         # Create a directory inside the backend folder named 'local_vault'
         base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "local_vault"))
         vault_dir = os.path.join(base_dir, family_id)
         os.makedirs(vault_dir, exist_ok=True)
         return vault_dir
+
+    def create_folder(self, config: dict, parent_folder_id: str, folder_name: str, db = None) -> str:
+        # Local storage is flat; DB controls the virtual hierarchy.
+        # We return a unique string to act as the virtual cloud_folder_id.
+        import uuid
+        return f"local_folder_{uuid.uuid4()}"
+
+    def move_file(self, config: dict, cloud_file_id: str, new_parent_id: str, db = None) -> bool:
+        # Local storage is flat; DB tracks virtual hierarchy, so disk operations are not needed.
+        return True
 
     def upload_file(self, config: dict, vault_folder_id: str, filename: str, file_content: bytes, mimetype: str, username: str = None, db = None) -> dict:
         import uuid

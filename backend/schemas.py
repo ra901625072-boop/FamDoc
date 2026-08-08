@@ -155,6 +155,7 @@ class FolderResponse(BaseModel):
     file_count: int = 0
     total_size_bytes: int = 0
     last_modified: Optional[datetime] = None
+    cloud_folder_id: Optional[str] = None
 
     class Config:
         from_attributes = True

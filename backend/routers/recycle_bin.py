@@ -145,9 +145,18 @@ def purge_folder_recursive(folder_id: int, family: models.Family, db: Session):
             print(f"Warning: Failed to delete cloud file {file.file_id} on {file.storage_provider} during purge: {e}")
         db.delete(file)
             
-    # 3. Delete folder record
+    # 3. Delete folder record and cloud folder node
     folder = db.query(models.Folder).filter(models.Folder.id == folder_id).first()
     if folder:
+        if folder.cloud_folder_id and family.storage_provider != "local":
+            try:
+                from storage import get_storage_provider
+                provider_name = family.storage_provider
+                provider = get_storage_provider(provider_name)
+                config = family_config.get(provider_name, {})
+                provider.delete_file(config, folder.cloud_folder_id, db=db)
+            except Exception as e:
+                print(f"Warning: Failed to delete cloud folder {folder.cloud_folder_id} on {family.storage_provider} during purge: {e}")
         db.delete(folder)
 
 @router.delete("/{item_type}/{item_id}/purge", status_code=status.HTTP_204_NO_CONTENT)
