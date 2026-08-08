@@ -64,18 +64,22 @@ const FamDocAPI = {
 
       // Handle 401 Unauthorized globally
       if (response.status === 401) {
-        // Only redirect if we're not on a public page or already trying to login
-        const isPublicPage = window.location.pathname.includes("index.html") || 
-                             window.location.pathname.includes("login.html") || 
-                             window.location.pathname.includes("register.html") || 
-                             window.location.pathname.includes("join.html") || 
-                             window.location.pathname.includes("shared.html") ||
-                             window.location.pathname === "/";
+        // Parse SPA hash routes and redirect properly
+        const hash = window.location.hash || "";
+        const pathName = window.location.pathname || "";
+        const isPublicPage = pathName.includes("shared.html") ||
+                             hash === "" || 
+                             hash === "#/" || 
+                             hash.startsWith("#/login") || 
+                             hash.startsWith("#/register") || 
+                             hash.startsWith("#/join") || 
+                             hash.startsWith("#/share");
         
         if (!isPublicPage) {
           localStorage.removeItem("famdoc_token");
           localStorage.removeItem("famdoc_user");
-          window.location.href = "/login.html";
+          window.location.href = "/#/login";
+          window.location.reload();
           return null;
         }
       }
