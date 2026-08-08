@@ -1699,7 +1699,13 @@
       try {
         await FamDocAPI.files.upload(file, currentFolderId, (percent) => {
           progressBar.style.width = `${percent}%`;
-          percentageText.textContent = `${percent}%`;
+          if (percent === 100) {
+            percentageText.textContent = "Saving to Cloud...";
+            progressBar.classList.add("syncing");
+          } else {
+            percentageText.textContent = `${percent}%`;
+            progressBar.classList.remove("syncing");
+          }
         });
         FamDocAPI.utils.showToast(`"${file.name}" uploaded successfully.`, "success");
       } catch (err) {

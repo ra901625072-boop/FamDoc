@@ -255,6 +255,24 @@
       .upload-progress-bar.failed {
         background: #ef4444;
       }
+      .upload-progress-bar.syncing {
+        background-image: linear-gradient(
+          45deg,
+          rgba(255, 255, 255, 0.15) 25%,
+          transparent 25%,
+          transparent 50%,
+          rgba(255, 255, 255, 0.15) 50%,
+          rgba(255, 255, 255, 0.15) 75%,
+          transparent 75%,
+          transparent
+        ) !important;
+        background-size: 40px 40px !important;
+        animation: progress-stripe-animation 1s linear infinite !important;
+      }
+      @keyframes progress-stripe-animation {
+        from { background-position: 0 0; }
+        to { background-position: 40px 0; }
+      }
       .upload-card-footer {
         padding: 0.75rem 1.25rem;
         background: rgba(0, 0, 0, 0.01);
@@ -336,7 +354,16 @@
           let barClass = "";
           let icon = `<i class="fas fa-circle-notch fa-spin" style="font-size: 0.75rem; color: var(--accent-brand);"></i>`;
           
-          if (item.status === "pending") {
+          if (item.status === "uploading") {
+            if (item.progress === 100) {
+              statusText = "Saving to Cloud...";
+              barClass = "syncing";
+              icon = `<i class="fas fa-cloud-upload-alt fa-pulse" style="font-size: 0.75rem; color: var(--accent-brand);"></i>`;
+            } else {
+              statusText = `Uploading ${item.progress}%`;
+              icon = `<i class="fas fa-circle-notch fa-spin" style="font-size: 0.75rem; color: var(--accent-brand);"></i>`;
+            }
+          } else if (item.status === "pending") {
             statusText = "Queued";
             icon = `<i class="far fa-clock" style="font-size: 0.75rem; color: #777;"></i>`;
           } else if (item.status === "completed") {
