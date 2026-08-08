@@ -690,5 +690,151 @@ class TestBackendRedesign(unittest.TestCase):
         self.assertEqual(res.status_code, 404)
         self.assertIn("File not found", res.json().get("detail", ""))
 
+    def test_sharing_link_security(self):
+        admin_token = auth.create_access_token(data={"sub": self.admin.email, "id": self.admin.id, "role": self.admin.role})
+        headers = {"Authorization": f"Bearer {admin_token}"}
+
+        # Create a file to share
+        file = models.File(
+            filename="share_test.pdf",
+            file_type="application/pdf",
+            size_bytes=500,
+            uploader_id=self.admin.id,
+            folder_id=None,
+            family_id=self.family.id,
+            storage_provider="local",
+            file_id="local-path/share_test.pdf",
+            local_file_id="local-path/share_test.pdf",
+            pending_sync=False
+        )
+        self.db.add(file)
+        self.db.commit()
+
+        # Mock the local storage provider read to return mock bytes
+        from storage.storage_manager import StorageManager
+        manager = StorageManager()
+        class MockLocalProvider:
+            def ensure_vault_folder(self, family_id, config, db=None):
+                return "mock-vault-id"
+            def download_file(self, config, file_id, db=None):
+                return b"hello share content"
+        manager.providers["local"] = MockLocalProvider()
+        
+        original_init = StorageManager.__init__
+        def mocked_init(sm_self):
+            sm_self.providers = {
+                "local": MockLocalProvider()
+            }
+        StorageManager.__init__ = mocked_init
+
+        try:
+            # 1. Create a password-free sharing link
+            res = self.client.post(
+                f"/api/files/{file.id}/share",
+                json={"expires_at": None, "max_downloads": None, "password": None},
+                headers=headers
+            )
+            self.assertEqual(res.status_code, 201)
+            share_data = res.json()
+            token = share_data["token"]
+
+            # Get public share info -> Should return 200 and only metadata, no hierarchy
+            res = self.client.get(f"/api/shared/{token}")
+            self.assertEqual(res.status_code, 200)
+            info = res.json()
+            self.assertEqual(info["filename"], "share_test.pdf")
+            self.assertFalse(info["is_password_protected"])
+            # Ensure no sibling keys or family details are exposed
+            self.assertNotIn("family_id", info)
+            self.assertNotIn("uploader_id", info)
+            self.assertNotIn("cloud_file_id", info)
+
+            # Public download -> Should succeed and return bytes
+            res = self.client.post(f"/api/shared/{token}/download")
+            self.assertEqual(res.status_code, 200)
+            self.assertEqual(res.content, b"hello share content")
+
+            # 2. Expiry testing (link expires in the past)
+            past_time = (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()
+            res = self.client.post(
+                f"/api/files/{file.id}/share",
+                json={"expires_at": past_time, "max_downloads": None, "password": None},
+                headers=headers
+            )
+            expired_token = res.json()["token"]
+            
+            # Fetching info/downloading expired link -> Should return 404 (Indistinguishable from nonexistent)
+            res = self.client.get(f"/api/shared/{expired_token}")
+            self.assertEqual(res.status_code, 404)
+            res = self.client.post(f"/api/shared/{expired_token}/download")
+            self.assertEqual(res.status_code, 404)
+
+            # 3. Revocation testing
+            res = self.client.post(
+                f"/api/files/{file.id}/share",
+                json={"expires_at": None, "max_downloads": None, "password": None},
+                headers=headers
+            )
+            rev_token = res.json()["token"]
+            
+            # Revoke share link
+            res = self.client.delete(f"/api/shared/links/{rev_token}", headers=headers)
+            self.assertEqual(res.status_code, 204)
+            
+            # Verify revoked link returns 404
+            res = self.client.get(f"/api/shared/{rev_token}")
+            self.assertEqual(res.status_code, 404)
+            res = self.client.post(f"/api/shared/{rev_token}/download")
+            self.assertEqual(res.status_code, 404)
+
+            # 4. Sharing deleted file testing
+            res = self.client.post(
+                f"/api/files/{file.id}/share",
+                json={"expires_at": None, "max_downloads": None, "password": None},
+                headers=headers
+            )
+            del_token = res.json()["token"]
+            
+            # Soft-delete the file
+            self.client.delete(f"/api/files/{file.id}", headers=headers)
+            
+            # Verify shared link returns 404
+            res = self.client.get(f"/api/shared/{del_token}")
+            self.assertEqual(res.status_code, 404)
+            res = self.client.post(f"/api/shared/{del_token}/download")
+            self.assertEqual(res.status_code, 404)
+
+            # Restore the file
+            self.client.post(f"/api/recycle-bin/file/{file.id}/restore", headers=headers)
+
+            # 5. Password protection testing
+            res = self.client.post(
+                f"/api/files/{file.id}/share",
+                json={"expires_at": None, "max_downloads": None, "password": "SecurePassword123"},
+                headers=headers
+            )
+            pwd_token = res.json()["token"]
+            
+            # Public info should show password protection is active
+            res = self.client.get(f"/api/shared/{pwd_token}")
+            self.assertEqual(res.status_code, 200)
+            self.assertTrue(res.json()["is_password_protected"])
+            
+            # Downloading without password -> 401
+            res = self.client.post(f"/api/shared/{pwd_token}/download")
+            self.assertEqual(res.status_code, 401)
+            
+            # Downloading with wrong password -> 401
+            res = self.client.post(f"/api/shared/{pwd_token}/download", json={"password": "WrongPassword"})
+            self.assertEqual(res.status_code, 401)
+            
+            # Downloading with correct password -> 200
+            res = self.client.post(f"/api/shared/{pwd_token}/download", json={"password": "SecurePassword123"})
+            self.assertEqual(res.status_code, 200)
+            self.assertEqual(res.content, b"hello share content")
+
+        finally:
+            StorageManager.__init__ = original_init
+
 if __name__ == "__main__":
     unittest.main()

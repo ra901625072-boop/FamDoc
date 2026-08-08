@@ -149,11 +149,11 @@ def get_public_share_info(
     if link.expires_at:
         expires_at_aware = link.expires_at.replace(tzinfo=timezone.utc) if link.expires_at.tzinfo is None else link.expires_at
         if expires_at_aware < datetime.now(timezone.utc):
-            raise HTTPException(status_code=410, detail="This shared link has expired")
+            raise HTTPException(status_code=404, detail="Shared link not found or expired")
 
     # Verify download count limit
     if link.max_downloads and link.download_count >= link.max_downloads:
-        raise HTTPException(status_code=410, detail="This shared link has reached its maximum download limit")
+        raise HTTPException(status_code=404, detail="Shared link not found or expired")
 
     return {
         "filename": link.file.filename,
@@ -186,11 +186,11 @@ def download_public_shared_file(
     if link.expires_at:
         expires_at_aware = link.expires_at.replace(tzinfo=timezone.utc) if link.expires_at.tzinfo is None else link.expires_at
         if expires_at_aware < datetime.now(timezone.utc):
-            raise HTTPException(status_code=410, detail="This shared link has expired")
+            raise HTTPException(status_code=404, detail="Shared link not found or expired")
 
     # Verify download count limit
     if link.max_downloads and link.download_count >= link.max_downloads:
-        raise HTTPException(status_code=410, detail="This shared link has reached its maximum download limit")
+        raise HTTPException(status_code=404, detail="Shared link not found or expired")
 
     # Verify password if protected
     if link.password_hash:
