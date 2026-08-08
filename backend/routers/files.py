@@ -29,6 +29,12 @@ def get_files(
     current_user: models.User = Depends(auth.get_current_user),
     db: Session = Depends(get_db)
 ):
+    if not current_user.family_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User has not joined a family yet."
+        )
+
     query = db.query(models.File).options(joinedload(models.File.uploader)).filter(
         models.File.family_id == current_user.family_id,
         models.File.deleted_at == None
@@ -37,9 +43,9 @@ def get_files(
     if folder_id is not None:
         if folder_id == "root" or folder_id == "":
             query = query.filter(models.File.folder_id == None)
-        else:
             try:
                 fid = int(folder_id)
+                auth.verify_resource_access(models.Folder, fid, current_user.family_id, db)
                 query = query.filter(models.File.folder_id == fid)
             except ValueError:
                 raise HTTPException(status_code=400, detail="Invalid folder_id format")
@@ -72,12 +78,12 @@ async def upload_file(
 
     # Validate parent folder if provided
     if folder_id is not None:
-        folder = db.query(models.Folder).filter(
-            models.Folder.id == folder_id,
-            models.Folder.family_id == current_user.family_id
-        ).first()
-        if not folder:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Target folder not found")
+        folder = auth.verify_resource_access(
+            models.Folder,
+            folder_id,
+            current_user.family_id,
+            db
+        )
 
     # Check for duplicate filename in the same folder
     existing_file = db.query(models.File).filter(
@@ -237,14 +243,12 @@ def get_preview_token(
     current_user: models.User = Depends(auth.get_current_user),
     db: Session = Depends(get_db)
 ):
-    file = db.query(models.File).filter(
-        models.File.id == file_id,
-        models.File.family_id == current_user.family_id,
-        models.File.deleted_at == None
-    ).first()
-    
-    if not file:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
+    file = auth.verify_resource_access(
+        models.File,
+        file_id,
+        current_user.family_id,
+        db
+    )
         
     token = auth.create_file_access_token(file.id, current_user.id)
     return {"token": token}
@@ -256,14 +260,12 @@ def download_file(
     current_user: models.User = Depends(auth.get_current_user_or_file_preview),
     db: Session = Depends(get_db)
 ):
-    file = db.query(models.File).filter(
-        models.File.id == file_id,
-        models.File.family_id == current_user.family_id,
-        models.File.deleted_at == None
-    ).first()
-    
-    if not file:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
+    file = auth.verify_resource_access(
+        models.File,
+        file_id,
+        current_user.family_id,
+        db
+    )
         
     family = db.query(models.Family).filter(models.Family.id == current_user.family_id).first()
     
@@ -295,14 +297,12 @@ def preview_file(
     current_user: models.User = Depends(auth.get_current_user_or_file_preview),
     db: Session = Depends(get_db)
 ):
-    file = db.query(models.File).filter(
-        models.File.id == file_id,
-        models.File.family_id == current_user.family_id,
-        models.File.deleted_at == None
-    ).first()
-    
-    if not file:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
+    file = auth.verify_resource_access(
+        models.File,
+        file_id,
+        current_user.family_id,
+        db
+    )
         
     family = db.query(models.Family).filter(models.Family.id == current_user.family_id).first()
     
@@ -332,14 +332,12 @@ def rename_file(
     current_user: models.User = Depends(auth.get_current_user),
     db: Session = Depends(get_db)
 ):
-    file = db.query(models.File).filter(
-        models.File.id == file_id,
-        models.File.family_id == current_user.family_id,
-        models.File.deleted_at == None
-    ).first()
-    
-    if not file:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
+    file = auth.verify_resource_access(
+        models.File,
+        file_id,
+        current_user.family_id,
+        db
+    )
         
     if current_user.role != "admin" and file.uploader_id != current_user.id:
         raise HTTPException(
@@ -399,14 +397,12 @@ def delete_file(
     current_user: models.User = Depends(auth.get_current_user),
     db: Session = Depends(get_db)
 ):
-    file = db.query(models.File).filter(
-        models.File.id == file_id,
-        models.File.family_id == current_user.family_id,
-        models.File.deleted_at == None
-    ).first()
-    
-    if not file:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
+    file = auth.verify_resource_access(
+        models.File,
+        file_id,
+        current_user.family_id,
+        db
+    )
         
     if current_user.role != "admin" and file.uploader_id != current_user.id:
         raise HTTPException(
@@ -435,24 +431,21 @@ def move_file(
     current_user: models.User = Depends(auth.get_current_user),
     db: Session = Depends(get_db)
 ):
-    file = db.query(models.File).options(joinedload(models.File.uploader)).filter(
-        models.File.id == file_id,
-        models.File.family_id == current_user.family_id,
-        models.File.deleted_at == None
-    ).first()
-    
-    if not file:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
+    file = auth.verify_resource_access(
+        models.File,
+        file_id,
+        current_user.family_id,
+        db
+    )
         
     # Verify destination folder exists
     if file_in.folder_id is not None:
-        folder = db.query(models.Folder).filter(
-            models.Folder.id == file_in.folder_id,
-            models.Folder.family_id == current_user.family_id,
-            models.Folder.deleted_at == None
-        ).first()
-        if not folder:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Destination folder not found")
+        folder = auth.verify_resource_access(
+            models.Folder,
+            file_in.folder_id,
+            current_user.family_id,
+            db
+        )
 
     # Check for duplicate filename in the target folder
     duplicate_file = db.query(models.File).filter(

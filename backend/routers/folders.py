@@ -60,6 +60,12 @@ def get_folders(
     current_user: models.User = Depends(auth.get_current_user),
     db: Session = Depends(get_db)
 ):
+    if not current_user.family_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User has not joined a family yet."
+        )
+
     query_results = db.query(
         models.Folder,
         func.count(models.File.id).label('file_count'),
@@ -90,16 +96,12 @@ def create_folder(
 
     # If parent folder is specified, verify it exists, belongs to the family, and is not deleted
     if folder_in.parent_id is not None:
-        parent = db.query(models.Folder).filter(
-            models.Folder.id == folder_in.parent_id,
-            models.Folder.family_id == current_user.family_id,
-            models.Folder.deleted_at == None
-        ).first()
-        if not parent:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Parent folder not found"
-            )
+        parent = auth.verify_resource_access(
+            models.Folder,
+            folder_in.parent_id,
+            current_user.family_id,
+            db
+        )
 
     folder_name = folder_in.name.strip()
     if not SAFE_FILENAME_PATTERN.match(folder_name) or len(folder_name) > 255:
@@ -168,17 +170,12 @@ def rename_folder(
     current_user: models.User = Depends(auth.get_current_user),
     db: Session = Depends(get_db)
 ):
-    folder = db.query(models.Folder).filter(
-        models.Folder.id == folder_id,
-        models.Folder.family_id == current_user.family_id,
-        models.Folder.deleted_at == None
-    ).first()
-    
-    if not folder:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Folder not found"
-        )
+    folder = auth.verify_resource_access(
+        models.Folder,
+        folder_id,
+        current_user.family_id,
+        db
+    )
         
     old_name = folder.name
     new_name = folder_in.name.strip()
@@ -258,17 +255,12 @@ def delete_folder(
     current_user: models.User = Depends(auth.get_current_user),
     db: Session = Depends(get_db)
 ):
-    folder = db.query(models.Folder).filter(
-        models.Folder.id == folder_id,
-        models.Folder.family_id == current_user.family_id,
-        models.Folder.deleted_at == None
-    ).first()
-    
-    if not folder:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Folder not found"
-        )
+    folder = auth.verify_resource_access(
+        models.Folder,
+        folder_id,
+        current_user.family_id,
+        db
+    )
         
     # Execute soft delete
     import uuid
@@ -290,17 +282,12 @@ def move_folder(
     current_user: models.User = Depends(auth.get_current_user),
     db: Session = Depends(get_db)
 ):
-    folder = db.query(models.Folder).filter(
-        models.Folder.id == folder_id,
-        models.Folder.family_id == current_user.family_id,
-        models.Folder.deleted_at == None
-    ).first()
-    
-    if not folder:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Folder not found"
-        )
+    folder = auth.verify_resource_access(
+        models.Folder,
+        folder_id,
+        current_user.family_id,
+        db
+    )
         
     # Validate destination parent_id
     if folder_in.parent_id is not None:
@@ -311,16 +298,12 @@ def move_folder(
             )
             
         # Verify parent exists
-        parent = db.query(models.Folder).filter(
-            models.Folder.id == folder_in.parent_id,
-            models.Folder.family_id == current_user.family_id,
-            models.Folder.deleted_at == None
-        ).first()
-        if not parent:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Destination folder not found"
-            )
+        parent = auth.verify_resource_access(
+            models.Folder,
+            folder_in.parent_id,
+            current_user.family_id,
+            db
+        )
             
         # Check for circular reference: destination parent must not be a child of this folder
         curr_parent = parent

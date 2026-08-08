@@ -167,3 +167,34 @@ def get_admin_user(
             detail="Operation restricted to family administrator"
         )
     return current_user
+
+def verify_resource_access(
+    db_model,
+    resource_id: int,
+    family_id: str,
+    db: Session,
+    include_deleted: bool = False,
+):
+    if family_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"{db_model.__name__} not found"
+        )
+        
+    query = db.query(db_model).filter(
+        db_model.id == resource_id,
+        db_model.family_id == family_id,
+    )
+
+    if not include_deleted and hasattr(db_model, "deleted_at"):
+        query = query.filter(db_model.deleted_at.is_(None))
+
+    resource = query.first()
+
+    if not resource:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"{db_model.__name__} not found"
+        )
+
+    return resource

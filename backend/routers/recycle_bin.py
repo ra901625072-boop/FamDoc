@@ -14,6 +14,12 @@ def get_recycle_bin(
     current_user: models.User = Depends(auth.get_current_user),
     db: Session = Depends(get_db)
 ):
+    if not current_user.family_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User has not joined a family yet."
+        )
+
     # Get all soft-deleted files and folders belonging to the current user's family
     files = db.query(models.File).filter(
         models.File.family_id == current_user.family_id,
@@ -89,12 +95,13 @@ def restore_item(
     db: Session = Depends(get_db)
 ):
     if item_type == "file":
-        file = db.query(models.File).filter(
-            models.File.id == item_id,
-            models.File.family_id == current_user.family_id
-        ).first()
-        if not file:
-            return {"message": "File not found or already restored"}
+        file = auth.verify_resource_access(
+            models.File,
+            item_id,
+            current_user.family_id,
+            db,
+            include_deleted=True
+        )
         
         if file.deleted_at is not None:
             file.deleted_at = None
@@ -107,12 +114,13 @@ def restore_item(
         return {"message": f"Successfully restored file: {file.filename}"}
 
     elif item_type == "folder":
-        folder = db.query(models.Folder).filter(
-            models.Folder.id == item_id,
-            models.Folder.family_id == current_user.family_id
-        ).first()
-        if not folder:
-            return {"message": "Folder not found or already restored"}
+        folder = auth.verify_resource_access(
+            models.Folder,
+            item_id,
+            current_user.family_id,
+            db,
+            include_deleted=True
+        )
         
         if folder.deleted_at is not None:
             restore_folder_recursive(item_id, folder.deletion_batch_id, db)
@@ -177,12 +185,13 @@ def purge_item(
     family = db.query(models.Family).filter(models.Family.id == current_user.family_id).first()
 
     if item_type == "file":
-        file = db.query(models.File).filter(
-            models.File.id == item_id,
-            models.File.family_id == current_user.family_id
-        ).first()
-        if not file:
-            raise HTTPException(status_code=404, detail="File not found")
+        file = auth.verify_resource_access(
+            models.File,
+            item_id,
+            current_user.family_id,
+            db,
+            include_deleted=True
+        )
         
         if file.deleted_at is not None:
             # Delete from cloud
@@ -204,12 +213,13 @@ def purge_item(
         return None
 
     elif item_type == "folder":
-        folder = db.query(models.Folder).filter(
-            models.Folder.id == item_id,
-            models.Folder.family_id == current_user.family_id
-        ).first()
-        if not folder:
-            raise HTTPException(status_code=404, detail="Folder not found")
+        folder = auth.verify_resource_access(
+            models.Folder,
+            item_id,
+            current_user.family_id,
+            db,
+            include_deleted=True
+        )
         
         if folder.deleted_at is not None:
             purge_folder_recursive(item_id, family, db)

@@ -500,7 +500,7 @@ class TestBackendRedesign(unittest.TestCase):
             # Other user attempts to create a folder under Test Family's "Photos" folder -> Should be rejected with 404
             res = self.client.post("/api/folders", json={"name": "HackedPhotos", "parent_id": photos_data["id"]}, headers=other_headers)
             self.assertEqual(res.status_code, 404)
-            self.assertIn("Parent folder not found", res.json().get("detail", ""))
+            self.assertIn("Folder not found", res.json().get("detail", ""))
 
             # Other user attempts to move their own folder inside Test Family's "Photos" folder -> Should be rejected with 404
             # Create a folder for other family first
@@ -622,10 +622,73 @@ class TestBackendRedesign(unittest.TestCase):
         res = self.client.delete(f"/api/recycle-bin/file/{file_b.id}/purge", headers=headers_a)
         self.assertEqual(res.status_code, 404)
 
-        # A tries to restore B's file -> Should return message that it's not found or already restored
+        # A tries to restore B's file -> Should return 404
         res = self.client.post(f"/api/recycle-bin/file/{file_b.id}/restore", headers=headers_a)
+        self.assertEqual(res.status_code, 404)
+
+    def test_family_membership_revocation(self):
+        # 1. User joins family, gets access token
+        user = models.User(
+            username="revoked_member",
+            email="revoked@test.com",
+            password_hash=auth.get_password_hash("Password123"),
+            role="member"
+        )
+        self.db.add(user)
+        self.db.flush()
+        
+        member_record = models.FamilyMember(
+            family_id=self.family.id,
+            user_id=user.id,
+            role="member"
+        )
+        self.db.add(member_record)
+        
+        # Create a file for the family
+        test_file = models.File(
+            filename="family_shared.pdf",
+            file_type="application/pdf",
+            size_bytes=1024,
+            uploader_id=self.admin.id,
+            folder_id=None,
+            family_id=self.family.id,
+            storage_provider="local",
+            cloud_file_id="cloud-shared-id",
+            pending_sync=False
+        )
+        self.db.add(test_file)
+        
+        self.db.commit()
+        
+        token = auth.create_access_token(data={"sub": user.email, "id": user.id, "role": user.role})
+        headers = {"Authorization": f"Bearer {token}"}
+        
+        # Verify user has access initially (can list files)
+        res = self.client.get("/api/files", headers=headers)
         self.assertEqual(res.status_code, 200)
-        self.assertEqual(res.json().get("message"), "File not found or already restored")
+        
+        # Verify user can get preview token
+        res = self.client.get(f"/api/files/{test_file.id}/preview-token", headers=headers)
+        self.assertEqual(res.status_code, 200)
+        
+        # 2. Revoke membership from database (delete FamilyMember)
+        db_member = self.db.query(models.FamilyMember).filter(
+            models.FamilyMember.family_id == self.family.id,
+            models.FamilyMember.user_id == user.id
+        ).first()
+        self.db.delete(db_member)
+        self.db.commit()
+        
+        # 3. Verify user's token immediately loses access to files and folders
+        # Fetching files returns 400 (User has not joined a family yet)
+        res = self.client.get("/api/files", headers=headers)
+        self.assertEqual(res.status_code, 400)
+        self.assertIn("User has not joined a family yet.", res.json().get("detail", ""))
+        
+        # Fetching specific file preview token returns 404 (File not found)
+        res = self.client.get(f"/api/files/{test_file.id}/preview-token", headers=headers)
+        self.assertEqual(res.status_code, 404)
+        self.assertIn("File not found", res.json().get("detail", ""))
 
 if __name__ == "__main__":
     unittest.main()

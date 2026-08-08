@@ -28,13 +28,12 @@ def create_share_link(
     db: Session = Depends(get_db)
 ):
     # Verify file exists, belongs to family, and is active
-    file = db.query(models.File).filter(
-        models.File.id == file_id,
-        models.File.family_id == current_user.family_id,
-        models.File.deleted_at == None
-    ).first()
-    if not file:
-        raise HTTPException(status_code=404, detail="File not found")
+    file = auth.verify_resource_access(
+        models.File,
+        file_id,
+        current_user.family_id,
+        db
+    )
 
     # Generate a unique token
     token = secrets.token_hex(16)
@@ -85,13 +84,12 @@ def get_file_share_links(
     db: Session = Depends(get_db)
 ):
     # Verify file belongs to family
-    file = db.query(models.File).filter(
-        models.File.id == file_id,
-        models.File.family_id == current_user.family_id,
-        models.File.deleted_at == None
-    ).first()
-    if not file:
-        raise HTTPException(status_code=404, detail="File not found")
+    file = auth.verify_resource_access(
+        models.File,
+        file_id,
+        current_user.family_id,
+        db
+    )
 
     links = db.query(models.SharedLink).filter(models.SharedLink.file_id == file_id).all()
     base_url = BACKEND_URL or str(request.base_url).rstrip("/")
@@ -117,12 +115,12 @@ def revoke_share_link(
     current_user: models.User = Depends(auth.get_current_user),
     db: Session = Depends(get_db)
 ):
-    link = db.query(models.SharedLink).filter(
-        models.SharedLink.id == token,
-        models.SharedLink.family_id == current_user.family_id
-    ).first()
-    if not link:
-        raise HTTPException(status_code=404, detail="Share link not found or unauthorized")
+    link = auth.verify_resource_access(
+        models.SharedLink,
+        token,
+        current_user.family_id,
+        db
+    )
 
     file_name = link.file.filename if link.file else "unknown"
     db.delete(link)
