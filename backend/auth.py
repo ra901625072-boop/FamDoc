@@ -31,7 +31,8 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     if expires_delta:
         expire = datetime.now(timezone.utc) + expires_delta
     else:
-        expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        # Set default session token expiration to 100 years (permanent login session)
+        expire = datetime.now(timezone.utc) + timedelta(days=365 * 100)
     to_encode.update({
         "exp": expire,
         "scope": "session"
