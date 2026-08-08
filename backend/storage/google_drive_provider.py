@@ -122,7 +122,8 @@ class GoogleDriveProvider(StorageProvider):
 
         # 2. Find or create the root 'Famdoc' project folder
         project_folder_name = "Famdoc"
-        project_query = f"mimeType = 'application/vnd.google-apps.folder' and name = '{project_folder_name}' and 'root' in parents and trashed = false"
+        safe_project_folder_name = project_folder_name.replace("'", "\\'")
+        project_query = f"mimeType = 'application/vnd.google-apps.folder' and name = '{safe_project_folder_name}' and 'root' in parents and trashed = false"
         
         from storage.base import SimpleRetry
         results = None
@@ -157,7 +158,8 @@ class GoogleDriveProvider(StorageProvider):
             family_folder_name = family_name
         else:
             family_folder_name = f"{family_name} Family"
-        family_query = f"mimeType = 'application/vnd.google-apps.folder' and name = '{family_folder_name}' and '{project_root_id}' in parents and trashed = false"
+        safe_family_folder_name = family_folder_name.replace("'", "\\'")
+        family_query = f"mimeType = 'application/vnd.google-apps.folder' and name = '{safe_family_folder_name}' and '{project_root_id}' in parents and trashed = false"
         
         results = None
         for attempt in SimpleRetry(attempts=3, wait=1):
@@ -229,7 +231,8 @@ class GoogleDriveProvider(StorageProvider):
         target_folder_id = vault_folder_id
         if username:
             # Query for the subfolder with name = username under parent vault_folder_id (which is root famdoc folder)
-            query = f"mimeType = 'application/vnd.google-apps.folder' and name = '{username}' and '{vault_folder_id}' in parents and trashed = false"
+            safe_username = username.replace("'", "\\'")
+            query = f"mimeType = 'application/vnd.google-apps.folder' and name = '{safe_username}' and '{vault_folder_id}' in parents and trashed = false"
             
             from storage.base import SimpleRetry
             results = None
