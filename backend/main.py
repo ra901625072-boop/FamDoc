@@ -24,10 +24,7 @@ if IS_DEFAULT_JWT_SECRET:
 # Storage Config Encryption Key Security Validation
 STORAGE_CONFIG_ENCRYPTION_KEY = os.getenv("STORAGE_CONFIG_ENCRYPTION_KEY")
 if not STORAGE_CONFIG_ENCRYPTION_KEY:
-    if APP_ENV != "development":
-        raise RuntimeError("SECURITY CRITICAL: STORAGE_CONFIG_ENCRYPTION_KEY environment variable is not set in a production environment! Server startup aborted.")
-    else:
-        logger.warning("WARNING: STORAGE_CONFIG_ENCRYPTION_KEY is not set. Falling back to key derived from JWT_SECRET. This is unsafe for production deployment.")
+    logger.warning("WARNING: STORAGE_CONFIG_ENCRYPTION_KEY is not set. Falling back to key derived from JWT_SECRET. This is unsafe for production deployment.")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
