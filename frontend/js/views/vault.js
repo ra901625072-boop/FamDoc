@@ -716,12 +716,15 @@
       const ext = file.filename.split(".").pop().toLowerCase();
       const mime = file.file_type ? file.file_type.toLowerCase() : "";
       const isImage = mime.includes("image") || ["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(ext);
+      const isPdf = ext === "pdf";
 
       let iconHtml = "";
       if (isImage) {
         const previewUrl = FamDocAPI.files.getPreviewUrl(file.id);
         const authenticatedPreviewUrl = previewUrl + (file.preview_token ? `?token=${file.preview_token}` : "");
         iconHtml = `<img class="item-icon item-thumbnail loaded" data-file-id="${file.id}" src="${authenticatedPreviewUrl}" alt="${FamDocAPI.utils.escapeHtml(file.filename)}" onerror="this.onerror=null; this.outerHTML='<i class=\'item-icon fas fa-file-image file-image\'></i>';">`;
+      } else if (isPdf) {
+        iconHtml = `<span class="pdf-thumbnail-container" data-file-id="${file.id}"><i class="item-icon far fa-file-pdf file-pdf"></i></span>`;
       } else {
         const iconClass = FamDocAPI.utils.getFileIconClass(file.file_type, file.filename);
         iconHtml = `<i class="item-icon ${iconClass}"></i>`;
@@ -832,9 +835,11 @@
 
       wrapper.appendChild(fileCard);
 
-      // Async fetch image thumbnails if missing token
+      // Async fetch image/pdf thumbnails
       if (isImage && !file.preview_token) {
         loadThumbnail(file.id);
+      } else if (isPdf) {
+        loadPdfThumbnail(file.id, file.preview_token);
       }
     });
   }
@@ -845,6 +850,50 @@
     const previewUrl = FamDocAPI.files.getPreviewUrl(fileId) + `?token=${fileToken}`;
     const imgs = document.querySelectorAll(`img[data-file-id="${fileId}"]`);
     imgs.forEach(img => { img.src = previewUrl; });
+  }
+
+  async function loadPdfThumbnail(fileId, previewToken) {
+    try {
+      let token = previewToken;
+      if (!token) {
+        token = await getPreviewToken(fileId);
+      }
+      if (!token) return;
+
+      const previewUrl = FamDocAPI.files.getPreviewUrl(fileId) + `?token=${token}`;
+      
+      if (typeof pdfjsLib === "undefined") return;
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+      
+      const loadingTask = pdfjsLib.getDocument(previewUrl);
+      const pdf = await loadingTask.promise;
+      const page = await pdf.getPage(1);
+      
+      const viewport = page.getViewport({ scale: 0.35 });
+      const canvas = document.createElement("canvas");
+      const context = canvas.getContext("2d");
+      canvas.height = viewport.height;
+      canvas.width = viewport.width;
+      
+      const renderContext = {
+        canvasContext: context,
+        viewport: viewport
+      };
+      await page.render(renderContext).promise;
+      const dataUrl = canvas.toDataURL("image/png");
+      
+      const containers = document.querySelectorAll(`.pdf-thumbnail-container[data-file-id="${fileId}"]`);
+      containers.forEach(container => {
+        const img = document.createElement("img");
+        img.className = "item-icon item-thumbnail loaded";
+        img.setAttribute("data-file-id", fileId);
+        img.src = dataUrl;
+        img.alt = "PDF Thumbnail";
+        container.replaceWith(img);
+      });
+    } catch (err) {
+      console.error("Failed to render PDF thumbnail for file " + fileId, err);
+    }
   }
 
   function setView(view) {
