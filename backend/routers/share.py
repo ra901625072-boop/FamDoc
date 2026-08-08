@@ -36,7 +36,7 @@ def create_share_link(
     )
 
     # Generate a unique token
-    token = secrets.token_hex(16)
+    token = secrets.token_urlsafe(32)
 
     # Securely hash password if provided
     pwd_hash = None
@@ -194,9 +194,16 @@ def download_public_shared_file(
 
     # Verify password if protected
     if link.password_hash:
+        if verify_rate_limit(f"shared_password_failed:{token}:{ip}", max_requests=5, window_seconds=600, increment=False):
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Too many incorrect password attempts. Please try again in 10 minutes."
+            )
         if not password_in or not password_in.password:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Password is required for this shared link.")
         if not auth.verify_password(password_in.password, link.password_hash):
+            # Record failed attempt
+            verify_rate_limit(f"shared_password_failed:{token}:{ip}", max_requests=5, window_seconds=600)
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect password.")
 
     # Retrieve file from storage provider

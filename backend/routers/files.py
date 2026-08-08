@@ -20,6 +20,31 @@ from datetime import datetime, timezone
 from storage.storage_manager import StorageManager
 
 SAFE_FILENAME_PATTERN = re.compile(r'^[\w\-. ()\[\]]+$', re.UNICODE)
+def validate_file_content_signature(content: bytes, ext: str) -> bool:
+    """
+    Validates that the file content's magic bytes match the expected signature for its extension.
+    """
+    if ext == ".pdf":
+        return content.startswith(b"%PDF")
+    elif ext in (".jpg", ".jpeg"):
+        return content.startswith(b"\xff\xd8\xff")
+    elif ext == ".png":
+        return content.startswith(b"\x89PNG\r\n\x1a\n")
+    elif ext in (".docx", ".xlsx"):
+        # Office XML format (ZIP container)
+        return content.startswith(b"PK\x03\x04")
+    elif ext in (".doc", ".xls"):
+        # Compound File Binary Format (OLE2)
+        return content.startswith(b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1")
+    elif ext == ".txt":
+        # Text files: try to decode as UTF-8 or ASCII
+        try:
+            content[:4096].decode("utf-8")
+            return True
+        except UnicodeDecodeError:
+            return False
+    return True
+
 router = APIRouter(prefix="/api/files", tags=["Files"])
 
 @router.get("", response_model=List[schemas.FileResponse])
@@ -115,6 +140,13 @@ async def upload_file(
 
     content = await file.read()
     file_size = len(content)
+
+    # Enforce file content verification (magic bytes check)
+    if not validate_file_content_signature(content, ext):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="File content does not match the file extension signature."
+        )
 
     # Enforce file size limit (50MB)
     MAX_FILE_SIZE = 50 * 1024 * 1024

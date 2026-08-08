@@ -9,7 +9,7 @@ class InMemoryRateLimiter:
         self._store: Dict[str, List[float]] = {}
         self._lock = threading.Lock()
 
-    def is_rate_limited(self, key: str, max_requests: int, window_seconds: int) -> bool:
+    def is_rate_limited(self, key: str, max_requests: int, window_seconds: int, increment: bool = True) -> bool:
         now = time.time()
         cutoff = now - window_seconds
         
@@ -23,7 +23,8 @@ class InMemoryRateLimiter:
             if len(self._store[key]) >= max_requests:
                 return True
                 
-            self._store[key].append(now)
+            if increment:
+                self._store[key].append(now)
             return False
 
 class RedisRateLimiter:
@@ -42,7 +43,7 @@ class RedisRateLimiter:
             logger.error(f"Failed to initialize Redis connection: {e}")
             self._connect_failed = True
 
-    def is_rate_limited(self, key: str, max_requests: int, window_seconds: int) -> bool:
+    def is_rate_limited(self, key: str, max_requests: int, window_seconds: int, increment: bool = True) -> bool:
         if self._connect_failed or not self.client:
             return False
             
@@ -50,6 +51,11 @@ class RedisRateLimiter:
             now = time.time()
             zset_key = f"rate_limit:{key}"
             cutoff = now - window_seconds
+            
+            if not increment:
+                self.client.zremrangebyscore(zset_key, 0, cutoff)
+                count = self.client.zcard(zset_key)
+                return count >= max_requests
             
             pipe = self.client.pipeline()
             # Clean up timestamps older than the window
@@ -87,20 +93,20 @@ class PluggableRateLimiter:
             except ImportError:
                 logger.warning("redis-py package is not installed. Using in-memory rate limiter.")
 
-    def is_rate_limited(self, key: str, max_requests: int, window_seconds: int) -> bool:
+    def is_rate_limited(self, key: str, max_requests: int, window_seconds: int, increment: bool = True) -> bool:
         if self.redis_limiter and not self.redis_limiter._connect_failed:
-            res = self.redis_limiter.is_rate_limited(key, max_requests, window_seconds)
+            res = self.redis_limiter.is_rate_limited(key, max_requests, window_seconds, increment)
             if not self.redis_limiter._connect_failed:
                 return res
-        return self.in_memory_limiter.is_rate_limited(key, max_requests, window_seconds)
+        return self.in_memory_limiter.is_rate_limited(key, max_requests, window_seconds, increment)
 
 # Global rate limiter instance
 _global_rate_limiter = PluggableRateLimiter()
 
-def check_rate_limit(key: str, max_requests: int = 5, window_seconds: int = 600) -> bool:
+def check_rate_limit(key: str, max_requests: int = 5, window_seconds: int = 600, increment: bool = True) -> bool:
     """
     Checks rate limits for a given identifier key.
     Returns:
         bool: True if key is rate limited, False otherwise.
     """
-    return _global_rate_limiter.is_rate_limited(key, max_requests, window_seconds)
+    return _global_rate_limiter.is_rate_limited(key, max_requests, window_seconds, increment)

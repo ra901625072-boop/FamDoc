@@ -262,6 +262,8 @@ class TestBackendRedesign(unittest.TestCase):
         
         # Helper payload for uploading files
         def upload_file_mock(filename, content_bytes):
+            if filename.endswith(".pdf") and len(content_bytes) >= 4:
+                content_bytes = b"%PDF" + content_bytes[4:]
             file_payload = {"file": (filename, content_bytes, "application/pdf")}
             return self.client.post("/api/files/upload", files=file_payload, headers=headers)
 
@@ -835,6 +837,79 @@ class TestBackendRedesign(unittest.TestCase):
 
         finally:
             StorageManager.__init__ = original_init
+
+    def test_upload_content_signature_validation(self):
+        admin_token = auth.create_access_token(data={"sub": self.admin.email, "id": self.admin.id, "role": self.admin.role})
+        headers = {"Authorization": f"Bearer {admin_token}"}
+
+        # 1. Upload valid PDF file (starts with %PDF) -> Should return 201
+        pdf_content = b"%PDF-1.4\n%mock pdf content"
+        res = self.client.post(
+            "/api/files/upload",
+            files={"file": ("report.pdf", pdf_content, "application/pdf")},
+            data={"folder_id": ""},
+            headers=headers
+        )
+        self.assertEqual(res.status_code, 201)
+
+        # 2. Upload fake PDF file (does not start with %PDF) -> Should return 400
+        fake_pdf_content = b"random hacker bytes, not a pdf"
+        res = self.client.post(
+            "/api/files/upload",
+            files={"file": ("fake_report.pdf", fake_pdf_content, "application/pdf")},
+            data={"folder_id": ""},
+            headers=headers
+        )
+        self.assertEqual(res.status_code, 400)
+        self.assertIn("File content does not match the file extension signature", res.json().get("detail", ""))
+
+        # 3. Upload valid text file (valid UTF-8) -> Should return 201
+        txt_content = b"Hello world, this is plain text."
+        res = self.client.post(
+            "/api/files/upload",
+            files={"file": ("notes.txt", txt_content, "text/plain")},
+            data={"folder_id": ""},
+            headers=headers
+        )
+        self.assertEqual(res.status_code, 201)
+
+    def test_share_password_brute_force_rate_limit(self):
+        admin_token = auth.create_access_token(data={"sub": self.admin.email, "id": self.admin.id, "role": self.admin.role})
+        headers = {"Authorization": f"Bearer {admin_token}"}
+
+        # Create a file
+        file = models.File(
+            filename="brute_test.pdf",
+            file_type="application/pdf",
+            size_bytes=100,
+            uploader_id=self.admin.id,
+            folder_id=None,
+            family_id=self.family.id,
+            storage_provider="local",
+            file_id="local-path/brute_test.pdf",
+            local_file_id="local-path/brute_test.pdf",
+            pending_sync=False
+        )
+        self.db.add(file)
+        self.db.commit()
+
+        # Create password-protected share link
+        res = self.client.post(
+            f"/api/files/{file.id}/share",
+            json={"expires_at": None, "max_downloads": None, "password": "CorrectPassword123"},
+            headers=headers
+        )
+        pwd_token = res.json()["token"]
+
+        # Make 5 incorrect password attempts (limit is 5)
+        for _ in range(5):
+            res = self.client.post(f"/api/shared/{pwd_token}/download", json={"password": "WrongPassword"})
+            self.assertEqual(res.status_code, 401)
+
+        # 6th attempt (even with CORRECT password) should fail with 429 Too Many Requests
+        res = self.client.post(f"/api/shared/{pwd_token}/download", json={"password": "CorrectPassword123"})
+        self.assertEqual(res.status_code, 429)
+        self.assertIn("Too many incorrect password attempts", res.json().get("detail", ""))
 
 if __name__ == "__main__":
     unittest.main()
