@@ -885,7 +885,12 @@
       const pdf = await loadingTask.promise;
       const page = await pdf.getPage(1);
       
-      const viewport = page.getViewport({ scale: 0.35 });
+      // Calculate optimal scale dynamically based on a target width of 120px
+      const unscaledViewport = page.getViewport({ scale: 1.0 });
+      const targetWidth = 120;
+      const scale = targetWidth / unscaledViewport.width;
+      const viewport = page.getViewport({ scale: scale });
+
       const canvas = document.createElement("canvas");
       const context = canvas.getContext("2d");
       canvas.height = viewport.height;
@@ -896,7 +901,9 @@
         viewport: viewport
       };
       await page.render(renderContext).promise;
-      const dataUrl = canvas.toDataURL("image/png");
+      
+      // Convert to compressed JPEG (quality 0.7) for very small payload sizes (1.5KB - 3KB)
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.7);
       
       try {
         localStorage.setItem("famdoc-pdf-thumb-" + fileId, dataUrl);
