@@ -19,7 +19,7 @@
         </div>
       </div>
 
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;" class="profile-grid">
+      <div class="profile-grid">
         <!-- Account details Card -->
         <div class="famdoc-card fd-fade-up" style="--fd-delay: 0.05s;">
           <div class="famdoc-card-header">

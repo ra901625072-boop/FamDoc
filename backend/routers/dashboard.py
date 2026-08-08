@@ -87,6 +87,42 @@ def get_dashboard_stats(
         for log in recent_logs
     ]
 
+    # 8. Storage Quota & Breakdown
+    storage_quota_bytes = family.storage_quota_bytes if family else 524288000
+    
+    active_files = db.query(models.File.file_type, models.File.filename, models.File.size_bytes).filter(
+        models.File.family_id == current_user.family_id,
+        models.File.deleted_at == None
+    ).all()
+    
+    storage_breakdown = {
+        "pdf": {"size": 0, "count": 0},
+        "image": {"size": 0, "count": 0},
+        "document": {"size": 0, "count": 0},
+        "sheet": {"size": 0, "count": 0},
+        "text": {"size": 0, "count": 0},
+        "other": {"size": 0, "count": 0}
+    }
+    for file_type, filename, size_bytes in active_files:
+        ext = filename.split('.')[-1].lower() if '.' in filename else ''
+        mime = file_type.lower() if file_type else ''
+        
+        if 'pdf' in mime or ext == 'pdf':
+            cat = 'pdf'
+        elif 'image' in mime or ext in ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg']:
+            cat = 'image'
+        elif 'word' in mime or 'officedocument.wordprocessingml' in mime or ext in ['doc', 'docx']:
+            cat = 'document'
+        elif 'excel' in mime or 'spreadsheet' in mime or 'officedocument.spreadsheetml' in mime or ext in ['xls', 'xlsx', 'csv']:
+            cat = 'sheet'
+        elif 'text' in mime or 'markdown' in mime or ext in ['txt', 'md', 'rtf']:
+            cat = 'text'
+        else:
+            cat = 'other'
+            
+        storage_breakdown[cat]["size"] += size_bytes
+        storage_breakdown[cat]["count"] += 1
+
     return {
         "total_files": total_files,
         "total_folders": total_folders,
@@ -94,5 +130,8 @@ def get_dashboard_stats(
         "total_members": total_members,
         "storage_provider": storage_provider,
         "recent_uploads": recent_uploads,
-        "recent_activity": recent_activity
+        "recent_activity": recent_activity,
+        "storage_quota_bytes": storage_quota_bytes,
+        "storage_breakdown": storage_breakdown
     }
+

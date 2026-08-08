@@ -28,6 +28,9 @@
           <div class="icon-chip stat-icon"><i class="fas fa-database"></i></div>
           <div class="stat-label">Space Occupied</div>
           <div class="stat-val" id="stat-size"><span class="fd-skel" style="width: 100px; height: 30px; border-radius: 4px;"></span></div>
+          <div id="dashboard-progress-container" style="display: none; background-color: var(--surface-paper-tint); border: 1px solid var(--border-paper); border-radius: var(--radius-sm); height: 8px; overflow: hidden; margin-top: 1rem; width: 100%; box-shadow: inset 0 1px 2px rgba(0,0,0,0.02);">
+            <div id="dashboard-progress-bar" style="display: flex; height: 100%; width: 100%;"></div>
+          </div>
         </div>
         <div class="famdoc-card stat-card fd-fade-up fd-stagger" style="--fd-delay: 0.15s;">
           <div class="icon-chip stat-icon"><i class="fas fa-users"></i></div>
@@ -128,6 +131,9 @@
     if (statFiles) statFiles.textContent = stats.total_files;
     if (statSize) statSize.textContent = FamDocAPI.utils.formatBytes(stats.total_size_bytes);
     if (statMembers) statMembers.textContent = stats.total_members;
+
+    // Render visual storage breakdown
+    renderDashboardStorageBreakdown(stats);
 
     // Populate Recent Uploads
     const recentList = document.getElementById("recent-uploads-list");
@@ -306,6 +312,62 @@
       } else {
         FamDocAPI.utils.showToast("Reconnecting... Using cached stats.", "warning");
       }
+    }
+  }
+
+  function renderDashboardStorageBreakdown(stats) {
+    const progressContainer = document.getElementById("dashboard-progress-container");
+    const progressBar = document.getElementById("dashboard-progress-bar");
+    if (!progressContainer || !progressBar) return;
+    
+    const usedBytes = stats.total_size_bytes || 0;
+    const quotaBytes = stats.storage_quota_bytes || 524288000;
+    
+    if (usedBytes === 0) {
+      progressContainer.style.display = "none";
+      return;
+    }
+    
+    progressContainer.style.display = "block";
+    progressBar.innerHTML = "";
+    
+    const breakdown = stats.storage_breakdown || {};
+    
+    const categories = [
+      { key: "image", colorClass: "storage-segment-image" },
+      { key: "pdf", colorClass: "storage-segment-pdf" },
+      { key: "document", colorClass: "storage-segment-document" },
+      { key: "sheet", colorClass: "storage-segment-sheet" },
+      { key: "text", colorClass: "storage-segment-text" },
+      { key: "other", colorClass: "storage-segment-other" }
+    ];
+    
+    let totalAssignedPercent = 0;
+    categories.forEach(cat => {
+      const data = breakdown[cat.key] || { size: 0, count: 0 };
+      if (data.size > 0) {
+        let segPercent = (data.size / quotaBytes) * 100;
+        if (segPercent > 0 && segPercent < 1) segPercent = 1;
+        totalAssignedPercent += segPercent;
+        
+        const segment = document.createElement("div");
+        segment.className = `storage-progress-segment ${cat.colorClass}`;
+        segment.style.width = `${segPercent}%`;
+        segment.style.height = "100%";
+        segment.title = `${cat.key.toUpperCase()}: ${FamDocAPI.utils.formatBytes(data.size)} (${data.count} items)`;
+        progressBar.appendChild(segment);
+      }
+    });
+    
+    const remainingBytes = Math.max(0, quotaBytes - usedBytes);
+    if (remainingBytes > 0 && totalAssignedPercent < 100) {
+      const remainingPercent = 100 - totalAssignedPercent;
+      const segment = document.createElement("div");
+      segment.style.width = `${remainingPercent}%`;
+      segment.style.height = "100%";
+      segment.style.backgroundColor = "transparent";
+      segment.title = `Free Space: ${FamDocAPI.utils.formatBytes(remainingBytes)}`;
+      progressBar.appendChild(segment);
     }
   }
 })();

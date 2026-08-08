@@ -44,7 +44,27 @@
           </div>
         </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;" class="storage-grid">
+        <!-- Storage Space Breakdown Card (New UI Element) -->
+        <div class="famdoc-card storage-breakdown-card fd-fade-up" id="storage-breakdown-panel" style="display: none; margin-bottom: 2rem;">
+          <h3 style="font-family: var(--font-serif); font-size: 1.25rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+            <i class="fas fa-chart-pie" style="color: var(--accent-brand);"></i>
+            Storage Space Breakdown
+          </h3>
+          <div class="storage-usage-summary">
+            <div class="storage-usage-values">
+              Used <strong id="storage-used-text">0 B</strong> of <span id="storage-total-text">500 MB</span>
+            </div>
+            <div class="storage-usage-percent" id="storage-percent-text">0%</div>
+          </div>
+          <div class="storage-progress-bar-container" id="storage-progress-bar">
+            <!-- Progress segments will be injected dynamically -->
+          </div>
+          <div class="storage-legend-grid" id="storage-legend">
+            <!-- Legend items will be injected dynamically -->
+          </div>
+        </div>
+
+        <div class="storage-grid">
           <!-- Google Drive card -->
           <div class="famdoc-card storage-config-card" id="google-card">
             <div class="famdoc-card-header">
@@ -179,6 +199,14 @@
       } else {
         activeDetailEl.textContent = "Currently using local database storage folder.";
       }
+
+      // Fetch stats and render visual breakdown
+      try {
+        const stats = await FamDocAPI.dashboard.getStats();
+        renderStorageBreakdown(stats);
+      } catch (err) {
+        console.error("Failed to load storage breakdown stats", err);
+      }
     } catch (err) {
       console.error("Failed to load storage config:", err);
     }
@@ -242,6 +270,79 @@
           submitBtn.innerHTML = '<i class="fas fa-save"></i> Configure MEGA Cloud';
         }
       });
+    }
+  }
+
+  function renderStorageBreakdown(stats) {
+    const panel = document.getElementById("storage-breakdown-panel");
+    if (!panel) return;
+    
+    panel.style.display = "block";
+    
+    const usedBytes = stats.total_size_bytes || 0;
+    const quotaBytes = stats.storage_quota_bytes || 524288000;
+    
+    document.getElementById("storage-used-text").textContent = FamDocAPI.utils.formatBytes(usedBytes);
+    document.getElementById("storage-total-text").textContent = FamDocAPI.utils.formatBytes(quotaBytes);
+    
+    const percent = Math.min(100, Math.round((usedBytes / quotaBytes) * 100));
+    document.getElementById("storage-percent-text").textContent = `${percent}%`;
+    
+    const progressBar = document.getElementById("storage-progress-bar");
+    const legend = document.getElementById("storage-legend");
+    if (!progressBar || !legend) return;
+    
+    progressBar.innerHTML = "";
+    legend.innerHTML = "";
+    
+    const breakdown = stats.storage_breakdown || {};
+    
+    const categories = [
+      { key: "image", name: "Images", colorClass: "storage-segment-image", legendColor: "var(--image-color)" },
+      { key: "pdf", name: "PDFs", colorClass: "storage-segment-pdf", legendColor: "var(--pdf-color)" },
+      { key: "document", name: "Word Docs", colorClass: "storage-segment-document", legendColor: "var(--doc-color)" },
+      { key: "sheet", name: "Spreadsheets", colorClass: "storage-segment-sheet", legendColor: "var(--sheet-color)" },
+      { key: "text", name: "Text Files", colorClass: "storage-segment-text", legendColor: "var(--text-color)" },
+      { key: "other", name: "Other Files", colorClass: "storage-segment-other", legendColor: "var(--generic-color)" }
+    ];
+    
+    let totalAssignedPercent = 0;
+    
+    categories.forEach(cat => {
+      const data = breakdown[cat.key] || { size: 0, count: 0 };
+      if (data.size > 0) {
+        let segPercent = (data.size / quotaBytes) * 100;
+        if (segPercent > 0 && segPercent < 1) segPercent = 1;
+        totalAssignedPercent += segPercent;
+        
+        const segment = document.createElement("div");
+        segment.className = `storage-progress-segment ${cat.colorClass}`;
+        segment.style.width = `${segPercent}%`;
+        segment.title = `${cat.name}: ${FamDocAPI.utils.formatBytes(data.size)} (${data.count} items)`;
+        progressBar.appendChild(segment);
+      }
+      
+      const legendItem = document.createElement("div");
+      legendItem.className = "storage-legend-item fd-fade-in";
+      legendItem.innerHTML = `
+        <div class="storage-legend-color" style="background-color: ${cat.legendColor};"></div>
+        <div class="storage-legend-info">
+          <span class="storage-legend-name">${cat.name}</span>
+          <span class="storage-legend-size">${FamDocAPI.utils.formatBytes(data.size)} (${data.count})</span>
+        </div>
+      `;
+      legend.appendChild(legendItem);
+    });
+    
+    const remainingBytes = Math.max(0, quotaBytes - usedBytes);
+    if (remainingBytes > 0 && totalAssignedPercent < 100) {
+      const remainingPercent = 100 - totalAssignedPercent;
+      const segment = document.createElement("div");
+      segment.className = "storage-progress-segment";
+      segment.style.width = `${remainingPercent}%`;
+      segment.style.backgroundColor = "transparent";
+      segment.title = `Free Space: ${FamDocAPI.utils.formatBytes(remainingBytes)}`;
+      progressBar.appendChild(segment);
     }
   }
 })();

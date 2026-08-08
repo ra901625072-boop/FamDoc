@@ -222,7 +222,7 @@
                 </div>
               </div>
               
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+              <div class="form-row-2col">
                 <div class="form-group">
                   <label for="share-expires" class="form-label">Expiration Date (Optional)</label>
                   <input type="datetime-local" id="share-expires" class="form-control">
