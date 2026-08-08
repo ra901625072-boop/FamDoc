@@ -153,7 +153,10 @@ class GoogleDriveProvider(StorageProvider):
             project_root_id = new_project_folder.get('id')
 
         # 3. Find or create the family-specific subfolder under 'Famdoc'
-        family_folder_name = f"{family_name} Family"
+        if family_name.lower().endswith(" family"):
+            family_folder_name = family_name
+        else:
+            family_folder_name = f"{family_name} Family"
         family_query = f"mimeType = 'application/vnd.google-apps.folder' and name = '{family_folder_name}' and '{project_root_id}' in parents and trashed = false"
         
         results = None

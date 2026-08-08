@@ -161,7 +161,10 @@ class MegaProvider(StorageProvider):
                 raise Exception("Failed to create project root folder 'Famdoc' in Mega")
 
         # 3. Find or create the family subfolder under 'Famdoc'
-        family_folder_name = f"{family_name} Family"
+        if family_name.lower().endswith(" family"):
+            family_folder_name = family_name
+        else:
+            family_folder_name = f"{family_name} Family"
         files = client.get_files()
         family_node_id = None
         for nid, file_info in files.items():
@@ -213,18 +216,14 @@ class MegaProvider(StorageProvider):
         if not file_info:
             raise Exception("File/folder not found in Mega cloud to move")
             
-        file_obj = (cloud_file_id, file_info)
-        
         dest_info = files.get(new_parent_id)
         if not dest_info:
             raise Exception("Destination folder not found in Mega cloud")
             
-        dest_obj = (new_parent_id, dest_info)
-        
         from storage.base import SimpleRetry
         for attempt in SimpleRetry(attempts=3, wait=1):
             with attempt:
-                client.move(file_obj, dest_obj)
+                client.move(cloud_file_id, new_parent_id)
         return True
 
     def upload_file(self, config: dict, vault_folder_id: str, filename: str, file_content: bytes, mimetype: str, username: str = None, db = None) -> dict:
