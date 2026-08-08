@@ -143,6 +143,8 @@ def get_current_user_or_file_preview(
     token: Optional[str] = None,
     db: Session = Depends(get_db)
 ) -> models.User:
+    if not token and request and hasattr(request, "query_params"):
+        token = request.query_params.get("token")
     return get_current_user_with_scopes(["session", "file_preview"], token_header, token, db, request)
 
 def get_admin_user(
