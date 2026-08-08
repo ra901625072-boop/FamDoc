@@ -55,39 +55,43 @@ def execute_migration_statement(sql_statement):
             conn.execute(text(sql_statement))
         return
 
-    try:
-        # Try with a short lock timeout first to avoid blocking startup indefinitely
-        with engine.begin() as conn:
-            conn.execute(text("SET lock_timeout = '5s'"))
-            conn.execute(text(sql_statement))
-    except Exception as e:
-        err_msg = str(e).lower()
-        if "lock" in err_msg or "timeout" in err_msg or "cancel" in err_msg:
-            logger.warning(f"Lock acquisition failed for statement: {sql_statement}. Attempting to clear active connections and retrying...")
-            try:
-                # Terminate other connections to release locks in a fresh connection/transaction context
-                with engine.begin() as conn:
-                    conn.execute(text("""
-                        SELECT pg_terminate_backend(pid) 
-                        FROM pg_stat_activity 
-                        WHERE datname = current_database() 
-                          AND pid <> pg_backend_pid()
-                    """))
-                # Wait 1s for connections to drop
+    # Retry loop to acquire lock
+    for attempt in range(1, 4):
+        try:
+            with engine.begin() as conn:
+                conn.execute(text("SET lock_timeout = '3s'"))
+                conn.execute(text(sql_statement))
+            return # Success!
+        except Exception as e:
+            err_msg = str(e).lower()
+            if "lock" in err_msg or "timeout" in err_msg or "cancel" in err_msg:
+                logger.warning(f"Lock timeout (attempt {attempt}/3) for: {sql_statement}. Terminating blocking backends...")
+                try:
+                    # Terminate other backends to break any locks in a fresh connection context
+                    with engine.begin() as conn:
+                        conn.execute(text("""
+                            SELECT pg_terminate_backend(pid) 
+                            FROM pg_stat_activity 
+                            WHERE datname = current_database() 
+                              AND pid <> pg_backend_pid()
+                              AND state in ('idle in transaction', 'active')
+                        """))
+                except Exception as term_err:
+                    logger.warning(f"Could not terminate backends: {term_err}")
                 time.sleep(1)
-            except Exception as term_err:
-                logger.warning(f"Could not terminate connections: {term_err}")
-            
-            # Reset timeout and retry one more time in a fresh connection context
-            try:
-                with engine.begin() as conn:
-                    conn.execute(text("SET lock_timeout = '30s'"))
-                    conn.execute(text(sql_statement))
-            except Exception as retry_err:
-                logger.error(f"Migration statement failed after retry: {sql_statement}. Error: {retry_err}")
-                raise retry_err
-        else:
-            raise e
+            else:
+                # Real error, raise it
+                raise e
+
+    # Final attempt: execute in blocking mode to guarantee success
+    logger.warning(f"All lock-retries failed for: {sql_statement}. Executing in blocking mode...")
+    try:
+        with engine.begin() as conn:
+            conn.execute(text("SET lock_timeout = 0"))
+            conn.execute(text(sql_statement))
+    except Exception as final_err:
+        logger.error(f"Migration statement failed in blocking mode: {sql_statement}. Error: {final_err}")
+        raise final_err
 
 
 def run_migrations():
