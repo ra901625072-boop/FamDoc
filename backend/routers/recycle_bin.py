@@ -182,7 +182,7 @@ def purge_item(
             models.File.family_id == current_user.family_id
         ).first()
         if not file:
-            return None
+            raise HTTPException(status_code=404, detail="File not found")
         
         if file.deleted_at is not None:
             # Delete from cloud
@@ -209,7 +209,7 @@ def purge_item(
             models.Folder.family_id == current_user.family_id
         ).first()
         if not folder:
-            return None
+            raise HTTPException(status_code=404, detail="Folder not found")
         
         if folder.deleted_at is not None:
             purge_folder_recursive(item_id, family, db)

@@ -542,5 +542,90 @@ class TestBackendRedesign(unittest.TestCase):
             StorageManager.__init__ = original_init
             storage.get_storage_provider = original_get_provider
 
+    def test_id_tampering_protection(self):
+        # 1. Setup Family A (Test Family, self.family) and User A (self.admin)
+        admin_token = auth.create_access_token(data={"sub": self.admin.email, "id": self.admin.id, "role": self.admin.role})
+        headers_a = {"Authorization": f"Bearer {admin_token}"}
+        
+        # 2. Setup Family B and User B
+        other_user = models.User(
+            username="other_admin",
+            email="other@test.com",
+            password_hash=auth.get_password_hash("Password123"),
+            role="admin"
+        )
+        self.db.add(other_user)
+        self.db.flush()
+        other_family = models.Family(
+            id="otherfam999",
+            name="Other Family",
+            admin_id=other_user.id,
+            secret_code_hash="hashed_other",
+            max_members=10
+        )
+        self.db.add(other_family)
+        self.db.flush()
+        other_member = models.FamilyMember(
+            family_id=other_family.id,
+            user_id=other_user.id,
+            role="admin"
+        )
+        self.db.add(other_member)
+        
+        # Create folder B in Family B
+        folder_b = models.Folder(
+            name="Family B Folder",
+            parent_id=None,
+            family_id=other_family.id
+        )
+        self.db.add(folder_b)
+        self.db.flush()
+
+        # Create file B in Family B
+        file_b = models.File(
+            filename="confidential_b.pdf",
+            file_type="application/pdf",
+            size_bytes=1024,
+            uploader_id=other_user.id,
+            folder_id=folder_b.id,
+            family_id=other_family.id,
+            storage_provider="local",
+            cloud_file_id="cloud-b-id",
+            pending_sync=False
+        )
+        self.db.add(file_b)
+        
+        self.db.commit()
+        
+        # 3. Test ID Tampering from User A (headers_a) attempting to access Family B's resources
+        # A tries to rename B's folder -> Should return 404
+        res = self.client.put(f"/api/folders/{folder_b.id}", json={"name": "HackedName"}, headers=headers_a)
+        self.assertEqual(res.status_code, 404)
+        
+        # A tries to delete B's folder -> Should return 404
+        res = self.client.delete(f"/api/folders/{folder_b.id}", headers=headers_a)
+        self.assertEqual(res.status_code, 404)
+
+        # A tries to rename B's file -> Should return 404
+        res = self.client.put(f"/api/files/{file_b.id}", json={"filename": "HackedFile.pdf"}, headers=headers_a)
+        self.assertEqual(res.status_code, 404)
+
+        # A tries to move B's file -> Should return 404
+        res = self.client.patch(f"/api/files/{file_b.id}/move", json={"folder_id": None}, headers=headers_a)
+        self.assertEqual(res.status_code, 404)
+
+        # A tries to delete B's file -> Should return 404
+        res = self.client.delete(f"/api/files/{file_b.id}", headers=headers_a)
+        self.assertEqual(res.status_code, 404)
+
+        # A tries to purge B's file -> Should return 404
+        res = self.client.delete(f"/api/recycle-bin/file/{file_b.id}/purge", headers=headers_a)
+        self.assertEqual(res.status_code, 404)
+
+        # A tries to restore B's file -> Should return message that it's not found or already restored
+        res = self.client.post(f"/api/recycle-bin/file/{file_b.id}/restore", headers=headers_a)
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.json().get("message"), "File not found or already restored")
+
 if __name__ == "__main__":
     unittest.main()

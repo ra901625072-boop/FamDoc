@@ -159,7 +159,7 @@ async def upload_file(
                 target_username = None
             else:
                 target_vault_id = family.vault_folder_id
-                target_username = current_user.username
+                target_username = None
 
             cloud_result = manager.providers[provider].upload_file(
                 config=target_config,

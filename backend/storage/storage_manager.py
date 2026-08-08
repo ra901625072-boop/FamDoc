@@ -231,7 +231,7 @@ class StorageManager:
                     target_username = None
                 else:
                     target_vault_id = file.family.vault_folder_id
-                    target_username = uploader_username
+                    target_username = None
 
                 cloud_result = self.providers[target].upload_file(
                     config=target_config,
