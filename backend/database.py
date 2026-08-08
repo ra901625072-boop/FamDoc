@@ -45,6 +45,48 @@ def get_db():
     finally:
         db.close()
 
+def execute_migration_statement(conn, sql_statement):
+    import time
+    from logging_config import logger
+    dialect = conn.dialect.name
+    if dialect != "postgresql":
+        from sqlalchemy import text
+        conn.execute(text(sql_statement))
+        return
+
+    from sqlalchemy import text
+    try:
+        # Try with a short lock timeout first to avoid blocking startup indefinitely
+        conn.execute(text("SET lock_timeout = '5s'"))
+        conn.execute(text(sql_statement))
+    except Exception as e:
+        err_msg = str(e).lower()
+        if "lock" in err_msg or "timeout" in err_msg or "cancel" in err_msg:
+            logger.warning(f"Lock acquisition failed for statement: {sql_statement}. Attempting to clear active connections and retrying...")
+            try:
+                # Terminate other connections to release locks
+                conn.execute(text("""
+                    SELECT pg_terminate_backend(pid) 
+                    FROM pg_stat_activity 
+                    WHERE datname = current_database() 
+                      AND pid <> pg_backend_pid()
+                """))
+                # Wait 1s for connections to drop
+                time.sleep(1)
+            except Exception as term_err:
+                logger.warning(f"Could not terminate connections: {term_err}")
+            
+            # Reset timeout and retry one more time
+            try:
+                conn.execute(text("SET lock_timeout = '30s'"))
+                conn.execute(text(sql_statement))
+            except Exception as retry_err:
+                logger.error(f"Migration statement failed after retry: {sql_statement}. Error: {retry_err}")
+                raise retry_err
+        else:
+            raise e
+
+
 def run_migrations():
     from sqlalchemy import inspect, text
     from logging_config import logger
@@ -61,15 +103,15 @@ def run_migrations():
         if "secret_code_sha256" not in columns:
             with engine.begin() as conn:
                 try:
-                    conn.execute(text("ALTER TABLE families ADD COLUMN secret_code_sha256 VARCHAR(64)"))
-                    conn.execute(text("CREATE UNIQUE INDEX ix_families_secret_code_sha256 ON families(secret_code_sha256)"))
+                    execute_migration_statement(conn, "ALTER TABLE families ADD COLUMN secret_code_sha256 VARCHAR(64)")
+                    execute_migration_statement(conn, "CREATE UNIQUE INDEX ix_families_secret_code_sha256 ON families(secret_code_sha256)")
                     logger.info("Migration: Successfully added secret_code_sha256 column and index to families table.")
                 except Exception as e:
                     logger.error(f"Migration error (families secret_code_sha256): {str(e)}")
         if "storage_quota_bytes" not in columns:
             with engine.begin() as conn:
                 try:
-                    conn.execute(text("ALTER TABLE families ADD COLUMN storage_quota_bytes INTEGER NOT NULL DEFAULT 524288000"))
+                    execute_migration_statement(conn, "ALTER TABLE families ADD COLUMN storage_quota_bytes INTEGER NOT NULL DEFAULT 524288000")
                     logger.info("Migration: Successfully added storage_quota_bytes column to families table.")
                 except Exception as e:
                     logger.error(f"Migration error (families storage_quota_bytes): {str(e)}")
@@ -80,37 +122,37 @@ def run_migrations():
         if "deleted_at" not in columns:
             with engine.begin() as conn:
                 try:
-                    conn.execute(text(f"ALTER TABLE folders ADD COLUMN deleted_at {datetime_type}"))
-                    conn.execute(text("CREATE INDEX ix_folders_deleted_at ON folders(deleted_at)"))
+                    execute_migration_statement(conn, f"ALTER TABLE folders ADD COLUMN deleted_at {datetime_type}")
+                    execute_migration_statement(conn, "CREATE INDEX ix_folders_deleted_at ON folders(deleted_at)")
                     logger.info("Migration: Successfully added deleted_at column to folders table.")
                 except Exception as e:
                     logger.error(f"Migration error (folders deleted_at): {str(e)}")
         if "deletion_batch_id" not in columns:
             with engine.begin() as conn:
                 try:
-                    conn.execute(text("ALTER TABLE folders ADD COLUMN deletion_batch_id VARCHAR(36)"))
-                    conn.execute(text("CREATE INDEX ix_folders_deletion_batch_id ON folders(deletion_batch_id)"))
+                    execute_migration_statement(conn, "ALTER TABLE folders ADD COLUMN deletion_batch_id VARCHAR(36)")
+                    execute_migration_statement(conn, "CREATE INDEX ix_folders_deletion_batch_id ON folders(deletion_batch_id)")
                     logger.info("Migration: Successfully added deletion_batch_id column and index to folders table.")
                 except Exception as e:
                     logger.error(f"Migration error (folders deletion_batch_id): {str(e)}")
         if "cloud_folder_id" not in columns:
             with engine.begin() as conn:
                 try:
-                    conn.execute(text("ALTER TABLE folders ADD COLUMN cloud_folder_id VARCHAR(255)"))
+                    execute_migration_statement(conn, "ALTER TABLE folders ADD COLUMN cloud_folder_id VARCHAR(255)")
                     logger.info("Migration: Successfully added cloud_folder_id column to folders table.")
                 except Exception as e:
                     logger.error(f"Migration error (folders cloud_folder_id): {str(e)}")
         if "google_drive_folder_id" not in columns:
             with engine.begin() as conn:
                 try:
-                    conn.execute(text("ALTER TABLE folders ADD COLUMN google_drive_folder_id VARCHAR(255)"))
+                    execute_migration_statement(conn, "ALTER TABLE folders ADD COLUMN google_drive_folder_id VARCHAR(255)")
                     logger.info("Migration: Successfully added google_drive_folder_id column to folders table.")
                 except Exception as e:
                     logger.error(f"Migration error (folders google_drive_folder_id): {str(e)}")
         if "mega_folder_id" not in columns:
             with engine.begin() as conn:
                 try:
-                    conn.execute(text("ALTER TABLE folders ADD COLUMN mega_folder_id VARCHAR(255)"))
+                    execute_migration_statement(conn, "ALTER TABLE folders ADD COLUMN mega_folder_id VARCHAR(255)")
                     logger.info("Migration: Successfully added mega_folder_id column to folders table.")
                 except Exception as e:
                     logger.error(f"Migration error (folders mega_folder_id): {str(e)}")
@@ -129,52 +171,52 @@ def run_migrations():
         if "deleted_at" not in columns:
             with engine.begin() as conn:
                 try:
-                    conn.execute(text(f"ALTER TABLE files ADD COLUMN deleted_at {datetime_type}"))
-                    conn.execute(text("CREATE INDEX ix_files_deleted_at ON files(deleted_at)"))
+                    execute_migration_statement(conn, f"ALTER TABLE files ADD COLUMN deleted_at {datetime_type}")
+                    execute_migration_statement(conn, "CREATE INDEX ix_files_deleted_at ON files(deleted_at)")
                     logger.info("Migration: Successfully added deleted_at column to files table.")
                 except Exception as e:
                     logger.error(f"Migration error (files deleted_at): {str(e)}")
         if "deletion_batch_id" not in columns:
             with engine.begin() as conn:
                 try:
-                    conn.execute(text("ALTER TABLE files ADD COLUMN deletion_batch_id VARCHAR(36)"))
-                    conn.execute(text("CREATE INDEX ix_files_deletion_batch_id ON files(deletion_batch_id)"))
+                    execute_migration_statement(conn, "ALTER TABLE files ADD COLUMN deletion_batch_id VARCHAR(36)")
+                    execute_migration_statement(conn, "CREATE INDEX ix_files_deletion_batch_id ON files(deletion_batch_id)")
                     logger.info("Migration: Successfully added deletion_batch_id column and index to files table.")
                 except Exception as e:
                     logger.error(f"Migration error (files deletion_batch_id): {str(e)}")
         if "cloud_file_id" in columns:
             with engine.begin() as conn:
                 try:
-                    conn.execute(text("ALTER TABLE files RENAME COLUMN cloud_file_id TO file_id"))
+                    execute_migration_statement(conn, "ALTER TABLE files RENAME COLUMN cloud_file_id TO file_id")
                     logger.info("Migration: Successfully renamed cloud_file_id to file_id.")
                 except Exception as e:
                     logger.error(f"Migration error (rename cloud_file_id): {str(e)}")
         if "pending_sync" not in columns:
             with engine.begin() as conn:
                 try:
-                    conn.execute(text("ALTER TABLE files ADD COLUMN pending_sync INTEGER NOT NULL DEFAULT 1"))
-                    conn.execute(text("CREATE INDEX ix_files_pending_sync ON files(pending_sync)"))
+                    execute_migration_statement(conn, "ALTER TABLE files ADD COLUMN pending_sync INTEGER NOT NULL DEFAULT 1")
+                    execute_migration_statement(conn, "CREATE INDEX ix_files_pending_sync ON files(pending_sync)")
                     logger.info("Migration: Successfully added pending_sync column to files table.")
                 except Exception as e:
                     logger.error(f"Migration error (files pending_sync): {str(e)}")
         if "pending_sync_at" not in columns:
             with engine.begin() as conn:
                 try:
-                    conn.execute(text(f"ALTER TABLE files ADD COLUMN pending_sync_at {datetime_type}"))
+                    execute_migration_statement(conn, f"ALTER TABLE files ADD COLUMN pending_sync_at {datetime_type}")
                     logger.info("Migration: Successfully added pending_sync_at column to files table.")
                 except Exception as e:
                     logger.error(f"Migration error (files pending_sync_at): {str(e)}")
         if "synced_to" not in columns:
             with engine.begin() as conn:
                 try:
-                    conn.execute(text("ALTER TABLE files ADD COLUMN synced_to VARCHAR(50)"))
+                    execute_migration_statement(conn, "ALTER TABLE files ADD COLUMN synced_to VARCHAR(50)")
                     logger.info("Migration: Successfully added synced_to column to files table.")
                 except Exception as e:
                     logger.error(f"Migration error (files synced_to): {str(e)}")
         if "storage_provider" not in columns:
             with engine.begin() as conn:
                 try:
-                    conn.execute(text("ALTER TABLE files ADD COLUMN storage_provider VARCHAR(50) NOT NULL DEFAULT 'local'"))
+                    execute_migration_statement(conn, "ALTER TABLE files ADD COLUMN storage_provider VARCHAR(50) NOT NULL DEFAULT 'local'")
                     logger.info("Migration: Successfully added storage_provider column to files table.")
                 except Exception as e:
                     logger.error(f"Migration error (files storage_provider): {str(e)}")
@@ -182,8 +224,8 @@ def run_migrations():
         if "lock_acquired_at" not in columns:
             with engine.begin() as conn:
                 try:
-                    conn.execute(text(f"ALTER TABLE files ADD COLUMN lock_acquired_at {datetime_type}"))
-                    conn.execute(text("CREATE INDEX ix_files_lock_acquired_at ON files(lock_acquired_at)"))
+                    execute_migration_statement(conn, f"ALTER TABLE files ADD COLUMN lock_acquired_at {datetime_type}")
+                    execute_migration_statement(conn, "CREATE INDEX ix_files_lock_acquired_at ON files(lock_acquired_at)")
                     logger.info("Migration: Successfully added lock_acquired_at column and index to files table.")
                 except Exception as e:
                     logger.error(f"Migration error (files lock_acquired_at): {str(e)}")
@@ -191,8 +233,8 @@ def run_migrations():
         if "lock_holder" not in columns:
             with engine.begin() as conn:
                 try:
-                    conn.execute(text("ALTER TABLE files ADD COLUMN lock_holder VARCHAR(255)"))
-                    conn.execute(text("CREATE INDEX ix_files_lock_holder ON files(lock_holder)"))
+                    execute_migration_statement(conn, "ALTER TABLE files ADD COLUMN lock_holder VARCHAR(255)")
+                    execute_migration_statement(conn, "CREATE INDEX ix_files_lock_holder ON files(lock_holder)")
                     logger.info("Migration: Successfully added lock_holder column and index to files table.")
                 except Exception as e:
                     logger.error(f"Migration error (files lock_holder): {str(e)}")
@@ -200,7 +242,7 @@ def run_migrations():
         if "sync_retry_count" not in columns:
             with engine.begin() as conn:
                 try:
-                    conn.execute(text("ALTER TABLE files ADD COLUMN sync_retry_count INTEGER NOT NULL DEFAULT 0"))
+                    execute_migration_statement(conn, "ALTER TABLE files ADD COLUMN sync_retry_count INTEGER NOT NULL DEFAULT 0")
                     logger.info("Migration: Successfully added sync_retry_count column to files table.")
                 except Exception as e:
                     logger.error(f"Migration error (files sync_retry_count): {str(e)}")
@@ -211,7 +253,7 @@ def run_migrations():
         if "local_file_id" not in columns:
             with engine.begin() as conn:
                 try:
-                    conn.execute(text("ALTER TABLE files ADD COLUMN local_file_id VARCHAR(255)"))
+                    execute_migration_statement(conn, "ALTER TABLE files ADD COLUMN local_file_id VARCHAR(255)")
                     local_file_id_added = True
                     logger.info("Migration: Successfully added local_file_id column to files table.")
                 except Exception as e:
@@ -220,7 +262,7 @@ def run_migrations():
         if "cloud_file_id" not in columns:
             with engine.begin() as conn:
                 try:
-                    conn.execute(text("ALTER TABLE files ADD COLUMN cloud_file_id VARCHAR(255)"))
+                    execute_migration_statement(conn, "ALTER TABLE files ADD COLUMN cloud_file_id VARCHAR(255)")
                     cloud_file_id_added = True
                     logger.info("Migration: Successfully added cloud_file_id column to files table.")
                 except Exception as e:
@@ -229,7 +271,7 @@ def run_migrations():
         if "google_drive_file_id" not in columns:
             with engine.begin() as conn:
                 try:
-                    conn.execute(text("ALTER TABLE files ADD COLUMN google_drive_file_id VARCHAR(255)"))
+                    execute_migration_statement(conn, "ALTER TABLE files ADD COLUMN google_drive_file_id VARCHAR(255)")
                     logger.info("Migration: Successfully added google_drive_file_id column to files table.")
                 except Exception as e:
                     logger.error(f"Migration error (files google_drive_file_id): {str(e)}")
@@ -237,7 +279,7 @@ def run_migrations():
         if "mega_file_id" not in columns:
             with engine.begin() as conn:
                 try:
-                    conn.execute(text("ALTER TABLE files ADD COLUMN mega_file_id VARCHAR(255)"))
+                    execute_migration_statement(conn, "ALTER TABLE files ADD COLUMN mega_file_id VARCHAR(255)")
                     logger.info("Migration: Successfully added mega_file_id column to files table.")
                 except Exception as e:
                     logger.error(f"Migration error (files mega_file_id): {str(e)}")
@@ -245,7 +287,7 @@ def run_migrations():
         if "primary_storage" not in columns:
             with engine.begin() as conn:
                 try:
-                    conn.execute(text("ALTER TABLE files ADD COLUMN primary_storage VARCHAR(50)"))
+                    execute_migration_statement(conn, "ALTER TABLE files ADD COLUMN primary_storage VARCHAR(50)")
                     logger.info("Migration: Successfully added primary_storage column to files table.")
                 except Exception as e:
                     logger.error(f"Migration error (files primary_storage): {str(e)}")
@@ -253,7 +295,7 @@ def run_migrations():
         if "backup_status" not in columns:
             with engine.begin() as conn:
                 try:
-                    conn.execute(text("ALTER TABLE files ADD COLUMN backup_status VARCHAR(50)"))
+                    execute_migration_statement(conn, "ALTER TABLE files ADD COLUMN backup_status VARCHAR(50)")
                     logger.info("Migration: Successfully added backup_status column to files table.")
                 except Exception as e:
                     logger.error(f"Migration error (files backup_status): {str(e)}")
@@ -281,7 +323,7 @@ def run_migrations():
         # Add index on pending_sync_at to optimize order_by queries
         with engine.begin() as conn:
             try:
-                conn.execute(text("CREATE INDEX IF NOT EXISTS ix_files_pending_sync_at ON files(pending_sync_at)"))
+                execute_migration_statement(conn, "CREATE INDEX ix_files_pending_sync_at ON files(pending_sync_at)")
                 logger.info("Migration: Successfully created index ix_files_pending_sync_at.")
             except Exception as e:
                 pass
