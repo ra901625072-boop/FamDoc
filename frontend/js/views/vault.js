@@ -863,7 +863,18 @@
       const previewUrl = FamDocAPI.files.getPreviewUrl(fileId) + `?token=${token}`;
       
       if (typeof pdfjsLib === "undefined") return;
-      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+      
+      // Load worker via blob to bypass cross-origin worker restrictions
+      if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
+        try {
+          const workerUrl = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+          const res = await fetch(workerUrl);
+          const blob = await res.blob();
+          pdfjsLib.GlobalWorkerOptions.workerSrc = URL.createObjectURL(blob);
+        } catch (e) {
+          pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+        }
+      }
       
       const loadingTask = pdfjsLib.getDocument(previewUrl);
       const pdf = await loadingTask.promise;
