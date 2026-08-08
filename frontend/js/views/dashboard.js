@@ -163,6 +163,17 @@
       await page.render(renderContext).promise;
       const dataUrl = canvas.toDataURL("image/png");
       
+      try {
+        localStorage.setItem("famdoc-pdf-thumb-" + fileId, dataUrl);
+      } catch (e) {
+        for (let i = localStorage.length - 1; i >= 0; i--) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith("famdoc-pdf-thumb-")) {
+            localStorage.removeItem(key);
+          }
+        }
+      }
+      
       const containers = document.querySelectorAll(`.pdf-thumbnail-container[data-file-id="${fileId}"]`);
       containers.forEach(container => {
         const img = document.createElement("img");
@@ -219,7 +230,12 @@
           const authenticatedPreviewUrl = previewUrl + (file.preview_token ? `?token=${file.preview_token}` : "");
           iconHtml = `<img class="item-icon item-thumbnail loaded" data-file-id="${file.id}" src="${authenticatedPreviewUrl}" alt="${FamDocAPI.utils.escapeHtml(file.filename)}" onerror="this.onerror=null; this.outerHTML='<i class=\'item-icon fas fa-file-image file-image\'></i>';">`;
         } else if (isPdf) {
-          iconHtml = `<span class="pdf-thumbnail-container" data-file-id="${file.id}"><i class="item-icon far fa-file-pdf file-pdf"></i></span>`;
+          const cachedThumb = localStorage.getItem("famdoc-pdf-thumb-" + file.id);
+          if (cachedThumb) {
+            iconHtml = `<img class="item-icon item-thumbnail loaded" data-file-id="${file.id}" src="${cachedThumb}" alt="${FamDocAPI.utils.escapeHtml(file.filename)}">`;
+          } else {
+            iconHtml = `<span class="pdf-thumbnail-container" data-file-id="${file.id}"><i class="item-icon far fa-file-pdf file-pdf"></i></span>`;
+          }
         } else {
           const iconClass = FamDocAPI.utils.getFileIconClass(file.file_type, file.filename);
           iconHtml = `<i class="item-icon ${iconClass}"></i>`;
@@ -240,7 +256,7 @@
         // Fetch thumbnail in background if token was not bundled
         if (isImage && !file.preview_token) {
           loadThumbnail(file.id);
-        } else if (isPdf) {
+        } else if (isPdf && !localStorage.getItem("famdoc-pdf-thumb-" + file.id)) {
           loadPdfThumbnail(file.id, file.preview_token);
         }
       });
