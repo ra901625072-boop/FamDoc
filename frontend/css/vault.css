@@ -671,6 +671,10 @@
 
   /* Constrain thumbnails on mobile to cover 100% height (if portrait) or 100% width (if landscape) */
   .items-grid .item-icon.item-thumbnail {
+    position: absolute !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
     max-width: 100% !important;
     max-height: 100% !important; /* Allow thumbnail to cover full container height/width */
     width: auto !important;
@@ -766,8 +770,9 @@
 /* Dynamic absolute image thumbnail overlay */
 .item-icon.item-thumbnail {
   position: absolute;
-  top: 0;
-  left: 0;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   width: 100%;
   height: 100%;
   z-index: 2;
