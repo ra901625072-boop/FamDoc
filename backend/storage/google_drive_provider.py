@@ -377,3 +377,41 @@ class GoogleDriveProvider(StorageProvider):
         if access_token:
             return f"https://www.googleapis.com/drive/v3/files/{cloud_file_id}?alt=media&access_token={access_token}"
         return None
+
+    def get_thumbnail_url(self, config: dict, cloud_file_id: str, db = None) -> str:
+        def _get_thumb(service):
+            file_meta = service.files().get(
+                fileId=cloud_file_id,
+                fields='thumbnailLink',
+                supportsAllDrives=True
+            ).execute()
+            return file_meta.get('thumbnailLink')
+        
+        try:
+            return self._execute_with_retry(_get_thumb, config, db)
+        except Exception as e:
+            logger.warning(f"Failed to get thumbnailLink from Google Drive: {e}")
+            return None
+
+    def stream_file(self, config: dict, cloud_file_id: str, db = None):
+        self._get_client(config, db)
+        access_token = config.get("access_token")
+        if not access_token:
+            raise Exception("Failed to acquire access token for Google Drive streaming")
+        
+        url = f"https://www.googleapis.com/drive/v3/files/{cloud_file_id}?alt=media"
+        headers = {"Authorization": f"Bearer {access_token}"}
+        
+        response = requests.get(url, headers=headers, stream=True, timeout=30)
+        response.raise_for_status()
+        
+        def chunk_generator():
+            try:
+                for chunk in response.iter_content(chunk_size=128 * 1024):
+                    if chunk:
+                        yield chunk
+            finally:
+                response.close()
+                
+        return chunk_generator()
+

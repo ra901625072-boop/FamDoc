@@ -128,6 +128,75 @@ class StorageManager:
             "It may still be syncing to cloud storage. Please try again shortly."
         )
 
+    def stream_file(self, file, family_config: dict, db = None):
+        provider_name = file.storage_provider or "local"
+        cascade_order = self._cascade_from(provider_name)
+
+        for p_name in cascade_order:
+            try:
+                cfg = family_config.get(p_name, {})
+                f_id = None
+                if p_name == "local":
+                    f_id = file.local_file_id or (file._file_id if file.storage_provider == "local" or not file.storage_provider else None)
+                elif p_name == "google":
+                    f_id = file.google_drive_file_id or (file.cloud_file_id if file.storage_provider == "google" else None) or (file._file_id if file.storage_provider == "google" else None)
+
+                if not f_id:
+                    continue
+                
+                # Check if provider has stream_file
+                if hasattr(self.providers[p_name], "stream_file"):
+                    stream = self.providers[p_name].stream_file(cfg, f_id, db=db)
+                    if stream is not None:
+                        return stream, p_name
+                        
+                # Fallback to download_file if stream_file is not supported or returns None
+                content = self.providers[p_name].download_file(cfg, f_id, db=db)
+                
+                def fallback_generator():
+                    yield content
+                return fallback_generator(), p_name
+                
+            except Exception as e:
+                logger.warning({
+                    "message":   "File not found or unreachable on provider for streaming, trying next",
+                    "error":     str(e),
+                    "service":   p_name,
+                    "file_id":   file.file_id,
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                })
+
+        raise FileNotFoundError(
+            f"File '{file.filename}' is temporarily unavailable. "
+            "It may still be syncing to cloud storage. Please try again shortly."
+        )
+
+    def get_thumbnail_url(self, file, family_config: dict, db = None) -> Optional[str]:
+        provider_name = file.storage_provider or "local"
+        if provider_name == "google":
+            cfg = family_config.get("google", {})
+            f_id = file.google_drive_file_id or (file.cloud_file_id if file.storage_provider == "google" else None) or (file._file_id if file.storage_provider == "google" else None)
+            if f_id:
+                try:
+                    if hasattr(self.providers["google"], "get_thumbnail_url"):
+                        return self.providers["google"].get_thumbnail_url(cfg, f_id, db=db)
+                except Exception as e:
+                    logger.warning(f"Failed to get thumbnail url: {e}")
+        return None
+
+    def get_direct_download_url(self, file, family_config: dict, db = None) -> Optional[str]:
+        provider_name = file.storage_provider or "local"
+        if provider_name == "google":
+            cfg = family_config.get("google", {})
+            f_id = file.google_drive_file_id or (file.cloud_file_id if file.storage_provider == "google" else None) or (file._file_id if file.storage_provider == "google" else None)
+            if f_id:
+                try:
+                    if hasattr(self.providers["google"], "get_direct_download_url"):
+                        return self.providers["google"].get_direct_download_url(cfg, f_id, db=db)
+                except Exception as e:
+                    logger.warning(f"Failed to get direct download url: {e}")
+        return None
+
     def _cascade_from(self, provider: str) -> list:
         full_order = ["google", "local"]
         if provider not in full_order:

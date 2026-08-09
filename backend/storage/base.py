@@ -82,6 +82,21 @@ class StorageProvider(ABC):
         """
         return None
 
+    def get_thumbnail_url(self, config: dict, cloud_file_id: str, db = None) -> str:
+        """
+        Optional: Returns a direct URL to fetch a thumbnail of the file.
+        Returns None if not supported.
+        """
+        return None
+
+    def stream_file(self, config: dict, cloud_file_id: str, db = None):
+        """
+        Optional: Returns a generator that streams the file content in chunks.
+        Returns None if not supported.
+        """
+        return None
+
+
 
 import time
 

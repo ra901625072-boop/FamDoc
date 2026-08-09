@@ -731,12 +731,14 @@
       const mime = file.file_type ? file.file_type.toLowerCase() : "";
       const isImage = mime.includes("image") || ["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(ext);
       const isPdf = ext === "pdf";
+      const isGooglePdf = isPdf && file.storage_provider === "google";
 
       let iconHtml = "";
       const fallbackIconClass = FamDocAPI.utils.getFileIconClass(file.file_type, file.filename);
 
-      if (isImage) {
-        const cachedThumb = localStorage.getItem("famdoc-image-thumb-" + file.id);
+      if (isImage || isGooglePdf) {
+        const cacheKey = isGooglePdf ? ("famdoc-pdf-thumb-" + file.id) : ("famdoc-image-thumb-" + file.id);
+        const cachedThumb = localStorage.getItem(cacheKey);
         if (cachedThumb) {
           iconHtml = `
             <div class="thumbnail-wrapper">
@@ -751,7 +753,7 @@
           iconHtml = `
             <div class="thumbnail-wrapper">
               <i class="item-icon ${fallbackIconClass} thumbnail-fallback"></i>
-              <img class="item-icon item-thumbnail" data-file-id="${file.id}" src="${authenticatedPreviewUrl}" alt="${FamDocAPI.utils.escapeHtml(file.filename)}" onload="cacheImageThumbnail(this, '${file.id}');" onerror="this.style.display='none';">
+              <img class="item-icon item-thumbnail" data-file-id="${file.id}" src="${authenticatedPreviewUrl}" alt="${FamDocAPI.utils.escapeHtml(file.filename)}" onload="cacheImageThumbnail(this, '${file.id}', ${isGooglePdf});" onerror="this.style.display='none';">
             </div>
           `;
         }
@@ -887,17 +889,19 @@
       // Async fetch image/pdf thumbnails
       if (isImage && !file.preview_token) {
         loadThumbnail(file.id);
-      } else if (isPdf && !localStorage.getItem("famdoc-pdf-thumb-" + file.id)) {
+      } else if (isPdf && !isGooglePdf && !localStorage.getItem("famdoc-pdf-thumb-" + file.id)) {
         loadPdfThumbnail(file.id, file.preview_token);
       }
     });
   }
 
-  function cacheImageThumbnail(img, fileId) {
+  function cacheImageThumbnail(img, fileId, isPdf = false) {
     img.classList.add("loaded");
     
+    const cacheKey = isPdf ? ("famdoc-pdf-thumb-" + fileId) : ("famdoc-image-thumb-" + fileId);
+    
     // Check if already cached in localStorage
-    if (localStorage.getItem("famdoc-image-thumb-" + fileId)) {
+    if (localStorage.getItem(cacheKey)) {
       const container = img.closest(".thumbnail-wrapper");
       if (container) {
         const fallback = container.querySelector(".thumbnail-fallback");
@@ -919,7 +923,7 @@
       const dataUrl = canvas.toDataURL("image/jpeg", 0.6);
       
       try {
-        localStorage.setItem("famdoc-image-thumb-" + fileId, dataUrl);
+        localStorage.setItem(cacheKey, dataUrl);
       } catch (storageErr) {
         for (let i = localStorage.length - 1; i >= 0; i--) {
           const key = localStorage.key(i);
@@ -928,7 +932,7 @@
           }
         }
         try {
-          localStorage.setItem("famdoc-image-thumb-" + fileId, dataUrl);
+          localStorage.setItem(cacheKey, dataUrl);
         } catch (retryErr) {}
       }
     } catch (err) {

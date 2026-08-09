@@ -369,40 +369,69 @@ def preview_file(
 
     filename = file.filename
     file_type = file.file_type
-    try:
-        content = manager.read_file(file, family_config, db=db)
-        
-        # Optimize image thumbnails to half-scale quality 60 on-the-fly
-        if thumbnail and file_type and file_type.lower().startswith("image/"):
-            try:
-                from PIL import Image
-                img = Image.open(io.BytesIO(content))
-                width, height = img.size
-                new_width = max(100, int(width / 2))
-                new_height = max(100, int(height / 2))
-                img = img.resize((new_width, new_height), Image.Resampling.LANCZOS if hasattr(Image, "Resampling") else Image.LANCZOS)
-                
-                out = io.BytesIO()
-                img.save(out, format="JPEG", quality=60)
-                content = out.getvalue()
-                file_type = "image/jpeg"
-            except Exception:
-                pass
-    except FileNotFoundError as e:
-        raise HTTPException(status_code=503, detail=str(e))
-    finally:
-        db.close()
+    
+    # Optimization 1: For Google Drive thumbnails, redirect directly to Google's thumbnailLink
+    if thumbnail and file.storage_provider == "google":
+        thumbnail_url = manager.get_thumbnail_url(file, family_config, db=db)
+        if thumbnail_url:
+            db.close()
+            return RedirectResponse(url=thumbnail_url)
+            
+    # Optimization 2: For Google Drive full image preview, redirect to direct download URL (bypassing backend)
+    if not thumbnail and file.storage_provider == "google" and file_type and file_type.lower().startswith("image/"):
+        direct_url = manager.get_direct_download_url(file, family_config, db=db)
+        if direct_url:
+            db.close()
+            return RedirectResponse(url=direct_url)
 
-    response_headers = {"Content-Disposition": f'inline; filename="{filename}"'}
     if thumbnail:
-        # Cache image thumbnails in user's browser for 7 days
-        response_headers["Cache-Control"] = "public, max-age=604800"
+        try:
+            content = manager.read_file(file, family_config, db=db)
+            
+            # Optimize image thumbnails to half-scale quality 60 on-the-fly
+            if file_type and file_type.lower().startswith("image/"):
+                try:
+                    from PIL import Image
+                    img = Image.open(io.BytesIO(content))
+                    width, height = img.size
+                    new_width = max(100, int(width / 2))
+                    new_height = max(100, int(height / 2))
+                    img = img.resize((new_width, new_height), Image.Resampling.LANCZOS if hasattr(Image, "Resampling") else Image.LANCZOS)
+                    
+                    out = io.BytesIO()
+                    img.save(out, format="JPEG", quality=60)
+                    content = out.getvalue()
+                    file_type = "image/jpeg"
+                except Exception:
+                    pass
+        except FileNotFoundError as e:
+            raise HTTPException(status_code=503, detail=str(e))
+        finally:
+            db.close()
 
-    return StreamingResponse(
-        io.BytesIO(content),
-        media_type=file_type or "application/octet-stream",
-        headers=response_headers
-    )
+        response_headers = {
+            "Content-Disposition": f'inline; filename="{filename}"',
+            "Cache-Control": "public, max-age=604800"
+        }
+        return StreamingResponse(
+            io.BytesIO(content),
+            media_type=file_type or "application/octet-stream",
+            headers=response_headers
+        )
+    else:
+        try:
+            generator, provider_used = manager.stream_file(file, family_config, db=db)
+        except FileNotFoundError as e:
+            raise HTTPException(status_code=503, detail=str(e))
+        finally:
+            db.close()
+
+        response_headers = {"Content-Disposition": f'inline; filename="{filename}"'}
+        return StreamingResponse(
+            generator,
+            media_type=file_type or "application/octet-stream",
+            headers=response_headers
+        )
 
 @router.put("/{file_id}", response_model=schemas.FileResponse)
 def rename_file(

@@ -48,6 +48,23 @@ class LocalStorageProvider(StorageProvider):
         with open(file_path, "rb") as f:
             return f.read()
 
+    def stream_file(self, config: dict, cloud_file_id: str, db = None):
+        vault_dir = config.get("vault_folder_id")
+        if not vault_dir:
+            raise Exception("Local vault directory is not configured")
+        file_path = os.path.join(vault_dir, cloud_file_id)
+        if not os.path.exists(file_path):
+            raise Exception(f"Local file not found: {cloud_file_id}")
+        
+        def chunk_generator():
+            with open(file_path, "rb") as f:
+                while True:
+                    chunk = f.read(128 * 1024)
+                    if not chunk:
+                        break
+                    yield chunk
+        return chunk_generator()
+
     def delete_file(self, config: dict, cloud_file_id: str, db = None) -> bool:
         vault_dir = config.get("vault_folder_id")
         if vault_dir:
