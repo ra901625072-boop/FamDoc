@@ -5,4 +5,13 @@
 @import url('./variables.css');
 @import url('./layout.css');
 @import url('./components.css');
-@import url('./pages.css');
+@import url('./landing.css');
+@import url('./auth.css');
+@import url('./dashboard.css');
+@import url('./vault.css');
+@import url('./trash.css');
+@import url('./family.css');
+@import url('./profile.css');
+@import url('./storage.css');
+@import url('./shared-global.css');
+

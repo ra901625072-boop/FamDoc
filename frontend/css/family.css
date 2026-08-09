@@ -1,0 +1,102 @@
+/* ==========================================================================
+   FamDoc Design System - Family View Layouts
+   ========================================================================== */
+
+/* Tabular Roster Design */
+.famdoc-table-wrapper {
+  overflow-x: auto;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-paper);
+  background-color: var(--surface-card);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: var(--shadow-sm);
+}
+
+.famdoc-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.famdoc-table th, .famdoc-table td {
+  padding: 1.1rem 1.4rem;
+  border-bottom: 1px solid var(--border-paper);
+}
+
+.famdoc-table th {
+  background-color: var(--surface-paper-tint);
+  font-weight: 700;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.75px;
+  color: var(--text-ink-muted);
+}
+
+.famdoc-table tr:last-child td {
+  border-bottom: none;
+}
+
+.famdoc-table tbody tr {
+  transition: var(--transition-smooth);
+}
+
+.famdoc-table tbody tr:hover {
+  background-color: var(--surface-paper-hover);
+}
+
+@media (max-width: 768px) {
+  /* Family roster table card transformation */
+  .famdoc-table, 
+  .famdoc-table thead, 
+  .famdoc-table tbody, 
+  .famdoc-table th, 
+  .famdoc-table td, 
+  .famdoc-table tr {
+    display: block !important;
+  }
+
+  .famdoc-table thead {
+    display: none !important;
+  }
+
+  .famdoc-table tbody tr {
+    border: 1px solid var(--border-paper) !important;
+    border-radius: var(--radius-md) !important;
+    padding: 1rem !important;
+    margin-bottom: 1rem !important;
+    background-color: var(--surface-card) !important;
+    box-shadow: var(--shadow-sm) !important;
+  }
+
+  .famdoc-table td {
+    border-bottom: 1px dashed var(--border-paper) !important;
+    padding: 0.65rem 0.25rem !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    text-align: right !important;
+  }
+
+  .famdoc-table td:last-child {
+    border-bottom: none !important;
+  }
+
+  .famdoc-table td::before {
+    content: attr(data-label) !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    font-size: 0.75rem !important;
+    color: var(--text-ink-muted) !important;
+    text-align: left !important;
+    flex-shrink: 0;
+  }
+
+  .famdoc-table td[data-label="Actions"] {
+    justify-content: flex-end !important;
+  }
+
+  .famdoc-table td[data-label="Actions"]::before {
+    display: none !important;
+  }
+}

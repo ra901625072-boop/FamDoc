@@ -19,7 +19,7 @@
         <button class="theme-toggle-btn guest-theme-toggle" aria-label="Toggle dark mode">
           <i class="fas fa-moon"></i>
         </button>
-        <div class="famdoc-card shared-layout fd-page-enter" style="width: 100%; max-width: 450px; padding: 2.5rem;">
+        <div class="famdoc-card shared-layout fd-page-enter">
           
           <!-- Logo header -->
           <div style="text-align: center; margin-bottom: 2rem; border-bottom: 1px solid var(--border-paper); padding-bottom: 1rem;">

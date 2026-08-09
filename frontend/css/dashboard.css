@@ -1,0 +1,214 @@
+/* ==========================================================================
+   FamDoc Design System - Dashboard Page View Layouts
+   ========================================================================== */
+
+/* Activity Feed styles */
+.activity-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.activity-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border-paper);
+}
+
+.activity-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.activity-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background-color: var(--surface-paper-tint);
+  border: 1px solid var(--border-paper);
+  color: var(--text-ink-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  flex-shrink: 0;
+}
+
+.activity-icon i {
+  transition: transform 0.25s ease;
+}
+
+.activity-item:hover .activity-icon i {
+  transform: scale(1.15);
+}
+
+.activity-details {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.activity-desc {
+  color: var(--text-ink);
+}
+
+.activity-meta {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--text-ink-muted);
+  margin-top: 0.2rem;
+}
+
+/* Dashboard Premium Grid Layouts */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.stat-card {
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-icon {
+  font-size: 1.5rem;
+  color: var(--accent-brand);
+  margin-bottom: 1rem;
+}
+
+.stat-label {
+  font-size: 0.85rem;
+  color: var(--text-ink-muted);
+  font-weight: 600;
+  margin-bottom: 0.35rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stat-val {
+  font-family: var(--font-serif);
+  font-size: 1.85rem;
+  font-weight: 800;
+  color: var(--text-ink);
+}
+
+.dashboard-sections {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+@media (max-width: 768px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr !important;
+    gap: 1rem !important;
+  }
+  .dashboard-sections {
+    grid-template-columns: 1fr !important;
+    gap: 1.5rem !important;
+  }
+}
+
+/* Scrollable Dashboard Cards lists */
+.scrollable-dashboard-list {
+  max-height: 380px;
+  overflow-y: auto;
+  padding-right: 0.25rem;
+}
+
+/* Custom Scrollbar for dashboard scrollable lists */
+.scrollable-dashboard-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.scrollable-dashboard-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollable-dashboard-list::-webkit-scrollbar-thumb {
+  background: var(--border-paper-dark);
+  border-radius: 4px;
+}
+
+.scrollable-dashboard-list::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-brand);
+}
+
+/* Edge-Anchored Bottom Progress Bar for Space Occupied Stat Card */
+.stat-card-bottom-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 6px;
+  background-color: var(--surface-paper-tint);
+  border-top: 1px solid var(--border-paper);
+  overflow: hidden;
+  display: flex;
+  z-index: 1;
+}
+
+.progress-bar-fill {
+  display: flex;
+  height: 100%;
+  width: 100%;
+}
+
+@media (max-width: 576px) {
+  /* Dashboard Stat Card compact horizontal layout */
+  .stat-card {
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 1.25rem !important;
+    padding: 1rem 1.25rem !important;
+  }
+
+  .stat-icon {
+    margin-bottom: 0 !important;
+    flex-shrink: 0 !important;
+  }
+
+  .stat-card-bottom-progress {
+    height: 4px !important;
+  }
+
+  /* Recent uploads stacking */
+  #recent-uploads-list .vault-item .item-details {
+    grid-template-columns: 1fr !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 0.15rem !important;
+  }
+  
+  #recent-uploads-list .vault-item .item-meta-size,
+  #recent-uploads-list .vault-item .item-meta-date {
+    display: inline !important;
+    font-size: 0.72rem !important;
+  }
+  
+  #recent-uploads-list .vault-item .item-meta-size::after {
+    content: " • ";
+    margin: 0 0.15rem;
+    color: var(--text-ink-muted);
+    opacity: 0.5;
+  }
+}
+
+@media (max-width: 900px) and (min-width: 480px) {
+  .dashboard-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  .dashboard-grid .stat-card:last-child {
+    grid-column: span 2 !important;
+  }
+}

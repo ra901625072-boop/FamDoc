@@ -1,0 +1,104 @@
+/* ==========================================================================
+   FamDoc Design System - Guest Portal & Auth Views
+   ========================================================================== */
+
+.auth-card {
+  width: 100%;
+  max-width: 450px;
+  padding: 3rem;
+  box-shadow: var(--shadow-lg);
+  border-radius: var(--radius-lg);
+  background-color: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border-paper);
+}
+
+[data-theme="dark"] .auth-card {
+  background-color: rgba(18, 22, 36, 0.7);
+}
+
+.auth-header {
+  text-align: center;
+  margin-bottom: 2.25rem;
+}
+
+.auth-logo {
+  font-family: var(--font-serif);
+  font-size: 2.25rem;
+  color: var(--text-ink);
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.75rem;
+  text-decoration: none;
+  outline: none;
+}
+
+.famdoc-logo-img {
+  height: 28px;
+  width: auto;
+  object-fit: contain;
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.sidebar-logo:hover .famdoc-logo-img,
+.auth-logo:hover .famdoc-logo-img,
+.landing-logo:hover .famdoc-logo-img {
+  transform: scale(1.12) rotate(-5deg);
+}
+
+.auth-logo .famdoc-logo-img { height: 42px; }
+.sidebar-logo .famdoc-logo-img { height: 28px; }
+.landing-logo .famdoc-logo-img { height: 34px; }
+
+.brand-text {
+  font-family: var(--font-sans);
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  color: var(--text-ink);
+}
+
+.auth-logo .brand-text { font-size: 1.85rem; }
+.landing-logo .brand-text { font-size: 1.6rem; }
+
+.brand-text .highlight {
+  color: var(--accent-brand);
+  background: var(--accent-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.auth-subtitle {
+  color: var(--text-ink-muted);
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.auth-footer {
+  margin-top: 1.75rem;
+  text-align: center;
+  font-size: 0.9rem;
+  color: var(--text-ink-muted);
+}
+
+/* Standalone Shared File Public Download View Card */
+.shared-layout {
+  width: 100%;
+  max-width: 450px;
+  padding: 2.5rem;
+  box-shadow: var(--shadow-lg);
+  border-radius: var(--radius-lg);
+  background-color: var(--surface-card);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border-paper);
+}
+
+@media (max-width: 480px) {
+  .auth-card, .shared-layout {
+    padding: 2.25rem 1.25rem !important;
+  }
+}
