@@ -71,7 +71,7 @@
             Active Storage Mode Selection
           </h3>
           <p style="font-size: 0.85rem; color: var(--text-ink-muted); margin-bottom: 1.5rem;">
-            Choose how your family documents are stored. Connecting both Google Drive and MEGA enables robust dual-cloud synchronization modes.
+            Choose how your family documents are stored. Connecting Google Drive enables robust cloud synchronization.
           </p>
           
           <form id="storage-mode-form">
@@ -92,51 +92,6 @@
                 <div>
                   <strong style="display: block; font-size: 0.95rem; color: var(--text-ink);"><i class="fab fa-google" style="color: #4285F4; margin-right: 0.25rem;"></i> Google Drive Only</strong>
                   <span style="font-size: 0.82rem; color: var(--text-ink-muted);">Store files on your linked Google Drive account. Requires Google Drive to be connected.</span>
-                </div>
-              </label>
-
-              <!-- MEGA Only -->
-              <label class="storage-mode-option" id="mode-opt-mega" style="display: flex; align-items: flex-start; gap: 1rem; padding: 1rem; border: 1px solid var(--border-paper-dark); border-radius: var(--radius-md); cursor: pointer; transition: var(--transition-smooth);">
-                <input type="radio" name="storage_provider" value="mega" style="margin-top: 0.25rem;">
-                <div>
-                  <strong style="display: block; font-size: 0.95rem; color: var(--text-ink);"><i class="fas fa-cloud" style="color: #D32F2F; margin-right: 0.25rem;"></i> MEGA Only</strong>
-                  <span style="font-size: 0.82rem; color: var(--text-ink-muted);">Store files on your linked MEGA cloud storage. Requires MEGA to be configured.</span>
-                </div>
-              </label>
-
-              <!-- Dual Mode -->
-              <label class="storage-mode-option" id="mode-opt-dual" style="display: flex; align-items: flex-start; gap: 1rem; padding: 1rem; border: 1px solid var(--border-paper-dark); border-radius: var(--radius-md); cursor: pointer; transition: var(--transition-smooth);">
-                <input type="radio" name="storage_provider" value="dual" style="margin-top: 0.25rem;">
-                <div style="width: 100%;">
-                  <strong style="display: block; font-size: 0.95rem; color: var(--text-ink);"><i class="fas fa-shield-alt" style="color: var(--success-sage); margin-right: 0.25rem;"></i> Dual Cloud Storage (Google Drive + MEGA)</strong>
-                  <span style="font-size: 0.82rem; color: var(--text-ink-muted); display: block; margin-bottom: 0.75rem;">Enable multi-cloud storage modes for complete redundancy. Requires both Google Drive and MEGA to be connected.</span>
-                  
-                  <!-- Nested Dual Options -->
-                  <div id="dual-options-container" style="display: none; padding-top: 0.75rem; border-top: 1px dashed var(--border-paper-dark); margin-top: 0.5rem; flex-direction: column; gap: 1rem;">
-                    
-                    <div>
-                      <span style="font-size: 0.85rem; font-weight: 600; display: block; margin-bottom: 0.5rem; color: var(--text-ink);">Select Dual Sync Option:</span>
-                      <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-left: 0.5rem;">
-                        <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.82rem; color: var(--text-ink); cursor: pointer;">
-                          <input type="radio" name="storage_mode" value="mirror" checked>
-                          Option 1: Mirror Sync (Upload every file to both clouds simultaneously)
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.82rem; color: var(--text-ink); cursor: pointer;">
-                          <input type="radio" name="storage_mode" value="failover">
-                          Option 2: Active-Passive Failover (Upload to Primary, fallback to Backup if down)
-                        </label>
-                      </div>
-                    </div>
-
-                    <div id="primary-provider-selection" style="display: flex; align-items: center; gap: 1rem; margin-left: 0.5rem; margin-top: 0.25rem;">
-                      <span style="font-size: 0.82rem; font-weight: 600; color: var(--text-ink);">Primary Cloud Provider:</span>
-                      <select id="primary-provider-dropdown" class="form-control" style="width: auto; padding: 0.25rem 0.5rem; height: auto; font-size: 0.82rem;">
-                        <option value="google">Google Drive (MEGA as Backup)</option>
-                        <option value="mega">MEGA (Google Drive as Backup)</option>
-                      </select>
-                    </div>
-
-                  </div>
                 </div>
               </label>
 
@@ -180,36 +135,6 @@
               </div>
               <button type="submit" id="btn-save-google-storage" class="btn btn-primary" style="width: 100%; margin-top: 1.5rem; justify-content: center; gap: 0.5rem;">
                 <i class="fab fa-google"></i> Link Google Drive Account
-              </button>
-            </form>
-          </div>
-
-          <!-- MEGA card -->
-          <div class="famdoc-card storage-config-card" id="mega-card">
-            <div class="famdoc-card-header">
-              <h2 class="famdoc-card-title"><i class="fas fa-cloud" style="color: #D32F2F; margin-right: 0.5rem;"></i>MEGA Account Link</h2>
-              <div id="mega-active-badge-container"></div>
-            </div>
-            <p style="font-size: 0.85rem; color: var(--text-ink-muted); margin-bottom: 1.5rem;">
-              Connect your family's MEGA.nz cloud storage account. Sync your family documents to a folder on MEGA.
-            </p>
-
-            <form id="mega-storage-form">
-              <div class="form-group">
-                <label class="form-label" for="mega-email">MEGA Email</label>
-                <input type="email" id="mega-email" class="form-control" placeholder="email@mega.nz" required style="width: 100%; box-sizing: border-box;">
-              </div>
-              <div class="form-group" style="margin-top: 1rem;">
-                <label class="form-label" for="mega-password">MEGA Password</label>
-                <div class="password-input-wrapper">
-                  <input type="password" id="mega-password" class="form-control" placeholder="••••••••" required style="width: 100%; box-sizing: border-box;">
-                  <button type="button" class="password-toggle-btn" aria-label="Toggle visibility">
-                    <i class="fas fa-eye"></i>
-                  </button>
-                </div>
-              </div>
-              <button type="submit" id="btn-save-mega-storage" class="btn btn-primary" style="width: 100%; margin-top: 1.5rem; justify-content: center; gap: 0.5rem;">
-                <i class="fas fa-save"></i> Configure MEGA Cloud
               </button>
             </form>
           </div>
@@ -259,16 +184,12 @@
       const activeDetailEl = document.getElementById("storage-active-detail");
       
       const googleCard = document.getElementById("google-card");
-      const megaCard = document.getElementById("mega-card");
       const googleBadgeContainer = document.getElementById("google-active-badge-container");
-      const megaBadgeContainer = document.getElementById("mega-active-badge-container");
       
       if (!activeProviderEl) return;
 
-      googleCard.classList.remove("active-card");
-      megaCard.classList.remove("active-card");
-      googleBadgeContainer.innerHTML = "";
-      megaBadgeContainer.innerHTML = "";
+      if (googleCard) googleCard.classList.remove("active-card");
+      if (googleBadgeContainer) googleBadgeContainer.innerHTML = "";
       
       const provider = config.storage_provider || "local";
       activeProviderEl.className = "badge badge-primary fd-fade-in";
@@ -277,39 +198,21 @@
       
       // Populate inputs regardless of whether they are active
       if (config.client_id) {
-        document.getElementById("google-client-id").value = config.client_id;
-      }
-      if (config.email) {
-        document.getElementById("mega-email").value = config.email;
+        const gInput = document.getElementById("google-client-id");
+        if (gInput) gInput.value = config.client_id;
       }
 
       if (provider === "google") {
         activeDetailEl.textContent = `Google Drive connected. Client ID: ${config.client_id || "Not set"}`;
-        googleCard.classList.add("active-card");
-        googleBadgeContainer.innerHTML = `<span class="active-badge"><i class="fas fa-check-circle"></i> Active</span>`;
-      } else if (provider === "mega") {
-        activeDetailEl.textContent = `Email: ${config.email || "Not set"}`;
-        megaCard.classList.add("active-card");
-        megaBadgeContainer.innerHTML = `<span class="active-badge"><i class="fas fa-check-circle"></i> Active</span>`;
-      } else if (provider === "dual") {
-        const modeLabel = config.storage_mode === "mirror" ? "Mirror Sync" : `Failover Sync (Primary: ${config.primary_provider === "google" ? "Google Drive" : "MEGA"})`;
-        activeDetailEl.textContent = `Dual Storage enabled. Mode: ${modeLabel}`;
-        
-        googleCard.classList.add("active-card");
-        googleBadgeContainer.innerHTML = `<span class="active-badge"><i class="fas fa-check-circle"></i> Active</span>`;
-        megaCard.classList.add("active-card");
-        megaBadgeContainer.innerHTML = `<span class="active-badge"><i class="fas fa-check-circle"></i> Active</span>`;
+        if (googleCard) googleCard.classList.add("active-card");
+        if (googleBadgeContainer) googleBadgeContainer.innerHTML = `<span class="active-badge"><i class="fas fa-check-circle"></i> Active</span>`;
       } else {
         activeDetailEl.textContent = "Currently using local database storage folder.";
       }
 
       // Configure Storage Mode Panel elements state based on provider status
       const googleConfigured = config.google_configured;
-      const megaConfigured = config.mega_configured;
-
       const optGoogle = document.getElementById("mode-opt-google");
-      const optMega = document.getElementById("mode-opt-mega");
-      const optDual = document.getElementById("mode-opt-dual");
 
       if (optGoogle) {
         if (!googleConfigured) {
@@ -323,54 +226,10 @@
         }
       }
 
-      if (optMega) {
-        if (!megaConfigured) {
-          optMega.style.opacity = "0.5";
-          optMega.style.pointerEvents = "none";
-          optMega.querySelector("input").disabled = true;
-        } else {
-          optMega.style.opacity = "1";
-          optMega.style.pointerEvents = "auto";
-          optMega.querySelector("input").disabled = false;
-        }
-      }
-
-      if (optDual) {
-        if (!googleConfigured || !megaConfigured) {
-          optDual.style.opacity = "0.5";
-          optDual.style.pointerEvents = "none";
-          optDual.querySelector("input").disabled = true;
-        } else {
-          optDual.style.opacity = "1";
-          optDual.style.pointerEvents = "auto";
-          optDual.querySelector("input").disabled = false;
-        }
-      }
-
       // Set active values in the form
       const radioInput = document.querySelector(`input[name="storage_provider"][value="${provider}"]`);
       if (radioInput) {
         radioInput.checked = true;
-        const container = document.getElementById("dual-options-container");
-        if (container) {
-          if (provider === "dual") {
-            container.style.display = "flex";
-          } else {
-            container.style.display = "none";
-          }
-        }
-      }
-
-      const activeMode = config.storage_mode || "failover";
-      const modeInput = document.querySelector(`input[name="storage_mode"][value="${activeMode}"]`);
-      if (modeInput) {
-        modeInput.checked = true;
-      }
-
-      const primaryProvider = config.primary_provider || "google";
-      const primarySelect = document.getElementById("primary-provider-dropdown");
-      if (primarySelect) {
-        primarySelect.value = primaryProvider;
       }
 
       // Render visual breakdown if stats are available
@@ -414,49 +273,6 @@
       });
     }
 
-    const megaForm = document.getElementById("mega-storage-form");
-    if (megaForm) {
-      megaForm.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        const emailInput = document.getElementById("mega-email");
-        const passwordInput = document.getElementById("mega-password");
-        const submitBtn = document.getElementById("btn-save-mega-storage");
-        
-        const email = emailInput.value.trim();
-        const password = passwordInput.value;
-        
-        try {
-          submitBtn.disabled = true;
-          submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Configuring...';
-          
-          await FamDocAPI.storage.configureMega(email, password);
-          FamDocAPI.utils.showToast("MEGA storage configured successfully!", "success");
-          passwordInput.value = "";
-          await loadStorageConfig();
-        } catch (err) {
-          FamDocAPI.utils.showToast(err.message || "Failed to configure MEGA.", "error");
-        } finally {
-          submitBtn.disabled = false;
-          submitBtn.innerHTML = '<i class="fas fa-save"></i> Configure MEGA Cloud';
-        }
-      });
-    }
-
-    // Toggle Dual Options visibility
-    const providerRadios = document.querySelectorAll('input[name="storage_provider"]');
-    providerRadios.forEach(radio => {
-      radio.addEventListener("change", (e) => {
-        const container = document.getElementById("dual-options-container");
-        if (container) {
-          if (e.target.value === "dual") {
-            container.style.display = "flex";
-          } else {
-            container.style.display = "none";
-          }
-        }
-      });
-    });
-
     // Handle Storage Mode Form Submit
     const modeForm = document.getElementById("storage-mode-form");
     if (modeForm) {
@@ -465,22 +281,17 @@
         const submitBtn = document.getElementById("btn-save-storage-mode");
         
         const checkedProvider = document.querySelector('input[name="storage_provider"]:checked');
-        const checkedMode = document.querySelector('input[name="storage_mode"]:checked');
-        const primarySelect = document.getElementById("primary-provider-dropdown");
-
         const selectedProvider = checkedProvider ? checkedProvider.value : "local";
-        const selectedMode = checkedMode ? checkedMode.value : "failover";
-        const primaryProvider = primarySelect ? primarySelect.value : "google";
         
         try {
           submitBtn.disabled = true;
           submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
           
-          await FamDocAPI.storage.updateMode(selectedProvider, selectedMode, primaryProvider);
-          FamDocAPI.utils.showToast("Storage mode updated successfully!", "success");
+          await FamDocAPI.storage.updateMode(selectedProvider);
+          FamDocAPI.utils.showToast("Storage provider updated successfully!", "success");
           await loadStorageConfig();
         } catch (err) {
-          FamDocAPI.utils.showToast(err.message || "Failed to update storage mode.", "error");
+          FamDocAPI.utils.showToast(err.message || "Failed to update storage provider.", "error");
         } finally {
           submitBtn.disabled = false;
           submitBtn.innerHTML = '<i class="fas fa-save"></i> Apply Storage Mode Settings';

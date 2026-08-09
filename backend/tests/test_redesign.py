@@ -199,14 +199,13 @@ class TestBackendRedesign(unittest.TestCase):
         family_configs = {
             self.family.id: {
                 "local": {"vault_folder_id": "."},
-                "google": {}, # Google drive health check will return False, mega False
-                "mega": {}
+                "google": {}
             }
         }
 
         # Mock the availability check so both providers fail -> triggers lease release
         original_check = manager.check_availability
-        manager.check_availability = lambda config, cache_ttl=30, db=None: {"google": False, "mega": False}
+        manager.check_availability = lambda config, cache_ttl=30, db=None: {"google": False}
 
         try:
             # Running sync will query the file, attempt to sync, fail to find active cloud providers,
@@ -221,7 +220,7 @@ class TestBackendRedesign(unittest.TestCase):
 
             # Let's mock a successful cloud sync
             # Mock the target providers so Google is online
-            manager.check_availability = lambda config, cache_ttl=30, db=None: {"google": True, "mega": False}
+            manager.check_availability = lambda config, cache_ttl=30, db=None: {"google": True}
             
             # Mock the providers upload/download calls to bypass actual API
             class MockProvider:
@@ -304,13 +303,12 @@ class TestBackendRedesign(unittest.TestCase):
         family_configs = {
             self.family.id: {
                 "local": {"vault_folder_id": "."},
-                "google": {},
-                "mega": {}
+                "google": {}
             }
         }
 
         # Mock the cloud availability to have Google online
-        manager.check_availability = lambda config, cache_ttl=30, db=None: {"google": True, "mega": False}
+        manager.check_availability = lambda config, cache_ttl=30, db=None: {"google": True}
 
         # Mock providers
         class SafeMockProvider:
@@ -377,9 +375,10 @@ class TestBackendRedesign(unittest.TestCase):
         self.assertEqual(run_key_validation("production", "securekey123"), "booted")
 
     def test_secure_hierarchy_and_boundary_protection(self):
-        # 1. Reset storage provider and vault folder on self.family
-        self.family.storage_provider = None
-        self.family.vault_folder_id = None
+        # 1. Set storage provider and vault folder to google on self.family
+        self.family.storage_provider = "google"
+        self.family.vault_folder_id = "google-family-root-folder-id"
+        self.family.storage_config = {"google": {"vault_folder_id": "google-family-root-folder-id"}}
         self.db.commit()
 
         # 2. Generate auth header for admin
@@ -389,7 +388,7 @@ class TestBackendRedesign(unittest.TestCase):
         # 2. Setup mock cloud provider in StorageManager
         manager = StorageManager()
         # Mock providers and availability
-        manager.check_availability = lambda config, cache_ttl=30, db=None: {"google": True, "mega": False}
+        manager.check_availability = lambda config, cache_ttl=30, db=None: {"google": True}
         
         class HierarchyMockProvider:
             def __init__(self):
@@ -432,7 +431,6 @@ class TestBackendRedesign(unittest.TestCase):
         def mocked_init(sm_self):
             sm_self.providers = {
                 "google": mock_google,
-                "mega": mock_google,
                 "local": mock_google
             }
         StorageManager.__init__ = mocked_init
@@ -992,265 +990,6 @@ class TestBackendRedesign(unittest.TestCase):
         res = self.client.post(f"/api/shared/{pwd_token}/download", json={"password": "CorrectPassword123"})
         self.assertEqual(res.status_code, 429)
         self.assertIn("Too many incorrect password attempts", res.json().get("detail", ""))
-
-    def test_dual_storage_config_mode_endpoint(self):
-        # Authenticate admin
-        token = auth.create_access_token(data={"sub": self.admin.email, "user_id": self.admin.id, "role": "admin"})
-        headers = {"Authorization": f"Bearer {token}"}
-
-        # Setup family config with mock Google and MEGA configured (flat schema in DB, but nested configuration returned)
-        self.family.storage_config = {
-            "google": {"client_id": "google-client", "refresh_token": "google-refresh"},
-            "mega": {"email": "test@mega.nz", "password": "password"}
-        }
-        self.db.commit()
-
-        # Update storage mode to dual failover
-        res = self.client.post(
-            "/api/storage/config/mode",
-            json={
-                "storage_provider": "dual",
-                "storage_mode": "failover",
-                "primary_provider": "mega"
-            },
-            headers=headers
-        )
-        self.assertEqual(res.status_code, 200)
-        resp_data = res.json()
-        self.assertEqual(resp_data["storage_provider"], "dual")
-        self.assertEqual(resp_data["storage_mode"], "failover")
-        self.assertEqual(resp_data["primary_provider"], "mega")
-
-        # Verify DB updates
-        self.db.refresh(self.family)
-        self.assertEqual(self.family.storage_provider, "dual")
-        self.assertEqual(self.family.storage_config.get("storage_mode"), "failover")
-        self.assertEqual(self.family.storage_config.get("primary_provider"), "mega")
-
-    def test_sync_pending_files_dual_mirror(self):
-        # Setup dual mirror mode
-        self.family.storage_provider = "dual"
-        self.family.storage_config = {
-            "google": {"client_id": "google-client", "refresh_token": "google-refresh", "vault_folder_id": "google-vault"},
-            "mega": {"email": "test@mega.nz", "password": "password", "vault_folder_id": "mega-vault"},
-            "storage_mode": "mirror",
-            "primary_provider": "google"
-        }
-        self.db.commit()
-
-        # Create a file pending sync
-        test_file = models.File(
-            filename="dual_mirror.txt",
-            file_type="text/plain",
-            size_bytes=100,
-            uploader_id=self.admin.id,
-            folder_id=None,
-            family_id=self.family.id,
-            storage_provider="local",
-            local_file_id="local-uuid-prefixed-dual_mirror.txt",
-            pending_sync=True,
-            pending_sync_at=datetime.now(timezone.utc)
-        )
-        self.db.add(test_file)
-        self.db.commit()
-
-        # Mock providers and check availability
-        manager = StorageManager()
-        manager.check_availability = lambda config, cache_ttl=30, db=None: {"google": True, "mega": True}
-
-        class MockGoogleProvider:
-            def upload_file(self, config, vault_folder_id, filename, file_content, mimetype, username=None, db=None):
-                return {"cloud_file_id": "google-drive-id-789", "cloud_link": "http://google.com/789"}
-            def health_check(self, config, db=None):
-                return True
-        class MockMegaProvider:
-            def upload_file(self, config, vault_folder_id, filename, file_content, mimetype, username=None, db=None):
-                return {"cloud_file_id": "mega-id-789", "cloud_link": "http://mega.nz/789"}
-            def health_check(self, config, db=None):
-                return True
-        class MockLocalProvider:
-            def download_file(self, config, file_id, db=None):
-                return b"dual_mirror_data"
-            def delete_file(self, config, file_id, db=None):
-                return True
-
-        manager.providers["google"] = MockGoogleProvider()
-        manager.providers["mega"] = MockMegaProvider()
-        manager.providers["local"] = MockLocalProvider()
-
-        family_configs = {self.family.id: manager.get_family_config(self.family, self.db)}
-        res = manager.sync_pending_files(self.db, family_configs, batch_size=5)
-
-        self.assertEqual(res["synced"], 1)
-        self.db.refresh(test_file)
-        self.assertFalse(test_file.pending_sync)
-        self.assertEqual(test_file.google_drive_file_id, "google-drive-id-789")
-        self.assertEqual(test_file.mega_file_id, "mega-id-789")
-        self.assertEqual(test_file.synced_to, "both")
-        self.assertEqual(test_file.backup_status, "success")
-        self.assertIsNone(test_file.local_file_id)
-
-    def test_sync_pending_files_dual_failover(self):
-        # Setup dual failover mode
-        self.family.storage_provider = "dual"
-        self.family.storage_config = {
-            "google": {"client_id": "google-client", "refresh_token": "google-refresh", "vault_folder_id": "google-vault"},
-            "mega": {"email": "test@mega.nz", "password": "password", "vault_folder_id": "mega-vault"},
-            "storage_mode": "failover",
-            "primary_provider": "google"
-        }
-        self.db.commit()
-
-        # Create a file pending sync
-        test_file = models.File(
-            filename="dual_failover.txt",
-            file_type="text/plain",
-            size_bytes=100,
-            uploader_id=self.admin.id,
-            folder_id=None,
-            family_id=self.family.id,
-            storage_provider="local",
-            local_file_id="local-uuid-prefixed-dual_failover.txt",
-            pending_sync=True,
-            pending_sync_at=datetime.now(timezone.utc)
-        )
-        self.db.add(test_file)
-        self.db.commit()
-
-        # Mock check_availability: Google is offline (False), MEGA is online (True)
-        manager = StorageManager()
-        manager.check_availability = lambda config, cache_ttl=30, db=None: {"google": False, "mega": True}
-
-        class MockGoogleProvider:
-            def upload_file(self, config, vault_folder_id, filename, file_content, mimetype, username=None, db=None):
-                raise Exception("Google offline")
-            def health_check(self, config, db=None):
-                return False
-        class MockMegaProvider:
-            def upload_file(self, config, vault_folder_id, filename, file_content, mimetype, username=None, db=None):
-                return {"cloud_file_id": "mega-failover-id-888", "cloud_link": "http://mega.nz/888"}
-            def health_check(self, config, db=None):
-                return True
-        class MockLocalProvider:
-            def download_file(self, config, file_id, db=None):
-                return b"dual_failover_data"
-            def delete_file(self, config, file_id, db=None):
-                return True
-
-        manager.providers["google"] = MockGoogleProvider()
-        manager.providers["mega"] = MockMegaProvider()
-        manager.providers["local"] = MockLocalProvider()
-
-        family_configs = {self.family.id: manager.get_family_config(self.family, self.db)}
-        res = manager.sync_pending_files(self.db, family_configs, batch_size=5)
-
-        self.assertEqual(res["synced"], 1)
-        self.db.refresh(test_file)
-        self.assertFalse(test_file.pending_sync)
-        self.assertEqual(test_file.mega_file_id, "mega-failover-id-888")
-        self.assertIsNone(test_file.google_drive_file_id)
-        self.assertEqual(test_file.synced_to, "mega")
-        self.assertEqual(test_file.backup_status, "success")
-        self.assertIsNone(test_file.local_file_id)
-
-    def test_file_operations_dual_mode(self):
-        # Authenticate admin
-        token = auth.create_access_token(data={"sub": self.admin.email, "user_id": self.admin.id, "role": "admin"})
-        headers = {"Authorization": f"Bearer {token}"}
-
-        # Setup family config for dual mode
-        self.family.storage_provider = "dual"
-        self.family.storage_config = {
-            "google": {"client_id": "google-client", "refresh_token": "google-refresh", "vault_folder_id": "google-vault"},
-            "mega": {"email": "test@mega.nz", "password": "password", "vault_folder_id": "mega-vault"},
-            "storage_mode": "mirror",
-            "primary_provider": "google"
-        }
-        self.db.commit()
-
-        # Create a file that is already synced to both
-        test_file = models.File(
-            filename="dual_ops.txt",
-            file_type="text/plain",
-            size_bytes=100,
-            uploader_id=self.admin.id,
-            folder_id=None,
-            family_id=self.family.id,
-            storage_provider="google",
-            google_drive_file_id="google-ops-id",
-            mega_file_id="mega-ops-id",
-            cloud_file_id="google-ops-id",
-            pending_sync=False
-        )
-        self.db.add(test_file)
-        self.db.commit()
-
-        # Mock provider rename and delete calls
-        google_renamed = False
-        mega_renamed = False
-        google_deleted = False
-        mega_deleted = False
-
-        class MockGoogleProvider:
-            def rename_file(self, config, file_id, new_name, db=None):
-                nonlocal google_renamed
-                google_renamed = True
-                return True
-            def delete_file(self, config, file_id, db=None):
-                nonlocal google_deleted
-                google_deleted = True
-                return True
-        class MockMegaProvider:
-            def rename_file(self, config, file_id, new_name, db=None):
-                nonlocal mega_renamed
-                mega_renamed = True
-                return True
-            def delete_file(self, config, file_id, db=None):
-                nonlocal mega_deleted
-                mega_deleted = True
-                return True
-
-        # Use mock in API context
-        from storage.storage_manager import StorageManager
-        orig_init = StorageManager.__init__
-        def patch_init(sm_self):
-            orig_init(sm_self)
-            sm_self.providers["google"] = MockGoogleProvider()
-            sm_self.providers["mega"] = MockMegaProvider()
-
-        StorageManager.__init__ = patch_init
-
-        try:
-            # Test Rename File API
-            res = self.client.put(
-                f"/api/files/{test_file.id}",
-                json={"filename": "renamed_dual_ops.txt"},
-                headers=headers
-            )
-            self.assertEqual(res.status_code, 200)
-            self.assertTrue(google_renamed)
-            self.assertTrue(mega_renamed)
-            self.db.refresh(test_file)
-            self.assertEqual(test_file.filename, "renamed_dual_ops.txt")
-
-            # Soft delete first
-            res = self.client.delete(f"/api/files/{test_file.id}", headers=headers)
-            self.assertEqual(res.status_code, 204)
-            self.db.refresh(test_file)
-            self.assertIsNotNone(test_file.deleted_at)
-
-            # Test Purge File API (Admin only)
-            res = self.client.delete(f"/api/recycle-bin/file/{test_file.id}/purge", headers=headers)
-            self.assertEqual(res.status_code, 204)
-            self.assertTrue(google_deleted)
-            self.assertTrue(mega_deleted)
-
-            # Check DB record is deleted
-            purged_file = self.db.query(models.File).filter(models.File.id == test_file.id).first()
-            self.assertIsNone(purged_file)
-
-        finally:
-            StorageManager.__init__ = orig_init
 
 if __name__ == "__main__":
     unittest.main()

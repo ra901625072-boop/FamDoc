@@ -50,7 +50,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Family Document Management System",
-    description="Full-stack family vault powered by Google Drive or Mega storage",
+    description="Full-stack family vault powered by Google Drive",
     version="1.0.0",
     lifespan=lifespan
 )

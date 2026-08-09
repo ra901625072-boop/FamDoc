@@ -59,11 +59,6 @@ To save family vault files in Google Drive:
 6.  Click **Create** and copy your **Client ID** and **Client Secret**.
 7.  *Configuration:* The Admin can paste these client credentials directly into the storage setup settings form in the web UI, or they can be pasted globally in the `.env` file as `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`.
 
-### Option B: Mega.co.nz
-To save family vault files in Mega:
-1.  All you need is a free Mega account registered on **[Mega.nz](https://mega.nz/)**.
-2.  *Configuration:* The Admin configures Mega directly in the web UI by entering the account email address and password. The system verifies these credentials via the `mega.py` library and auto-creates a dedicated vault directory in the account.
-
 ---
 
 ## 4. Running the Application
@@ -86,6 +81,6 @@ Once the server has started:
 
 1.  **Register a Family Admin**: Fill out the Sign Up page. Leave the "Family ID" input empty. Upon submitting, the system creates a new family group, auto-generates a unique Family ID, and sets your account role to **Admin**.
 2.  **Add Family Members**: Share the Family ID displayed in your sidebar with other members. They can register by pasting that ID into the "Family ID (Optional)" field on the Sign Up page to join your vault as **Members**.
-3.  **Choose Cloud Storage**: As Admin, navigate to **Storage Provider** in the sidebar, input your credentials for either Google Drive or Mega, and authenticate.
+3.  **Choose Cloud Storage**: As Admin, navigate to **Storage Provider** in the sidebar, input your credentials for Google Drive, and authenticate.
 4.  **Create Folders & Upload Files**: Navigate to the **Shared Vault**. Drag and drop documents, or use the file selector to upload images (`.png`, `.jpg`), PDFs, text, or Word documents. 
 5.  **View & Manage**: Double-click files or select "Open Preview" from the action menu to preview PDFs, text, and images. Rename or delete items. Members can delete only files they uploaded, while the Admin has full delete permissions.

@@ -121,25 +121,20 @@ class OAuthUrlRequest(BaseModel):
     client_id: Optional[str] = None
     client_secret: Optional[str] = None
 
-class StorageSetupMega(BaseModel):
-    email: str
-    password: str
-
 class StorageConfigResponse(BaseModel):
     storage_provider: Optional[str] = None
     is_configured: bool
-    email: Optional[str] = None # For mega configuration verification (redacted password)
     folder_id: Optional[str] = None # For Google Drive configuration verification
     client_id: Optional[str] = None # For Google OAuth client verification
     google_configured: Optional[bool] = False
+    # Deprecated fields kept for frontend compatibility
+    email: Optional[str] = None
     mega_configured: Optional[bool] = False
     storage_mode: Optional[str] = "failover"
     primary_provider: Optional[str] = "google"
 
 class StorageModeUpdate(BaseModel):
-    storage_provider: str # "local", "google", "mega", "dual"
-    storage_mode: Optional[str] = "failover" # "mirror" or "failover"
-    primary_provider: Optional[str] = "google" # "google" or "mega"
+    storage_provider: str # "local" or "google"
 
 
 # ==========================================

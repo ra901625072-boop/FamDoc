@@ -153,13 +153,6 @@ def purge_folder_recursive(folder_id: int, family: models.Family, db: Session):
                 deleted_somewhere = True
             except Exception as e:
                 print(f"Warning: Failed to delete Google Drive file {file.google_drive_file_id} during purge: {e}")
-        if file.mega_file_id:
-            try:
-                cfg = family_config.get("mega", {})
-                manager.providers["mega"].delete_file(cfg, file.mega_file_id, db=db)
-                deleted_somewhere = True
-            except Exception as e:
-                print(f"Warning: Failed to delete MEGA file {file.mega_file_id} during purge: {e}")
         if not deleted_somewhere:
             try:
                 provider = file.storage_provider or "local"
@@ -182,15 +175,6 @@ def purge_folder_recursive(folder_id: int, family: models.Family, db: Session):
                 deleted_folder_somewhere = True
             except Exception as e:
                 print(f"Warning: Failed to delete Google Drive folder {folder.google_drive_folder_id} during purge: {e}")
-        if folder.mega_folder_id:
-            try:
-                from storage import get_storage_provider
-                provider = get_storage_provider("mega")
-                cfg = family_config.get("mega", {})
-                provider.delete_file(cfg, folder.mega_folder_id, db=db)
-                deleted_folder_somewhere = True
-            except Exception as e:
-                print(f"Warning: Failed to delete MEGA folder {folder.mega_folder_id} during purge: {e}")
         if not deleted_folder_somewhere and folder.cloud_folder_id and family.storage_provider != "local":
             try:
                 from storage import get_storage_provider
@@ -244,14 +228,6 @@ def purge_item(
                         deleted_somewhere = True
                     except Exception as e:
                         print(f"Warning: Failed to delete Google Drive file {file.google_drive_file_id} during purge: {e}")
-                        
-                if file.mega_file_id:
-                    try:
-                        cfg = family_config.get("mega", {})
-                        manager.providers["mega"].delete_file(cfg, file.mega_file_id, db=db)
-                        deleted_somewhere = True
-                    except Exception as e:
-                        print(f"Warning: Failed to delete MEGA file {file.mega_file_id} during purge: {e}")
                         
                 if not deleted_somewhere:
                     provider = file.storage_provider or "local"

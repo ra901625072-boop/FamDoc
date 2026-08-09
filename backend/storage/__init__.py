@@ -1,13 +1,10 @@
 from storage.base import StorageProvider
-from storage.mega_provider import MegaProvider
 from storage.google_drive_provider import GoogleDriveProvider
 from storage.local import LocalStorageProvider
 
 def get_storage_provider(provider_name: str) -> StorageProvider:
     if provider_name == "google":
         return GoogleDriveProvider()
-    elif provider_name == "mega":
-        return MegaProvider()
     elif provider_name == "local":
         return LocalStorageProvider()
     else:

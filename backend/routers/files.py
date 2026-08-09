@@ -186,7 +186,7 @@ async def upload_file(
     upload_success = False
     cloud_result = None
 
-    if provider in ("google", "mega"):
+    if provider == "google":
         try:
             target_config = family_config.get(provider, {})
             manager.initialize_family_storage(family, db)
@@ -232,8 +232,7 @@ async def upload_file(
             pending_sync_at  = None,
             synced_to        = provider,
             cloud_link       = cloud_result.get("cloud_link"),
-            google_drive_file_id = cloud_result["cloud_file_id"] if provider == "google" else None,
-            mega_file_id     = cloud_result["cloud_file_id"] if provider == "mega" else None,
+            google_drive_file_id = cloud_result["cloud_file_id"],
             primary_storage  = provider,
             backup_status    = "none"
         )
@@ -262,8 +261,8 @@ async def upload_file(
             pending_sync_at  = now if (provider != "local") else None,
             synced_to        = None,
             cloud_link       = None,
-            primary_storage  = family_config.get("primary_provider") if provider == "dual" else provider,
-            backup_status    = "pending" if provider == "dual" else "none"
+            primary_storage  = provider,
+            backup_status    = "none"
         )
 
     db.add(db_file)
@@ -422,15 +421,6 @@ def rename_file(
                 import logging
                 logging.getLogger(__name__).warning(f"Failed to rename file in Google Drive: {e}")
                 
-        if file.mega_file_id:
-            try:
-                cfg = family_config.get("mega", {})
-                manager.providers["mega"].rename_file(cfg, file.mega_file_id, new_name, db=db)
-                renamed_somewhere = True
-            except Exception as e:
-                import logging
-                logging.getLogger(__name__).warning(f"Failed to rename file in MEGA: {e}")
-                
         if not renamed_somewhere:
             provider_name = file.storage_provider or "local"
             cfg = family_config.get(provider_name, {})
@@ -544,16 +534,6 @@ def move_file(
                 except Exception as e:
                     import logging
                     logging.getLogger(__name__).warning(f"Failed to move file in Google Drive: {e}")
-
-            if file.mega_file_id:
-                try:
-                    dest_mega_id = ensure_folder_cloud_id(file_in.folder_id, "mega", family, db)
-                    provider = get_storage_provider("mega")
-                    provider.move_file(family_config.get("mega", {}), file.mega_file_id, dest_mega_id, db=db)
-                    moved_somewhere = True
-                except Exception as e:
-                    import logging
-                    logging.getLogger(__name__).warning(f"Failed to move file in MEGA: {e}")
 
             if not moved_somewhere and file.cloud_file_id:
                 provider_name = family.storage_provider

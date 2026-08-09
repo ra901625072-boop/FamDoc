@@ -42,10 +42,6 @@ GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "")
 
 
-# Mega Storage Settings
-MEGA_EMAIL = os.getenv("MEGA_EMAIL", "")
-MEGA_PASSWORD = os.getenv("MEGA_PASSWORD", "")
-
 # VirusTotal Scanner Settings
 VIRUSTOTAL_API_KEY = os.getenv("VIRUSTOTAL_API_KEY", "")
 
