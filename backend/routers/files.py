@@ -68,6 +68,7 @@ def get_files(
     if folder_id is not None:
         if folder_id == "root" or folder_id == "":
             query = query.filter(models.File.folder_id == None)
+        else:
             try:
                 fid = int(folder_id)
                 auth.verify_resource_access(models.Folder, fid, current_user.family_id, db)

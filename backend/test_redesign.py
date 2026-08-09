@@ -692,6 +692,81 @@ class TestBackendRedesign(unittest.TestCase):
         self.assertEqual(res.status_code, 404)
         self.assertIn("File not found", res.json().get("detail", ""))
 
+    def test_file_listing_with_folder_id_filtering(self):
+        # 1. Create a test folder
+        test_folder = models.Folder(
+            name="Test Folder",
+            parent_id=None,
+            family_id=self.family.id
+        )
+        self.db.add(test_folder)
+        self.db.commit()
+        
+        # 2. Create one file in root and one file in the test folder
+        root_file = models.File(
+            filename="root_file.pdf",
+            file_type="application/pdf",
+            size_bytes=100,
+            uploader_id=self.admin.id,
+            folder_id=None,
+            family_id=self.family.id,
+            storage_provider="local",
+            cloud_file_id="root-file-cloud-id",
+            pending_sync=False
+        )
+        folder_file = models.File(
+            filename="folder_file.pdf",
+            file_type="application/pdf",
+            size_bytes=200,
+            uploader_id=self.admin.id,
+            folder_id=test_folder.id,
+            family_id=self.family.id,
+            storage_provider="local",
+            cloud_file_id="folder-file-cloud-id",
+            pending_sync=False
+        )
+        self.db.add(root_file)
+        self.db.add(folder_file)
+        self.db.commit()
+        
+        token = auth.create_access_token(data={"sub": self.admin.email, "id": self.admin.id, "role": self.admin.role})
+        headers = {"Authorization": f"Bearer {token}"}
+        
+        # 3. Test listing files with folder_id="root"
+        res = self.client.get("/api/files?folder_id=root", headers=headers)
+        self.assertEqual(res.status_code, 200)
+        files = res.json()
+        self.assertEqual(len(files), 1)
+        self.assertEqual(files[0]["filename"], "root_file.pdf")
+        
+        # 4. Test listing files with folder_id="" (empty string)
+        res = self.client.get("/api/files?folder_id=", headers=headers)
+        self.assertEqual(res.status_code, 200)
+        files = res.json()
+        self.assertEqual(len(files), 1)
+        self.assertEqual(files[0]["filename"], "root_file.pdf")
+        
+        # 5. Test listing files in the specific folder
+        res = self.client.get(f"/api/files?folder_id={test_folder.id}", headers=headers)
+        self.assertEqual(res.status_code, 200)
+        files = res.json()
+        self.assertEqual(len(files), 1)
+        self.assertEqual(files[0]["filename"], "folder_file.pdf")
+        
+        # 6. Test listing files without folder_id filter (should return all files)
+        res = self.client.get("/api/files", headers=headers)
+        self.assertEqual(res.status_code, 200)
+        files = res.json()
+        self.assertEqual(len(files), 2)
+        filenames = [f["filename"] for f in files]
+        self.assertIn("root_file.pdf", filenames)
+        self.assertIn("folder_file.pdf", filenames)
+        
+        # 7. Test listing files with invalid folder_id format
+        res = self.client.get("/api/files?folder_id=invalid_folder_id", headers=headers)
+        self.assertEqual(res.status_code, 400)
+        self.assertIn("Invalid folder_id format", res.json().get("detail", ""))
+
     def test_sharing_link_security(self):
         admin_token = auth.create_access_token(data={"sub": self.admin.email, "id": self.admin.id, "role": self.admin.role})
         headers = {"Authorization": f"Bearer {admin_token}"}
