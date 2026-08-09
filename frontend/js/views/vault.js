@@ -354,20 +354,38 @@
   }
 
   async function refreshData() {
-    // Render cache first
-    const cachedFoldersJson = localStorage.getItem("famdoc_cached_folders");
-    const cachedFilesJson = localStorage.getItem("famdoc_cached_files_" + currentFolderId);
+    allFolders = [];
+    currentFiles = [];
 
-    if (cachedFoldersJson) {
-      try { allFolders = JSON.parse(cachedFoldersJson); } catch (e) {}
-    }
-    if (cachedFilesJson) {
-      try { currentFiles = JSON.parse(cachedFilesJson); } catch (e) {}
-    }
-
-    if (allFolders.length > 0 || currentFiles.length > 0) {
-      renderBreadcrumbs();
-      renderExplorer();
+    const wrapper = document.getElementById("items-wrapper");
+    if (wrapper) {
+      // Clear empty state and hide it
+      const emptyState = document.getElementById("explorer-empty");
+      if (emptyState) emptyState.style.display = "none";
+      
+      wrapper.style.display = currentView === "grid" ? "grid" : "flex";
+      wrapper.innerHTML = `
+        <div class="fd-skel-vault-item">
+          <div class="fd-skel fd-skel-circle" style="width: 3.5rem; height: 3.5rem; margin-bottom: 1rem;"></div>
+          <div class="fd-skel fd-skel-text lg" style="margin-bottom: 0.5rem;"></div>
+          <div class="fd-skel fd-skel-text sm"></div>
+        </div>
+        <div class="fd-skel-vault-item">
+          <div class="fd-skel fd-skel-circle" style="width: 3.5rem; height: 3.5rem; margin-bottom: 1rem;"></div>
+          <div class="fd-skel fd-skel-text lg" style="margin-bottom: 0.5rem;"></div>
+          <div class="fd-skel fd-skel-text sm"></div>
+        </div>
+        <div class="fd-skel-vault-item">
+          <div class="fd-skel fd-skel-circle" style="width: 3.5rem; height: 3.5rem; margin-bottom: 1rem;"></div>
+          <div class="fd-skel fd-skel-text lg" style="margin-bottom: 0.5rem;"></div>
+          <div class="fd-skel fd-skel-text sm"></div>
+        </div>
+        <div class="fd-skel-vault-item">
+          <div class="fd-skel fd-skel-circle" style="width: 3.5rem; height: 3.5rem; margin-bottom: 1rem;"></div>
+          <div class="fd-skel fd-skel-text lg" style="margin-bottom: 0.5rem;"></div>
+          <div class="fd-skel fd-skel-text sm"></div>
+        </div>
+      `;
     }
 
     // Refresh from server
@@ -389,7 +407,6 @@
           .map(op => op.itemId)
       );
       allFolders = freshFolders.filter(f => !activeDeleteFolderIds.has(f.id));
-      localStorage.setItem("famdoc_cached_folders", JSON.stringify(allFolders));
       
       const activeDeleteFileIds = new Set(
         BackgroundManager.queue
@@ -397,24 +414,18 @@
           .map(op => op.itemId)
       );
       currentFiles = freshFiles.filter(f => !activeDeleteFileIds.has(f.id));
-      localStorage.setItem("famdoc_cached_files_" + currentFolderId, JSON.stringify(currentFiles));
       
       renderBreadcrumbs();
       renderExplorer();
     } catch (err) {
       console.error("Failed to load vault items:", err);
-      if (allFolders.length === 0 && currentFiles.length === 0) {
-        FamDocAPI.utils.showToast("Failed to load vault files.", "error");
-        const wrapper = document.getElementById("items-wrapper");
-        if (wrapper) wrapper.innerHTML = "";
-        const emptyState = document.getElementById("explorer-empty");
-        if (emptyState) {
-          emptyState.style.display = "flex";
-          emptyState.querySelector(".empty-state-title").textContent = "Failed to load files";
-          emptyState.querySelector(".empty-state-text").textContent = err.message || "Please reload to try again.";
-        }
-      } else {
-        FamDocAPI.utils.showToast("Reconnecting... Using offline view.", "warning");
+      FamDocAPI.utils.showToast("Failed to load vault files.", "error");
+      if (wrapper) wrapper.innerHTML = "";
+      const emptyState = document.getElementById("explorer-empty");
+      if (emptyState) {
+        emptyState.style.display = "flex";
+        emptyState.querySelector(".empty-state-title").textContent = "Failed to load files";
+        emptyState.querySelector(".empty-state-text").textContent = err.message || "Please reload to try again.";
       }
     }
   }
@@ -603,7 +614,7 @@
     wrapper.style.display = currentView === "grid" ? "grid" : "flex";
     emptyState.style.display = "none";
 
-    const currentUser = JSON.parse(localStorage.getItem("famdoc_user")) || {};
+    const currentUser = JSON.parse(sessionStorage.getItem("famdoc_user")) || {};
 
     // 1. Subfolders
     subFolders.forEach((folder, index) => {

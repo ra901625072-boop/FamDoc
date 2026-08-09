@@ -74,7 +74,7 @@
 
     // Direct Login click checking
     document.getElementById("btn-login").addEventListener("click", async (e) => {
-      const token = localStorage.getItem("famdoc_token");
+      const token = sessionStorage.getItem("famdoc_token");
       if (token) {
         e.preventDefault();
         const loginBtn = document.getElementById("btn-login");

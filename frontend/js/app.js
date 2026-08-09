@@ -10,7 +10,7 @@
     getUser: async function() {
       if (cachedUser) return cachedUser;
       
-      const cached = localStorage.getItem("famdoc_user");
+      const cached = sessionStorage.getItem("famdoc_user");
       if (cached) {
         cachedUser = JSON.parse(cached);
         return cachedUser;
@@ -18,7 +18,7 @@
 
       try {
         cachedUser = await FamDocAPI.auth.me();
-        localStorage.setItem("famdoc_user", JSON.stringify(cachedUser));
+        sessionStorage.setItem("famdoc_user", JSON.stringify(cachedUser));
         return cachedUser;
       } catch (err) {
         console.error("Failed to load user profile:", err);
@@ -34,8 +34,8 @@
       const user = await this.getUser();
       if (!user) {
         // Session validation failed, logout immediately
-        localStorage.removeItem("famdoc_token");
-        localStorage.removeItem("famdoc_user");
+        sessionStorage.removeItem("famdoc_token");
+        sessionStorage.removeItem("famdoc_user");
         window.FamDocRouter.navigate('/');
         return;
       }
@@ -46,7 +46,7 @@
           const defaultName = `${user.username}'s Family`;
           await FamDocAPI.family.setup(defaultName, 10);
           const freshUser = await FamDocAPI.auth.me();
-          localStorage.setItem("famdoc_user", JSON.stringify(freshUser));
+           sessionStorage.setItem("famdoc_user", JSON.stringify(freshUser));
           cachedUser = freshUser;
           FamDocAPI.utils.showToast(`Initialized family vault: ${defaultName}`, "success");
         } catch (err) {
@@ -329,8 +329,8 @@
     // Reset session caches
     clearSession: function() {
       cachedUser = null;
-      localStorage.removeItem("famdoc_user");
-      localStorage.removeItem("famdoc_token");
+      sessionStorage.removeItem("famdoc_user");
+      sessionStorage.removeItem("famdoc_token");
     }
   };
 })();

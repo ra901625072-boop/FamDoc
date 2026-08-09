@@ -346,54 +346,38 @@
       welcome.textContent = `${greeting}, ${user.username}`;
     }
 
-    // Load and render cache immediately
-    const cachedStatsJson = localStorage.getItem("famdoc_cached_stats");
-    if (cachedStatsJson) {
-      try {
-        const cachedStats = JSON.parse(cachedStatsJson);
-        renderDashboardStats(cachedStats);
-      } catch (e) {
-        console.error("Failed to parse cached stats", e);
-      }
-    }
-
     // Fetch fresh stats
     try {
       const freshStats = await FamDocAPI.dashboard.getStats();
-      localStorage.setItem("famdoc_cached_stats", JSON.stringify(freshStats));
       renderDashboardStats(freshStats);
     } catch (err) {
       console.error("Dashboard failed to load fresh data:", err);
-      if (!cachedStatsJson) {
-        FamDocAPI.utils.showToast("Failed to retrieve dashboard statistics.", "error");
-        
-        const statFiles = document.getElementById("stat-files");
-        const statSize = document.getElementById("stat-size");
-        const statMembers = document.getElementById("stat-members");
-        if (statFiles) statFiles.textContent = "—";
-        if (statSize) statSize.textContent = "—";
-        if (statMembers) statMembers.textContent = "—";
+      FamDocAPI.utils.showToast("Failed to retrieve dashboard statistics.", "error");
+      
+      const statFiles = document.getElementById("stat-files");
+      const statSize = document.getElementById("stat-size");
+      const statMembers = document.getElementById("stat-members");
+      if (statFiles) statFiles.textContent = "—";
+      if (statSize) statSize.textContent = "—";
+      if (statMembers) statMembers.textContent = "—";
 
-        const recentList = document.getElementById("recent-uploads-list");
-        if (recentList) {
-          recentList.innerHTML = `
-            <div class="empty-state fd-fade-in" style="padding: 2rem 0; color: var(--warning-red);">
-              <i class="fas fa-exclamation-triangle state-icon error"></i>
-              <h4 class="empty-state-title">Failed to load files</h4>
-            </div>
-          `;
-        }
-        const activityFeed = document.getElementById("activity-feed-list");
-        if (activityFeed) {
-          activityFeed.innerHTML = `
-            <div class="empty-state fd-fade-in" style="padding: 2rem 0; color: var(--warning-red);">
-              <i class="fas fa-exclamation-triangle state-icon error"></i>
-              <h4 class="empty-state-title">Failed to load activity</h4>
-            </div>
-          `;
-        }
-      } else {
-        FamDocAPI.utils.showToast("Reconnecting... Using cached stats.", "warning");
+      const recentList = document.getElementById("recent-uploads-list");
+      if (recentList) {
+        recentList.innerHTML = `
+          <div class="empty-state fd-fade-in" style="padding: 2rem 0; color: var(--warning-red);">
+            <i class="fas fa-exclamation-triangle state-icon error"></i>
+            <h4 class="empty-state-title">Failed to load files</h4>
+          </div>
+        `;
+      }
+      const activityFeed = document.getElementById("activity-feed-list");
+      if (activityFeed) {
+        activityFeed.innerHTML = `
+          <div class="empty-state fd-fade-in" style="padding: 2rem 0; color: var(--warning-red);">
+            <i class="fas fa-exclamation-triangle state-icon error"></i>
+            <h4 class="empty-state-title">Failed to load activity</h4>
+          </div>
+        `;
       }
     }
   }
