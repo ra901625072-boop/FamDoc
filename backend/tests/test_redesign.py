@@ -76,7 +76,9 @@ class TestBackendRedesign(unittest.TestCase):
             name="Test Family",
             admin_id=self.admin.id,
             secret_code_hash="hashed_code",
-            max_members=10
+            max_members=10,
+            storage_provider="local",
+            vault_folder_id="test-local-vault"
         )
         self.db.add(self.family)
         self.db.flush()
@@ -375,7 +377,12 @@ class TestBackendRedesign(unittest.TestCase):
         self.assertEqual(run_key_validation("production", "securekey123"), "booted")
 
     def test_secure_hierarchy_and_boundary_protection(self):
-        # 1. Generate auth header for admin
+        # 1. Reset storage provider and vault folder on self.family
+        self.family.storage_provider = None
+        self.family.vault_folder_id = None
+        self.db.commit()
+
+        # 2. Generate auth header for admin
         admin_token = auth.create_access_token(data={"sub": self.admin.email, "id": self.admin.id, "role": self.admin.role})
         headers = {"Authorization": f"Bearer {admin_token}"}
         

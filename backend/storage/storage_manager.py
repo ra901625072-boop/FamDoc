@@ -631,6 +631,12 @@ class StorageManager:
         db.commit()
 
     def initialize_family_storage(self, family, db: Session):
+        # If the storage provider is already initialized with a vault, bypass initialization
+        # to avoid redundant, blocking network calls (e.g. MEGA login) on every API request.
+        if family.storage_provider and family.vault_folder_id:
+            if family.storage_provider != "dual":
+                return
+
         config_data = family.storage_config or {}
         
         if family.storage_provider == "dual":
