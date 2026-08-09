@@ -425,8 +425,8 @@ class GoogleDriveProvider(StorageProvider):
         if not thumbnail_url:
             return None
             
-        headers = {"Authorization": f"Bearer {access_token}"}
-        response = requests.get(thumbnail_url, headers=headers, stream=True, timeout=15)
+        # Do not send Authorization headers to googleusercontent.com (Google's CDN), as it will reject the request.
+        response = requests.get(thumbnail_url, stream=True, timeout=15)
         response.raise_for_status()
         
         def chunk_generator():
@@ -438,4 +438,5 @@ class GoogleDriveProvider(StorageProvider):
                 response.close()
                 
         return chunk_generator()
+
 

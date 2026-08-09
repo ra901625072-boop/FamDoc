@@ -408,6 +408,12 @@ def preview_file(
                     file_type = "image/jpeg"
                 except Exception:
                     pass
+            elif file_type and file_type.lower() == "application/pdf":
+                # PDF thumbnail generation fallback is not supported (cannot render PDF in <img> tag)
+                raise HTTPException(
+                    status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+                    detail="PDF thumbnail generation failed. Fallback to default icon."
+                )
         except FileNotFoundError as e:
             raise HTTPException(status_code=503, detail=str(e))
         finally:
