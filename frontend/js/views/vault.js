@@ -737,7 +737,8 @@
 
       if (isImage) {
         const previewUrl = FamDocAPI.files.getPreviewUrl(file.id);
-        const authenticatedPreviewUrl = previewUrl + (file.preview_token ? `?token=${file.preview_token}` : "");
+        let authenticatedPreviewUrl = previewUrl + (file.preview_token ? `?token=${file.preview_token}` : "");
+        authenticatedPreviewUrl += (authenticatedPreviewUrl.includes("?") ? "&" : "?") + "thumbnail=true";
         iconHtml = `
           <div class="thumbnail-wrapper">
             <i class="item-icon ${fallbackIconClass} thumbnail-fallback"></i>
@@ -885,7 +886,7 @@
   async function loadThumbnail(fileId) {
     const fileToken = await getPreviewToken(fileId);
     if (!fileToken) return;
-    const previewUrl = FamDocAPI.files.getPreviewUrl(fileId) + `?token=${fileToken}`;
+    const previewUrl = FamDocAPI.files.getPreviewUrl(fileId) + `?token=${fileToken}&thumbnail=true`;
     const imgs = document.querySelectorAll(`img[data-file-id="${fileId}"]`);
     imgs.forEach(img => { img.src = previewUrl; });
   }

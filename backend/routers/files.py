@@ -347,6 +347,7 @@ def download_file(
 def preview_file(
     file_id: int,
     request: Request,
+    thumbnail: bool = False,
     current_user: models.User = Depends(auth.get_current_user_or_file_preview),
     db: Session = Depends(get_db)
 ):
@@ -370,6 +371,24 @@ def preview_file(
     file_type = file.file_type
     try:
         content = manager.read_file(file, family_config, db=db)
+        
+        # Optimize image thumbnails to half-scale quality 60 on-the-fly
+        if thumbnail and file_type and file_type.lower().startswith("image/"):
+            try:
+                import io
+                from PIL import Image
+                img = Image.open(io.BytesIO(content))
+                width, height = img.size
+                new_width = max(100, int(width / 2))
+                new_height = max(100, int(height / 2))
+                img = img.resize((new_width, new_height), Image.Resampling.LANCZOS if hasattr(Image, "Resampling") else Image.LANCZOS)
+                
+                out = io.BytesIO()
+                img.save(out, format="JPEG", quality=60)
+                content = out.getvalue()
+                file_type = "image/jpeg"
+            except Exception:
+                pass
     except FileNotFoundError as e:
         raise HTTPException(status_code=503, detail=str(e))
     finally:
