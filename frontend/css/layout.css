@@ -673,3 +673,13 @@ body::after {
   animation: progress-stripe-animation 1s linear infinite !important;
 }
 
+@media (max-width: 480px) {
+  .main-content {
+    padding: 1rem !important;
+    padding-bottom: calc(var(--bottom-nav-height) + 1rem) !important;
+  }
+  .guest-wrapper {
+    padding: 1rem !important;
+  }
+}
+

@@ -1249,6 +1249,9 @@
   border-radius: var(--radius-lg);
   padding: 2.25rem;
   transition: var(--transition-smooth);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .feature-card:hover {
@@ -1899,6 +1902,72 @@
 
   .famdoc-table td[data-label="Actions"]::before {
     display: none !important;
+  }
+}
+
+/* ==========================================================================
+   Extreme Mobile UI/UX Overrides (Symmetry, Compact Stats, and Alignment)
+   ========================================================================== */
+
+/* Core Toolbar Actions flex container styling */
+.toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+@media (max-width: 576px) {
+  /* Dashboard Stat Card compact horizontal layout */
+  .stat-card {
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 1.25rem !important;
+    padding: 1rem 1.25rem !important;
+  }
+
+  .stat-icon {
+    margin-bottom: 0 !important;
+    flex-shrink: 0 !important;
+  }
+
+  .stat-card-bottom-progress {
+    height: 4px !important;
+  }
+
+  /* Symmetrical Content Header & Toolbar Actions stretching */
+  .content-header {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 1rem !important;
+    text-align: center !important;
+  }
+
+  .toolbar-actions {
+    width: 100% !important;
+    justify-content: stretch !important;
+  }
+
+  .toolbar-actions .btn {
+    flex: 1 !important;
+    justify-content: center !important;
+  }
+
+  /* Browser Explorer Grid Alignment: puts filters on a single horizontal row */
+  .browser-toolbar > div:last-child {
+    display: grid !important;
+    grid-template-columns: 2fr 1.2fr auto !important;
+    gap: 0.75rem !important;
+    width: 100% !important;
+    align-items: center !important;
+  }
+
+  .browser-toolbar .search-input-wrapper {
+    grid-column: span 3 !important;
+    width: 100% !important;
+  }
+
+  .browser-toolbar .search-input-wrapper input {
+    width: 100% !important;
   }
 }
 
