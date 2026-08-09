@@ -411,7 +411,7 @@ body::after {
 
 /* Modals & Dialogs Layout */
 .modal-overlay {
-  display: none;
+  display: flex;
   position: fixed;
   top: 0;
   left: 0;
@@ -426,13 +426,14 @@ body::after {
   padding: 1.5rem;
   box-sizing: border-box;
   opacity: 0;
-  transition: opacity 0.25s ease-in-out;
+  visibility: hidden;
   pointer-events: none;
+  transition: opacity 0.25s ease-in-out, visibility 0.25s ease-in-out;
 }
 
 .modal-overlay.show {
-  display: flex;
   opacity: 1;
+  visibility: visible;
   pointer-events: auto;
 }
 
@@ -512,7 +513,7 @@ body::after {
   :root {
     --sidebar-width: 0px;
     --header-height: 60px;
-    --bottom-nav-height: 64px;
+    --bottom-nav-height: calc(64px + env(safe-area-inset-bottom, 0px));
   }
 
   .mobile-header {
@@ -521,6 +522,8 @@ body::after {
 
   .bottom-nav {
     display: grid;
+    height: var(--bottom-nav-height);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 
   .sidebar {
@@ -549,12 +552,24 @@ body::after {
     max-width: 100%;
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     margin-bottom: 0;
-    animation: modalSlideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    transform: translateY(100%);
+    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
-  @keyframes modalSlideUp {
-    from { transform: translateY(100%); }
-    to { transform: translateY(0); }
+  /* Tactile Bottom Sheet Handle Indicator */
+  .famdoc-modal::before {
+    content: '';
+    display: block;
+    width: 36px;
+    height: 4px;
+    background-color: var(--text-ink-muted);
+    opacity: 0.3;
+    border-radius: 2px;
+    margin: 8px auto 0 auto;
+  }
+
+  .modal-overlay.show .famdoc-modal {
+    transform: translateY(0);
   }
 
   .modal-footer {
