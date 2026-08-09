@@ -140,7 +140,7 @@ def oauth2callback(
         "grant_type": "authorization_code"
     }
     
-    r = requests.post("https://oauth2.googleapis.com/token", data=payload)
+    r = requests.post("https://oauth2.googleapis.com/token", data=payload, timeout=10)
     if r.status_code != 200:
         return RedirectResponse(url=f"{FRONTEND_URL.rstrip('/')}/?google_auth=error&detail={urllib.parse.quote(r.text)}#/storage")
         

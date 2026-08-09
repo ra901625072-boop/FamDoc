@@ -41,7 +41,7 @@ class GoogleDriveProvider(StorageProvider):
                     "refresh_token": refresh_token,
                     "grant_type": "refresh_token"
                 }
-                r = requests.post(url, data=payload)
+                r = requests.post(url, data=payload, timeout=10)
                 if r.status_code != 200:
                     raise Exception(f"Failed to refresh Google token: {r.text}")
                 res = r.json()

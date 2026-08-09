@@ -1,4 +1,9 @@
 import os
+import socket
+# Set default global socket timeout of 20 seconds to prevent connection hangs 
+# to Google Drive or Supabase DB from blocking FastAPI request threads indefinitely.
+socket.setdefaulttimeout(20.0)
+
 import asyncio
 if not hasattr(asyncio, "coroutine"):
     asyncio.coroutine = lambda f: f
