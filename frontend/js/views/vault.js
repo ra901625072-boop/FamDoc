@@ -733,20 +733,39 @@
       const isPdf = ext === "pdf";
 
       let iconHtml = "";
+      const fallbackIconClass = FamDocAPI.utils.getFileIconClass(file.file_type, file.filename);
+
       if (isImage) {
         const previewUrl = FamDocAPI.files.getPreviewUrl(file.id);
         const authenticatedPreviewUrl = previewUrl + (file.preview_token ? `?token=${file.preview_token}` : "");
-        iconHtml = `<img class="item-icon item-thumbnail loaded" data-file-id="${file.id}" src="${authenticatedPreviewUrl}" alt="${FamDocAPI.utils.escapeHtml(file.filename)}" onerror="this.onerror=null; this.outerHTML='<i class=\'item-icon fas fa-file-image file-image\'></i>';">`;
+        iconHtml = `
+          <div class="thumbnail-wrapper">
+            <i class="item-icon ${fallbackIconClass} thumbnail-fallback"></i>
+            <img class="item-icon item-thumbnail" data-file-id="${file.id}" src="${authenticatedPreviewUrl}" alt="${FamDocAPI.utils.escapeHtml(file.filename)}" onload="this.classList.add('loaded');" onerror="this.style.display='none';">
+          </div>
+        `;
       } else if (isPdf) {
         const cachedThumb = localStorage.getItem("famdoc-pdf-thumb-" + file.id);
         if (cachedThumb) {
-          iconHtml = `<img class="item-icon item-thumbnail loaded" data-file-id="${file.id}" src="${cachedThumb}" alt="${FamDocAPI.utils.escapeHtml(file.filename)}">`;
+          iconHtml = `
+            <div class="thumbnail-wrapper">
+              <i class="item-icon far fa-file-pdf file-pdf thumbnail-fallback" style="opacity: 0;"></i>
+              <img class="item-icon item-thumbnail loaded" data-file-id="${file.id}" src="${cachedThumb}" alt="${FamDocAPI.utils.escapeHtml(file.filename)}">
+            </div>
+          `;
         } else {
-          iconHtml = `<span class="pdf-thumbnail-container" data-file-id="${file.id}"><i class="item-icon far fa-file-pdf file-pdf"></i></span>`;
+          iconHtml = `
+            <div class="thumbnail-wrapper pdf-thumbnail-container" data-file-id="${file.id}">
+              <i class="item-icon far fa-file-pdf file-pdf thumbnail-fallback"></i>
+            </div>
+          `;
         }
       } else {
-        const iconClass = FamDocAPI.utils.getFileIconClass(file.file_type, file.filename);
-        iconHtml = `<i class="item-icon ${iconClass}"></i>`;
+        iconHtml = `
+          <div class="thumbnail-wrapper">
+            <i class="item-icon ${fallbackIconClass} thumbnail-fallback"></i>
+          </div>
+        `;
       }
 
       const formattedSize = FamDocAPI.utils.formatBytes(file.size_bytes);
@@ -933,11 +952,21 @@
       const containers = document.querySelectorAll(`.pdf-thumbnail-container[data-file-id="${fileId}"]`);
       containers.forEach(container => {
         const img = document.createElement("img");
-        img.className = "item-icon item-thumbnail loaded";
+        img.className = "item-icon item-thumbnail";
         img.setAttribute("data-file-id", fileId);
         img.src = dataUrl;
         img.alt = "PDF Thumbnail";
-        container.replaceWith(img);
+        
+        // Hide fallback icon on load
+        img.onload = () => {
+          img.classList.add("loaded");
+          const fallback = container.querySelector(".thumbnail-fallback");
+          if (fallback) {
+            fallback.style.opacity = "0";
+          }
+        };
+        
+        container.appendChild(img);
       });
     } catch (err) {
       console.error("Failed to render PDF thumbnail for file " + fileId, err);
@@ -1357,10 +1386,15 @@
 
   function openModal(modalId) {
     document.getElementById(modalId).classList.add("show");
+    document.body.classList.add("modal-open");
   }
 
   function closeModal(modalId) {
     document.getElementById(modalId).classList.remove("show");
+    const openModals = document.querySelectorAll(".modal-overlay.show");
+    if (openModals.length === 0) {
+      document.body.classList.remove("modal-open");
+    }
   }
 
   function setupEvents() {
@@ -1500,7 +1534,20 @@
       btn.addEventListener("click", (e) => {
         const overlay = e.target.closest(".modal-overlay");
         if (overlay) {
-          overlay.classList.remove("show");
+          closeModal(overlay.id);
+          if (overlay.id === "modal-preview" && activePreviewUrl) {
+            URL.revokeObjectURL(activePreviewUrl);
+            activePreviewUrl = null;
+          }
+        }
+      });
+    });
+
+    // Backdrop overlay click to close modals
+    document.querySelectorAll(".modal-overlay").forEach(overlay => {
+      overlay.addEventListener("click", (e) => {
+        if (e.target === overlay) {
+          closeModal(overlay.id);
           if (overlay.id === "modal-preview" && activePreviewUrl) {
             URL.revokeObjectURL(activePreviewUrl);
             activePreviewUrl = null;

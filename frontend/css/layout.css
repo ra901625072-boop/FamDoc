@@ -753,3 +753,9 @@ body::after {
   }
 }
 
+/* Fix Modal Stacking Context to cover sidebar and bottom-nav */
+body.modal-open .main-content {
+  z-index: 2001; /* Elevate above sidebar (100) and bottom-nav (101) */
+}
+
+

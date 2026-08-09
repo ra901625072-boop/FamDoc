@@ -98,6 +98,7 @@
       try {
         // Reset scroll position on route change to prevent cut-off headers
         window.scrollTo(0, 0);
+        document.body.classList.remove("modal-open");
         
         await match.route.handler(match.params);
         

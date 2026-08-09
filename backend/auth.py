@@ -43,12 +43,12 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     return encoded_jwt
 
 def create_file_access_token(file_id: int, user_id: int) -> str:
-    # 5-minute single-use/short-lived token for file previews and downloads
+    # 2-hour short-lived token for file previews and downloads to prevent timezone/clock skew issues
     to_encode = {
         "file_id": file_id,
         "user_id": user_id,
         "scope": "file_preview",
-        "exp": datetime.now(timezone.utc) + timedelta(minutes=5),
+        "exp": datetime.now(timezone.utc) + timedelta(hours=2),
         "jti": str(uuid.uuid4())
     }
     encoded_jwt = jwt.encode(to_encode, JWT_SECRET, algorithm=JWT_ALGORITHM)
@@ -147,8 +147,15 @@ def get_current_user_or_file_preview(
     token: Optional[str] = None,
     db: Session = Depends(get_db)
 ) -> models.User:
-    if not token and request and hasattr(request, "query_params"):
-        token = request.query_params.get("token")
+    # Always prioritize query parameter token if present, bypassing Authorization header
+    # to prevent browser extension or stale token conflicts.
+    query_token = None
+    if request and hasattr(request, "query_params"):
+        query_token = request.query_params.get("token")
+        
+    if query_token:
+        return get_current_user_with_scopes(["session", "file_preview"], None, query_token, db, request)
+        
     return get_current_user_with_scopes(["session", "file_preview"], token_header, token, db, request)
 
 def get_admin_user(
