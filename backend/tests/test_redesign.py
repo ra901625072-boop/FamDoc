@@ -7,7 +7,7 @@ import socket
 from datetime import datetime, timezone, timedelta
 
 # Adjust python path to import backend modules
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
