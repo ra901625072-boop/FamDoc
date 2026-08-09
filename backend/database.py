@@ -174,7 +174,7 @@ def run_migrations():
                 logger.info("Migration: Successfully added deletion_batch_id column and index to files table.")
             except Exception as e:
                 logger.error(f"Migration error (files deletion_batch_id): {str(e)}")
-        if "cloud_file_id" in columns:
+        if "cloud_file_id" in columns and "file_id" not in columns:
             try:
                 execute_migration_statement("ALTER TABLE files RENAME COLUMN cloud_file_id TO file_id")
                 logger.info("Migration: Successfully renamed cloud_file_id to file_id.")
