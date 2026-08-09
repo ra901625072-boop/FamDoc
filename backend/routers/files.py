@@ -370,19 +370,23 @@ def preview_file(
     filename = file.filename
     file_type = file.file_type
     
-    # Optimization 1: For Google Drive thumbnails, redirect directly to Google's thumbnailLink
+    # Optimization 1: For Google Drive thumbnails, stream the pre-rendered thumbnail directly
     if thumbnail and file.storage_provider == "google":
-        thumbnail_url = manager.get_thumbnail_url(file, family_config, db=db)
-        if thumbnail_url:
-            db.close()
-            return RedirectResponse(url=thumbnail_url)
-            
-    # Optimization 2: For Google Drive full image preview, redirect to direct download URL (bypassing backend)
-    if not thumbnail and file.storage_provider == "google" and file_type and file_type.lower().startswith("image/"):
-        direct_url = manager.get_direct_download_url(file, family_config, db=db)
-        if direct_url:
-            db.close()
-            return RedirectResponse(url=direct_url)
+        try:
+            generator = manager.stream_thumbnail(file, family_config, db=db)
+            if generator:
+                db.close()
+                response_headers = {
+                    "Content-Disposition": f'inline; filename="thumb_{filename}.jpg"',
+                    "Cache-Control": "public, max-age=604800"
+                }
+                return StreamingResponse(
+                    generator,
+                    media_type="image/jpeg",
+                    headers=response_headers
+                )
+        except Exception:
+            pass
 
     if thumbnail:
         try:

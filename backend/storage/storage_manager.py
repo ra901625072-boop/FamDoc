@@ -184,6 +184,19 @@ class StorageManager:
                     logger.warning(f"Failed to get thumbnail url: {e}")
         return None
 
+    def stream_thumbnail(self, file, family_config: dict, db = None):
+        provider_name = file.storage_provider or "local"
+        if provider_name == "google":
+            cfg = family_config.get("google", {})
+            f_id = file.google_drive_file_id or (file.cloud_file_id if file.storage_provider == "google" else None) or (file._file_id if file.storage_provider == "google" else None)
+            if f_id:
+                try:
+                    if hasattr(self.providers["google"], "stream_thumbnail"):
+                        return self.providers["google"].stream_thumbnail(cfg, f_id, db=db)
+                except Exception as e:
+                    logger.warning(f"Failed to stream thumbnail: {e}")
+        return None
+
     def get_direct_download_url(self, file, family_config: dict, db = None) -> Optional[str]:
         provider_name = file.storage_provider or "local"
         if provider_name == "google":

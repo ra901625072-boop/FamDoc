@@ -415,3 +415,27 @@ class GoogleDriveProvider(StorageProvider):
                 
         return chunk_generator()
 
+    def stream_thumbnail(self, config: dict, cloud_file_id: str, db = None):
+        self._get_client(config, db)
+        access_token = config.get("access_token")
+        if not access_token:
+            raise Exception("Failed to acquire access token for Google Drive thumbnail streaming")
+        
+        thumbnail_url = self.get_thumbnail_url(config, cloud_file_id, db=db)
+        if not thumbnail_url:
+            return None
+            
+        headers = {"Authorization": f"Bearer {access_token}"}
+        response = requests.get(thumbnail_url, headers=headers, stream=True, timeout=15)
+        response.raise_for_status()
+        
+        def chunk_generator():
+            try:
+                for chunk in response.iter_content(chunk_size=32 * 1024):
+                    if chunk:
+                        yield chunk
+            finally:
+                response.close()
+                
+        return chunk_generator()
+
