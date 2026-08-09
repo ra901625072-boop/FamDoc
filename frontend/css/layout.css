@@ -139,6 +139,34 @@ body::after {
   z-index: 2;
 }
 
+/* Global Content Header & Toolbars */
+.content-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  width: 100%;
+}
+
+.content-header .page-title {
+  font-family: var(--font-serif);
+  font-size: 1.85rem;
+  font-weight: 800;
+  color: var(--text-ink);
+}
+
+.content-header .page-subtitle {
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  color: var(--text-ink-muted);
+}
+
+.toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
 /* Mobile Header (Translucent Glass) */
 .mobile-header {
   display: none;
@@ -160,15 +188,24 @@ body::after {
 
 /* Mobile Hamburger Menu */
 .hamburger {
-  background: transparent;
-  border: none;
+  background: var(--surface-paper-tint);
+  border: 1px solid var(--border-paper);
   color: var(--text-ink);
-  font-size: 1.25rem;
-  cursor: pointer;
-  padding: 0.5rem;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+  font-size: 0.95rem;
+}
+
+.hamburger:hover {
+  background-color: var(--surface-paper-hover);
+  border-color: var(--accent-brand);
+  color: var(--accent-brand);
 }
 
 /* Bottom Navigation Bar (Glass) */
@@ -519,6 +556,26 @@ body::after {
     --sidebar-width: 0px;
     --header-height: 60px;
     --bottom-nav-height: calc(64px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Symmetrical Content Header & Toolbar Actions stretching */
+  .content-header {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 1rem !important;
+    text-align: center !important;
+    margin-bottom: 1.5rem !important;
+  }
+
+  .toolbar-actions {
+    width: 100% !important;
+    justify-content: stretch !important;
+    gap: 0.75rem !important;
+  }
+
+  .toolbar-actions .btn {
+    flex: 1 !important;
+    justify-content: center !important;
   }
 
   .mobile-header {

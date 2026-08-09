@@ -669,35 +669,21 @@
     font-size: 0.68rem !important;
   }
 
-  /* Symmetrical Content Header & Toolbar Actions stretching */
-  .content-header {
-    flex-direction: column !important;
-    align-items: stretch !important;
-    gap: 1rem !important;
-    text-align: center !important;
-  }
-
-  .toolbar-actions {
-    width: 100% !important;
-    justify-content: stretch !important;
-  }
-
-  .toolbar-actions .btn {
-    flex: 1 !important;
-    justify-content: center !important;
-  }
-
   /* Browser Explorer Grid Alignment: puts filters on a single horizontal row */
+  .browser-toolbar {
+    padding: 1rem !important;
+  }
+
   .browser-toolbar > div:last-child {
     display: grid !important;
-    grid-template-columns: 2fr 1.2fr auto !important;
+    grid-template-columns: 1fr auto !important;
     gap: 0.75rem !important;
     width: 100% !important;
     align-items: center !important;
   }
 
   .browser-toolbar .search-input-wrapper {
-    grid-column: span 3 !important;
+    grid-column: span 2 !important;
     width: 100% !important;
   }
 

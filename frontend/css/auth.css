@@ -8,14 +8,10 @@
   padding: 3rem;
   box-shadow: var(--shadow-lg);
   border-radius: var(--radius-lg);
-  background-color: rgba(255, 255, 255, 0.75);
+  background-color: var(--surface-card);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--border-paper);
-}
-
-[data-theme="dark"] .auth-card {
-  background-color: rgba(18, 22, 36, 0.7);
 }
 
 .auth-header {
