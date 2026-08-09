@@ -375,7 +375,6 @@ def preview_file(
         # Optimize image thumbnails to half-scale quality 60 on-the-fly
         if thumbnail and file_type and file_type.lower().startswith("image/"):
             try:
-                import io
                 from PIL import Image
                 img = Image.open(io.BytesIO(content))
                 width, height = img.size
