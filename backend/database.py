@@ -293,3 +293,22 @@ def run_migrations():
             logger.info("Migration: Successfully created index ix_files_pending_sync_at.")
         except Exception as e:
             pass
+
+    # 4. Migrate audit_logs table
+    if "audit_logs" in table_names:
+        columns = [col["name"] for col in inspector.get_columns("audit_logs")]
+        if "family_id" not in columns:
+            try:
+                execute_migration_statement("ALTER TABLE audit_logs ADD COLUMN family_id VARCHAR(36)")
+                logger.info("Migration: Successfully added family_id column to audit_logs table.")
+            except Exception as e:
+                logger.error(f"Migration error (audit_logs family_id): {str(e)}")
+        
+        try:
+            execute_migration_statement("CREATE INDEX ix_audit_logs_family_id ON audit_logs(family_id)")
+        except Exception:
+            pass
+        try:
+            execute_migration_statement("CREATE INDEX ix_audit_logs_family_timestamp ON audit_logs(family_id, timestamp)")
+        except Exception:
+            pass
