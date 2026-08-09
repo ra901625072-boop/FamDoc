@@ -372,13 +372,17 @@
 
     // Refresh from server
     try {
-      try {
-        familyStorageConfig = await FamDocAPI.request("/api/storage/config");
-      } catch (storageErr) {
-        console.error("Failed to load storage configuration:", storageErr);
-      }
+      const [storageConfigRes, freshFolders, freshFiles] = await Promise.all([
+        FamDocAPI.request("/api/storage/config").catch(storageErr => {
+          console.error("Failed to load storage configuration:", storageErr);
+          return familyStorageConfig;
+        }),
+        FamDocAPI.folders.getFolders(),
+        FamDocAPI.files.getFiles(currentFolderId)
+      ]);
 
-      const freshFolders = await FamDocAPI.folders.getFolders();
+      familyStorageConfig = storageConfigRes;
+
       const activeDeleteFolderIds = new Set(
         BackgroundManager.queue
           .filter(op => (op.status === "pending" || op.status === "running" || op.status === "completed") && op.type === "delete-folder")
@@ -387,7 +391,6 @@
       allFolders = freshFolders.filter(f => !activeDeleteFolderIds.has(f.id));
       localStorage.setItem("famdoc_cached_folders", JSON.stringify(allFolders));
       
-      const freshFiles = await FamDocAPI.files.getFiles(currentFolderId);
       const activeDeleteFileIds = new Set(
         BackgroundManager.queue
           .filter(op => (op.status === "pending" || op.status === "running" || op.status === "completed") && op.type === "delete-file")
@@ -1638,7 +1641,22 @@
       }
     };
 
-    searchInput.addEventListener("input", handleFilterChange);
+    // Debounce search queries to prevent flooding the server on keystrokes
+    const debounce = (func, wait) => {
+      let timeout;
+      return function executedFunction(...args) {
+        const later = () => {
+          clearTimeout(timeout);
+          func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+      };
+    };
+
+    const debouncedFilterChange = debounce(handleFilterChange, 300);
+
+    searchInput.addEventListener("input", debouncedFilterChange);
     typeFilter.addEventListener("change", handleFilterChange);
 
     // Mobile FAB Menu controls

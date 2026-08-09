@@ -40,6 +40,10 @@ function translateValidationError(field, message) {
 const FamDocAPI = {
   // Base request method
   async request(path, options = {}) {
+    if (typeof navigator !== "undefined" && navigator.onLine === false) {
+      throw new Error("Offline: No internet connection");
+    }
+
     const token = localStorage.getItem("famdoc_token");
     const headers = options.headers || {};
 
@@ -52,15 +56,26 @@ const FamDocAPI = {
       headers["Authorization"] = `Bearer ${token}`;
     }
 
+    const controller = new AbortController();
+    const method = (options.method || "GET").toUpperCase();
+    const defaultTimeout = method === "GET" ? 4000 : 8000;
+    const timeoutMs = options.timeout || defaultTimeout;
+
+    const timeoutId = setTimeout(() => {
+      controller.abort();
+    }, timeoutMs);
+
     const fetchOptions = {
       ...options,
-      headers
+      headers,
+      signal: controller.signal
     };
 
     const fullPath = (API_BASE_URL && path.startsWith("/")) ? `${API_BASE_URL}${path}` : path;
 
     try {
       const response = await fetch(fullPath, fetchOptions);
+      clearTimeout(timeoutId);
 
       // Handle 401 Unauthorized globally
       if (response.status === 401) {
@@ -107,6 +122,10 @@ const FamDocAPI = {
       const text = await response.text();
       return text ? JSON.parse(text) : null;
     } catch (error) {
+      clearTimeout(timeoutId);
+      if (error.name === "AbortError") {
+        throw new Error("Request timed out. Please check your connection.");
+      }
       console.error(`API Error on ${path}:`, error);
       throw error;
     }

@@ -247,7 +247,14 @@
 
   async function loadStorageConfig() {
     try {
-      const config = await FamDocAPI.storage.getConfig();
+      const [config, stats] = await Promise.all([
+        FamDocAPI.storage.getConfig(),
+        FamDocAPI.dashboard.getStats().catch(err => {
+          console.error("Failed to load storage breakdown stats", err);
+          return null;
+        })
+      ]);
+
       const activeProviderEl = document.getElementById("storage-active-provider");
       const activeDetailEl = document.getElementById("storage-active-detail");
       
@@ -366,12 +373,9 @@
         primarySelect.value = primaryProvider;
       }
 
-      // Fetch stats and render visual breakdown
-      try {
-        const stats = await FamDocAPI.dashboard.getStats();
+      // Render visual breakdown if stats are available
+      if (stats) {
         renderStorageBreakdown(stats);
-      } catch (err) {
-        console.error("Failed to load storage breakdown stats", err);
       }
     } catch (err) {
       console.error("Failed to load storage config:", err);
