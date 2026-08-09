@@ -37,6 +37,66 @@ function translateValidationError(field, message) {
   return `${friendlyField} ${friendlyMsg}`;
 }
 
+// ─── Client-Side Response Cache & Request Deduplication ───
+const ApiCache = {
+  _store: new Map(),
+  _pendingRequests: new Map(),
+  _defaultTTL: 15000,
+
+  get(key) {
+    const entry = this._store.get(key);
+    if (!entry) return null;
+    if (Date.now() > entry.expiry) {
+      this._store.delete(key);
+      return null;
+    }
+    return entry.data;
+  },
+
+  set(key, data, ttl) {
+    if (this._store.size >= 200) {
+      const oldest = this._store.keys().next().value;
+      this._store.delete(oldest);
+    }
+    this._store.set(key, { data, expiry: Date.now() + (ttl || this._defaultTTL) });
+  },
+
+  invalidate(key) { this._store.delete(key); },
+
+  invalidatePrefix(prefix) {
+    for (const key of this._store.keys()) {
+      if (key.startsWith(prefix)) this._store.delete(key);
+    }
+  },
+
+  invalidateAll() { this._store.clear(); },
+
+  /** Deduplicate identical in-flight GET requests and serve from cache */
+  async deduplicatedFetch(key, fetchFn, ttl) {
+    const cached = this.get(key);
+    if (cached !== null) return cached;
+    if (this._pendingRequests.has(key)) return this._pendingRequests.get(key);
+    const promise = fetchFn().then(result => {
+      this._pendingRequests.delete(key);
+      this.set(key, result, ttl);
+      return result;
+    }).catch(err => {
+      this._pendingRequests.delete(key);
+      throw err;
+    });
+    this._pendingRequests.set(key, promise);
+    return promise;
+  },
+
+  /** Invalidate all data caches after a write operation */
+  invalidateOnMutation() {
+    this.invalidatePrefix("files:");
+    this.invalidatePrefix("folders:");
+    this.invalidatePrefix("search:");
+    this.invalidate("dashboard:stats");
+  }
+};
+
 const FamDocAPI = {
   // Base request method
   async request(path, options = {}) {
@@ -277,7 +337,8 @@ const FamDocAPI = {
   // Folder Endpoints
   folders: {
     async getFolders() {
-      return FamDocAPI.request("/api/folders");
+      const cacheKey = "folders:all";
+      return ApiCache.deduplicatedFetch(cacheKey, () => FamDocAPI.request("/api/folders"), 15000);
     },
 
     async create(name, parentId = null) {
@@ -288,23 +349,29 @@ const FamDocAPI = {
     },
 
     async rename(folderId, name) {
-      return FamDocAPI.request(`/api/folders/${folderId}`, {
+      const result = await FamDocAPI.request(`/api/folders/${folderId}`, {
         method: "PUT",
         body: JSON.stringify({ name })
       });
+      ApiCache.invalidateOnMutation();
+      return result;
     },
 
     async move(folderId, parentId) {
-      return FamDocAPI.request(`/api/folders/${folderId}/move`, {
+      const result = await FamDocAPI.request(`/api/folders/${folderId}/move`, {
         method: "PATCH",
         body: JSON.stringify({ parent_id: parentId })
       });
+      ApiCache.invalidateOnMutation();
+      return result;
     },
 
     async delete(folderId) {
-      return FamDocAPI.request(`/api/folders/${folderId}`, {
+      const result = await FamDocAPI.request(`/api/folders/${folderId}`, {
         method: "DELETE"
       });
+      ApiCache.invalidateOnMutation();
+      return result;
     }
   },
 
@@ -315,7 +382,8 @@ const FamDocAPI = {
       if (folderId !== null) {
         path += `?folder_id=${folderId === "root" ? "root" : folderId}`;
       }
-      return FamDocAPI.request(path);
+      const cacheKey = `files:${folderId}`;
+      return ApiCache.deduplicatedFetch(cacheKey, () => FamDocAPI.request(path), 15000);
     },
 
     async upload(fileObj, folderId = null, onProgress = null) {
@@ -374,23 +442,29 @@ const FamDocAPI = {
     },
 
     async rename(fileId, filename) {
-      return FamDocAPI.request(`/api/files/${fileId}`, {
+      const result = await FamDocAPI.request(`/api/files/${fileId}`, {
         method: "PUT",
         body: JSON.stringify({ filename })
       });
+      ApiCache.invalidateOnMutation();
+      return result;
     },
 
     async move(fileId, folderId) {
-      return FamDocAPI.request(`/api/files/${fileId}/move`, {
+      const result = await FamDocAPI.request(`/api/files/${fileId}/move`, {
         method: "PATCH",
         body: JSON.stringify({ folder_id: folderId })
       });
+      ApiCache.invalidateOnMutation();
+      return result;
     },
 
     async delete(fileId) {
-      return FamDocAPI.request(`/api/files/${fileId}`, {
+      const result = await FamDocAPI.request(`/api/files/${fileId}`, {
         method: "DELETE"
       });
+      ApiCache.invalidateOnMutation();
+      return result;
     },
 
     getDownloadUrl(fileId) {
@@ -432,14 +506,17 @@ const FamDocAPI = {
           queryParams.append(key, params[key]);
         }
       });
-      return FamDocAPI.request(`/api/search?${queryParams.toString()}`);
+      const queryStr = queryParams.toString();
+      const cacheKey = `search:${queryStr}`;
+      return ApiCache.deduplicatedFetch(cacheKey, () => FamDocAPI.request(`/api/search?${queryStr}`), 10000);
     }
   },
 
   // Dashboard Endpoint
   dashboard: {
     async getStats() {
-      return FamDocAPI.request("/api/dashboard/stats");
+      const cacheKey = "dashboard:stats";
+      return ApiCache.deduplicatedFetch(cacheKey, () => FamDocAPI.request("/api/dashboard/stats"), 30000);
     }
   },
 
@@ -698,3 +775,6 @@ styleEl.textContent = `
 }
 `;
 document.head.appendChild(styleEl);
+
+// Expose cache globally for other modules
+window.ApiCache = ApiCache;

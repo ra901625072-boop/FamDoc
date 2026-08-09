@@ -61,6 +61,15 @@ class TestBackendRedesign(unittest.TestCase):
         self.db.query(models.RevokedToken).delete()
         self.db.commit()
 
+        # Clear backend caching singletons to prevent test contamination
+        try:
+            import cache
+            cache.dashboard_cache.clear()
+            cache.folder_listing_cache.clear()
+            cache.search_cache.clear()
+        except Exception:
+            pass
+
         # Create a test admin user and a test member
         self.admin = models.User(
             username="admin_user",

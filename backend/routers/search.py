@@ -6,6 +6,7 @@ import schemas
 import auth
 from typing import List, Optional
 from datetime import datetime
+from cache import search_cache
 
 router = APIRouter(prefix="/api/search", tags=["Search"])
 
@@ -27,6 +28,12 @@ def search_files(
         models.File.family_id == current_user.family_id,
         models.File.deleted_at == None
     )
+
+    # Check cache first
+    cache_key = f"search:{current_user.family_id}:{query}:{file_type}:{folder_id}:{uploader_id}:{start_date}:{end_date}"
+    cached = search_cache.get(cache_key)
+    if cached is not None:
+        return cached
 
     # 1. Search by filename
     if query:
@@ -70,7 +77,7 @@ def search_files(
     if end_date:
         db_query = db_query.filter(models.File.upload_date <= end_date)
 
-    files = db_query.all()
+    files = db_query.order_by(models.File.upload_date.desc()).limit(200).all()
 
     shared_file_ids = {sl.file_id for sl in db.query(models.SharedLink.file_id).filter(models.SharedLink.family_id == current_user.family_id).all()}
 
@@ -79,4 +86,8 @@ def search_files(
         serialize_file(file, is_shared=(file.id in shared_file_ids), current_user_id=current_user.id)
         for file in files
     ]
+
+    # Cache search results for 10 seconds
+    search_cache.set(cache_key, result)
+
     return result

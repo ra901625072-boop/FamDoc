@@ -18,6 +18,7 @@ import os
 from serializers import serialize_file
 from datetime import datetime, timezone
 from storage.storage_manager import StorageManager
+from cache import folder_listing_cache, invalidate_family_caches
 
 SAFE_FILENAME_PATTERN = re.compile(r'^[\w\-. ()\[\]]+$', re.UNICODE)
 def validate_file_content_signature(content: bytes, ext: str) -> bool:
@@ -64,6 +65,12 @@ def get_files(
         models.File.family_id == current_user.family_id,
         models.File.deleted_at == None
     )
+
+    # Check cache first for faster repeated access
+    cache_key = f"files:{current_user.family_id}:{folder_id}"
+    cached_result = folder_listing_cache.get(cache_key)
+    if cached_result is not None:
+        return cached_result
     
     if folder_id is not None:
         if folder_id == "root" or folder_id == "":
@@ -82,6 +89,9 @@ def get_files(
     
     # Format files responses to include uploader email and preview token
     result = [serialize_file(file, is_shared=(file.id in shared_file_ids), current_user_id=current_user.id) for file in files]
+    
+    # Cache the result for subsequent requests
+    folder_listing_cache.set(cache_key, result)
         
     return result
 
@@ -273,6 +283,8 @@ async def upload_file(
     ip = request.client.host if request.client else "127.0.0.1"
     log_action(db, "UPLOAD_FILE", current_user.id, current_user.family_id, ip, f"Uploaded file: {db_file.filename} ({db_file.size_bytes} bytes)")
 
+    invalidate_family_caches(current_user.family_id)
+
     return serialize_file(db_file, current_user_id=current_user.id)
 
 @router.get("/{file_id}/preview-token")
@@ -445,6 +457,8 @@ def rename_file(
     ip = request.client.host if request.client else "127.0.0.1"
     log_action(db, "RENAME_FILE", current_user.id, current_user.family_id, ip, f"Renamed file '{old_name}' to '{new_name}'")
     
+    invalidate_family_caches(current_user.family_id)
+    
     return serialize_file(file, current_user_id=current_user.id)
 
 @router.delete("/{file_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -477,6 +491,8 @@ def delete_file(
     
     ip = request.client.host if request.client else "127.0.0.1"
     log_action(db, "DELETE_FILE", current_user.id, current_user.family_id, ip, f"Deleted file: {file.filename}")
+    
+    invalidate_family_caches(current_user.family_id)
     
     return None
 
@@ -562,5 +578,7 @@ def move_file(
     ip = request.client.host if request.client else "127.0.0.1"
     dest_name = "Root" if file.folder_id is None else f"Folder ID {file.folder_id}"
     log_action(db, "MOVE_FILE", current_user.id, current_user.family_id, ip, f"Moved file '{file.filename}' to '{dest_name}'")
+    
+    invalidate_family_caches(current_user.family_id)
     
     return serialize_file(file, current_user_id=current_user.id)

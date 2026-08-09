@@ -9,6 +9,7 @@ from sqlalchemy import func
 from utils.audit import log_action
 import re
 from serializers import serialize_folder
+from cache import folder_listing_cache, invalidate_family_caches
 
 SAFE_FILENAME_PATTERN = re.compile(r'^[\w\-. ()\[\]]+$', re.UNICODE)
 
@@ -98,8 +99,17 @@ def get_folders(
         models.Folder.family_id == current_user.family_id,
         models.Folder.deleted_at == None
     ).group_by(models.Folder.id).all()
+
+    # Check cache first for faster repeated access
+    cache_key = f"folders:{current_user.family_id}"
+    cached_result = folder_listing_cache.get(cache_key)
+    if cached_result is not None:
+        return cached_result
     
     result = [serialize_folder(folder, file_count, total_size, last_modified_file) for folder, file_count, total_size, last_modified_file in query_results]
+    
+    # Cache the result for subsequent requests
+    folder_listing_cache.set(cache_key, result)
         
     return result
 
@@ -186,6 +196,8 @@ def create_folder(
     ip = request.client.host if request.client else "127.0.0.1"
     log_action(db, "CREATE_FOLDER", current_user.id, current_user.family_id, ip, f"Created folder: {new_folder.name}")
     
+    invalidate_family_caches(current_user.family_id)
+    
     # Return formatted response
     return serialize_folder(new_folder)
 
@@ -251,6 +263,8 @@ def rename_folder(
     ip = request.client.host if request.client else "127.0.0.1"
     log_action(db, "RENAME_FOLDER", current_user.id, current_user.family_id, ip, f"Renamed folder '{old_name}' to '{folder.name}'")
     
+    invalidate_family_caches(current_user.family_id)
+    
     # Calculate stats efficiently
     stats = db.query(
         func.count(models.File.id).label('file_count'),
@@ -309,6 +323,8 @@ def delete_folder(
     # Audit log
     ip = request.client.host if request.client else "127.0.0.1"
     log_action(db, "DELETE_FOLDER", current_user.id, current_user.family_id, ip, f"Soft-deleted folder: {folder.name}")
+    
+    invalidate_family_caches(current_user.family_id)
     
     return None
 
@@ -399,6 +415,8 @@ def move_folder(
     ip = request.client.host if request.client else "127.0.0.1"
     dest_name = "Root" if folder.parent_id is None else f"Folder ID {folder.parent_id}"
     log_action(db, "MOVE_FOLDER", current_user.id, current_user.family_id, ip, f"Moved folder '{folder.name}' to '{dest_name}'")
+    
+    invalidate_family_caches(current_user.family_id)
     
     # Calculate stats efficiently
     stats = db.query(

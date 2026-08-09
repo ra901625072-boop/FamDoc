@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.gzip import GZipMiddleware
 from database import engine, Base, run_migrations, SessionLocal
 import models
 from routers import auth, family, storage_config, folders, files, recycle_bin, search, dashboard, share, views
@@ -134,6 +135,9 @@ def start_sync_worker():
     logger.info("Sync worker thread launched")
 
 # Startup operations are handled by the lifespan context manager
+
+# GZip Compression — reduces JSON response sizes by ~60-80%
+app.add_middleware(GZipMiddleware, minimum_size=500)
 
 # CORS Configuration
 # Restricted to CORS_ORIGINS configured in config.py

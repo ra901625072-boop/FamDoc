@@ -49,3 +49,8 @@ VIRUSTOTAL_API_KEY = os.getenv("VIRUSTOTAL_API_KEY", "")
 SYNC_POLL_INTERVAL_SECONDS = int(os.getenv("SYNC_POLL_INTERVAL_SECONDS", "60"))
 SYNC_BATCH_SIZE = int(os.getenv("SYNC_BATCH_SIZE", "50"))
 HEALTH_CHECK_CACHE_TTL = int(os.getenv("HEALTH_CHECK_CACHE_TTL", "30"))
+
+# Cache Settings (configurable via environment variables)
+DASHBOARD_CACHE_TTL = int(os.getenv("DASHBOARD_CACHE_TTL", "30"))
+FOLDER_LISTING_CACHE_TTL = int(os.getenv("FOLDER_LISTING_CACHE_TTL", "15"))
+SEARCH_CACHE_TTL = int(os.getenv("SEARCH_CACHE_TTL", "10"))

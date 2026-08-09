@@ -101,6 +101,8 @@ class Folder(Base):
     __tablename__ = "folders"
     __table_args__ = (
         Index('ix_folders_family_parent_deleted', 'family_id', 'parent_id', 'deleted_at'),
+        Index('ix_folders_cloud_folder_id', 'cloud_folder_id'),
+        Index('ix_folders_google_drive_folder_id', 'google_drive_folder_id'),
     )
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
@@ -124,6 +126,10 @@ class File(Base):
     __table_args__ = (
         Index('ix_files_family_folder_deleted', 'family_id', 'folder_id', 'deleted_at'),
         Index('ix_files_family_deleted', 'family_id', 'deleted_at'),
+        Index('ix_files_cloud_file_id', 'cloud_file_id'),
+        Index('ix_files_google_drive_file_id', 'google_drive_file_id'),
+        Index('ix_files_local_file_id', 'local_file_id'),
+        Index('ix_files_pending_sync_retry', 'pending_sync', 'sync_retry_count'),
     )
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)

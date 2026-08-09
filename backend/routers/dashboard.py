@@ -4,6 +4,7 @@ from database import get_db
 import models
 import auth
 from sqlalchemy import func
+from cache import dashboard_cache
 
 router = APIRouter(prefix="/api/dashboard", tags=["Dashboard"])
 
@@ -22,6 +23,12 @@ def get_dashboard_stats(
             "recent_uploads": [],
             "recent_activity": []
         }
+
+    # Check cache first
+    cache_key = f"stats:{current_user.family_id}"
+    cached = dashboard_cache.get(cache_key)
+    if cached is not None:
+        return cached
 
     # 1. Total files (excluding soft-deleted ones)
     total_files = db.query(models.File).filter(
@@ -123,7 +130,7 @@ def get_dashboard_stats(
         storage_breakdown[cat]["size"] += size_bytes
         storage_breakdown[cat]["count"] += 1
 
-    return {
+    result = {
         "total_files": total_files,
         "total_folders": total_folders,
         "total_size_bytes": total_size_bytes,
@@ -134,4 +141,9 @@ def get_dashboard_stats(
         "storage_quota_bytes": storage_quota_bytes,
         "storage_breakdown": storage_breakdown
     }
+
+    # Cache the result for 30 seconds
+    dashboard_cache.set(cache_key, result)
+
+    return result
 

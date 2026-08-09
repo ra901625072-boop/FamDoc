@@ -312,3 +312,20 @@ def run_migrations():
             execute_migration_statement("CREATE INDEX ix_audit_logs_family_timestamp ON audit_logs(family_id, timestamp)")
         except Exception:
             pass
+
+    # 5. Add performance indexes for cloud file/folder ID lookups
+    performance_indexes = [
+        ("files", "ix_files_cloud_file_id", "CREATE INDEX ix_files_cloud_file_id ON files(cloud_file_id)"),
+        ("files", "ix_files_google_drive_file_id", "CREATE INDEX ix_files_google_drive_file_id ON files(google_drive_file_id)"),
+        ("files", "ix_files_local_file_id", "CREATE INDEX ix_files_local_file_id ON files(local_file_id)"),
+        ("files", "ix_files_pending_sync_retry", "CREATE INDEX ix_files_pending_sync_retry ON files(pending_sync, sync_retry_count)"),
+        ("folders", "ix_folders_cloud_folder_id", "CREATE INDEX ix_folders_cloud_folder_id ON folders(cloud_folder_id)"),
+        ("folders", "ix_folders_google_drive_folder_id", "CREATE INDEX ix_folders_google_drive_folder_id ON folders(google_drive_folder_id)"),
+    ]
+    for table_name, index_name, sql in performance_indexes:
+        if table_name in table_names:
+            try:
+                execute_migration_statement(sql)
+                logger.info(f"Migration: Successfully created index {index_name}.")
+            except Exception:
+                pass  # Index likely already exists
