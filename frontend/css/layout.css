@@ -537,10 +537,18 @@ body::after {
     transform: translateX(0);
   }
 
+  .layout-wrapper {
+    width: 100% !important;
+    overflow-x: hidden !important;
+  }
+
   .main-content {
     margin-top: var(--header-height);
     padding: 1.5rem !important;
     padding-bottom: calc(var(--bottom-nav-height) + 1.5rem) !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    overflow-x: hidden !important;
   }
 
   .modal-overlay {

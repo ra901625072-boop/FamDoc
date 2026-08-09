@@ -163,7 +163,7 @@
   width: 100%;
 }
 
-@media (max-width: 576px) {
+@media (max-width: 768px) {
   /* Dashboard Stat Card compact horizontal grid layout */
   .stat-card {
     display: grid !important;

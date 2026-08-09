@@ -104,7 +104,7 @@
   }
 }
 
-@media (max-width: 576px) {
+@media (max-width: 768px) {
   /* Regenerate vault invitation code button full-width adjustment */
   #btn-regen-family-code {
     width: 100% !important;

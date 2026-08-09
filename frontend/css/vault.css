@@ -624,7 +624,7 @@
   }
 }
 
-@media (max-width: 576px) {
+@media (max-width: 768px) {
   /* Vault explorer grid view two-column reflow */
   .items-grid {
     grid-template-columns: repeat(2, 1fr) !important;
