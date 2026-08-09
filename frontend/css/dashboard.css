@@ -164,43 +164,64 @@
 }
 
 @media (max-width: 576px) {
-  /* Dashboard Stat Card compact horizontal layout */
+  /* Dashboard Stat Card compact horizontal grid layout */
   .stat-card {
-    flex-direction: row !important;
+    display: grid !important;
+    grid-template-columns: auto 1fr !important;
+    grid-template-rows: auto auto !important;
+    gap: 0.15rem 1rem !important;
     align-items: center !important;
-    gap: 1.25rem !important;
     padding: 1rem 1.25rem !important;
   }
 
   .stat-icon {
+    grid-row: span 2 !important;
+    grid-column: 1 !important;
     margin-bottom: 0 !important;
     flex-shrink: 0 !important;
   }
 
+  .stat-label {
+    grid-column: 2 !important;
+    grid-row: 1 !important;
+    margin-bottom: 0 !important;
+  }
+
+  .stat-val {
+    grid-column: 2 !important;
+    grid-row: 2 !important;
+    font-size: 1.5rem !important;
+  }
+
   .stat-card-bottom-progress {
+    grid-column: span 2 !important;
     height: 4px !important;
   }
 
-  /* Recent uploads stacking */
-  #recent-uploads-list .vault-item .item-details {
-    grid-template-columns: 1fr !important;
+  /* Recent uploads stacking & skeleton row alignment */
+  #recent-uploads-list .vault-item .item-details,
+  #recent-uploads-list .skel-row .item-details {
     display: flex !important;
-    flex-direction: column !important;
-    align-items: flex-start !important;
-    gap: 0.15rem !important;
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    gap: 0.15rem 0.5rem !important;
+  }
+  
+  #recent-uploads-list .vault-item .item-name,
+  #recent-uploads-list .skel-row .item-details > .fd-skel-text.lg {
+    width: 100% !important;
+    font-size: 0.85rem !important;
+    margin-bottom: 0.05rem !important;
   }
   
   #recent-uploads-list .vault-item .item-meta-size,
-  #recent-uploads-list .vault-item .item-meta-date {
-    display: inline !important;
+  #recent-uploads-list .vault-item .item-meta-date,
+  #recent-uploads-list .skel-row .item-details > .fd-skel-text.md,
+  #recent-uploads-list .skel-row .item-details > .fd-skel-text.sm {
+    display: inline-block !important;
     font-size: 0.72rem !important;
-  }
-  
-  #recent-uploads-list .vault-item .item-meta-size::after {
-    content: " • ";
-    margin: 0 0.15rem;
-    color: var(--text-ink-muted);
-    opacity: 0.5;
+    width: auto !important;
   }
 }
 

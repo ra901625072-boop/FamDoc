@@ -53,7 +53,7 @@
             <div class="fd-skel-uploads-placeholder">
               <div class="skel-row">
                 <div class="fd-skel fd-skel-circle" style="width: 1.75rem; height: 1.75rem;"></div>
-                <div style="flex: 1; display: grid; grid-template-columns: 2fr 1fr 1.2fr; gap: 1rem; align-items: center; width: 100%;">
+                <div class="item-details" style="flex: 1; display: grid; grid-template-columns: 2fr 1fr 1.2fr; gap: 1rem; align-items: center; width: 100%;">
                   <div class="fd-skel fd-skel-text lg"></div>
                   <div class="fd-skel fd-skel-text md"></div>
                   <div class="fd-skel fd-skel-text sm"></div>
@@ -61,7 +61,7 @@
               </div>
               <div class="skel-row">
                 <div class="fd-skel fd-skel-circle" style="width: 1.75rem; height: 1.75rem;"></div>
-                <div style="flex: 1; display: grid; grid-template-columns: 2fr 1fr 1.2fr; gap: 1rem; align-items: center; width: 100%;">
+                <div class="item-details" style="flex: 1; display: grid; grid-template-columns: 2fr 1fr 1.2fr; gap: 1rem; align-items: center; width: 100%;">
                   <div class="fd-skel fd-skel-text lg"></div>
                   <div class="fd-skel fd-skel-text md"></div>
                   <div class="fd-skel fd-skel-text sm"></div>

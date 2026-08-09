@@ -93,3 +93,34 @@
     font-size: 2.5rem;
   }
 }
+
+@media (max-width: 576px) {
+  .landing-actions {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    max-width: 320px !important;
+    width: 100% !important;
+    gap: 0.75rem !important;
+    margin-bottom: 3rem !important;
+  }
+
+  .landing-actions .btn {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+
+  .feature-card {
+    padding: 1.5rem !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .landing-hero {
+    font-size: 2rem !important;
+  }
+
+  .landing-subtitle {
+    font-size: 1rem !important;
+    margin-bottom: 2.25rem !important;
+  }
+}
