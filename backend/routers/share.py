@@ -36,7 +36,7 @@ def create_share_link(
     )
 
     # Generate a unique token
-    token = secrets.token_urlsafe(32)
+    token = secrets.token_urlsafe(16)
 
     # Securely hash password if provided
     pwd_hash = None
@@ -228,11 +228,14 @@ def download_public_shared_file(
     ip = request.client.host if request.client else "127.0.0.1"
     log_action(db, "DOWNLOAD_SHARED_FILE", None, file.family_id, ip, f"Public download of shared file: {file.filename} (Link token: {token})")
 
+    filename = file.filename
+    db.close()
+
     return StreamingResponse(
         io.BytesIO(file_bytes),
         media_type="application/octet-stream",
         headers={
-            "Content-Disposition": f'attachment; filename="{file.filename}"',
+            "Content-Disposition": f'attachment; filename="{filename}"',
             "Access-Control-Expose-Headers": "Content-Disposition"
         }
     )

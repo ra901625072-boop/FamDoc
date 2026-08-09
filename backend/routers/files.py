@@ -314,16 +314,19 @@ def download_file(
     manager = StorageManager()
     family_config = manager.get_family_config(family, db)
 
+    filename = file.filename
     try:
         content = manager.read_file(file, family_config, db=db)
     except FileNotFoundError as e:
         raise HTTPException(status_code=503, detail=str(e))
+    finally:
+        db.close()
 
     return StreamingResponse(
         io.BytesIO(content),
         media_type="application/octet-stream",
         headers={
-            "Content-Disposition": f'attachment; filename="{file.filename}"',
+            "Content-Disposition": f'attachment; filename="{filename}"',
             "Access-Control-Expose-Headers": "Content-Disposition"
         }
     )
@@ -351,15 +354,19 @@ def preview_file(
     manager = StorageManager()
     family_config = manager.get_family_config(family, db)
 
+    filename = file.filename
+    file_type = file.file_type
     try:
         content = manager.read_file(file, family_config, db=db)
     except FileNotFoundError as e:
         raise HTTPException(status_code=503, detail=str(e))
+    finally:
+        db.close()
 
     return StreamingResponse(
         io.BytesIO(content),
-        media_type=file.file_type or "application/octet-stream",
-        headers={"Content-Disposition": f'inline; filename="{file.filename}"'}
+        media_type=file_type or "application/octet-stream",
+        headers={"Content-Disposition": f'inline; filename="{filename}"'}
     )
 
 @router.put("/{file_id}", response_model=schemas.FileResponse)
