@@ -736,15 +736,25 @@
       const fallbackIconClass = FamDocAPI.utils.getFileIconClass(file.file_type, file.filename);
 
       if (isImage) {
-        const previewUrl = FamDocAPI.files.getPreviewUrl(file.id);
-        let authenticatedPreviewUrl = previewUrl + (file.preview_token ? `?token=${file.preview_token}` : "");
-        authenticatedPreviewUrl += (authenticatedPreviewUrl.includes("?") ? "&" : "?") + "thumbnail=true";
-        iconHtml = `
-          <div class="thumbnail-wrapper">
-            <i class="item-icon ${fallbackIconClass} thumbnail-fallback"></i>
-            <img class="item-icon item-thumbnail" data-file-id="${file.id}" src="${authenticatedPreviewUrl}" alt="${FamDocAPI.utils.escapeHtml(file.filename)}" onload="this.classList.add('loaded');" onerror="this.style.display='none';">
-          </div>
-        `;
+        const cachedThumb = localStorage.getItem("famdoc-image-thumb-" + file.id);
+        if (cachedThumb) {
+          iconHtml = `
+            <div class="thumbnail-wrapper">
+              <i class="item-icon ${fallbackIconClass} thumbnail-fallback" style="opacity: 0;"></i>
+              <img class="item-icon item-thumbnail loaded" data-file-id="${file.id}" src="${cachedThumb}" alt="${FamDocAPI.utils.escapeHtml(file.filename)}">
+            </div>
+          `;
+        } else {
+          const previewUrl = FamDocAPI.files.getPreviewUrl(file.id);
+          let authenticatedPreviewUrl = previewUrl + (file.preview_token ? `?token=${file.preview_token}` : "");
+          authenticatedPreviewUrl += (authenticatedPreviewUrl.includes("?") ? "&" : "?") + "thumbnail=true";
+          iconHtml = `
+            <div class="thumbnail-wrapper">
+              <i class="item-icon ${fallbackIconClass} thumbnail-fallback"></i>
+              <img class="item-icon item-thumbnail" data-file-id="${file.id}" src="${authenticatedPreviewUrl}" alt="${FamDocAPI.utils.escapeHtml(file.filename)}" onload="cacheImageThumbnail(this, '${file.id}');" onerror="this.style.display='none';">
+            </div>
+          `;
+        }
       } else if (isPdf) {
         const cachedThumb = localStorage.getItem("famdoc-pdf-thumb-" + file.id);
         if (cachedThumb) {
@@ -881,6 +891,55 @@
         loadPdfThumbnail(file.id, file.preview_token);
       }
     });
+  }
+
+  function cacheImageThumbnail(img, fileId) {
+    img.classList.add("loaded");
+    
+    // Check if already cached in localStorage
+    if (localStorage.getItem("famdoc-image-thumb-" + fileId)) {
+      const container = img.closest(".thumbnail-wrapper");
+      if (container) {
+        const fallback = container.querySelector(".thumbnail-fallback");
+        if (fallback) fallback.style.opacity = "0";
+      }
+      return;
+    }
+    
+    try {
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      
+      const targetWidth = 120;
+      const scale = targetWidth / img.naturalWidth;
+      canvas.width = targetWidth;
+      canvas.height = img.naturalHeight * scale;
+      
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.6);
+      
+      try {
+        localStorage.setItem("famdoc-image-thumb-" + fileId, dataUrl);
+      } catch (storageErr) {
+        for (let i = localStorage.length - 1; i >= 0; i--) {
+          const key = localStorage.key(i);
+          if (key && (key.startsWith("famdoc-image-thumb-") || key.startsWith("famdoc-pdf-thumb-"))) {
+            localStorage.removeItem(key);
+          }
+        }
+        try {
+          localStorage.setItem("famdoc-image-thumb-" + fileId, dataUrl);
+        } catch (retryErr) {}
+      }
+    } catch (err) {
+      console.warn("Failed to cache image thumbnail client-side:", err);
+    }
+    
+    const container = img.closest(".thumbnail-wrapper");
+    if (container) {
+      const fallback = container.querySelector(".thumbnail-fallback");
+      if (fallback) fallback.style.opacity = "0";
+    }
   }
 
   async function loadThumbnail(fileId) {

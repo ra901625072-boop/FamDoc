@@ -394,10 +394,15 @@ def preview_file(
     finally:
         db.close()
 
+    response_headers = {"Content-Disposition": f'inline; filename="{filename}"'}
+    if thumbnail:
+        # Cache image thumbnails in user's browser for 7 days
+        response_headers["Cache-Control"] = "public, max-age=604800"
+
     return StreamingResponse(
         io.BytesIO(content),
         media_type=file_type or "application/octet-stream",
-        headers={"Content-Disposition": f'inline; filename="{filename}"'}
+        headers=response_headers
     )
 
 @router.put("/{file_id}", response_model=schemas.FileResponse)
