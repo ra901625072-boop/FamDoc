@@ -2,7 +2,6 @@
    FamDoc Design System - Reusable Core Components
    ========================================================================== */
 
-/* Buttons */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -15,17 +14,17 @@
   border-radius: var(--radius-md);
   border: 1px solid transparent;
   cursor: pointer;
-  transition: var(--transition-smooth);
+  transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease, transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
   outline: none;
 }
 
 .btn:hover:not(:disabled) {
-  transform: translateY(-2px);
+  transform: translateY(-2px) scale(1.02);
   box-shadow: var(--shadow-md);
 }
 
 .btn:active:not(:disabled) {
-  transform: translateY(0.5px);
+  transform: scale(0.96) translateY(0px);
   box-shadow: var(--shadow-sm);
 }
 
@@ -104,14 +103,14 @@
   border-radius: var(--radius-md);
   background-color: var(--surface-paper-tint);
   color: var(--text-ink);
-  transition: var(--transition-smooth);
+  transition: background-color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
   outline: none;
 }
 
 .form-control:focus {
   border-color: var(--accent-brand);
   background-color: var(--surface-card);
-  box-shadow: 0 0 0 4px rgba(var(--accent-brand-rgb), 0.12);
+  box-shadow: 0 0 0 4px rgba(var(--accent-brand-rgb), 0.15);
 }
 
 /* Badges / Tags */

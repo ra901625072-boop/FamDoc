@@ -23,8 +23,8 @@ body {
 
 /* Custom Scrollbars */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
@@ -33,8 +33,9 @@ body {
 
 ::-webkit-scrollbar-thumb {
   background: var(--border-paper-dark);
-  border-radius: 10px;
-  border: 2px solid var(--bg-linen);
+  border-radius: 8px;
+  border: 1px solid var(--bg-linen);
+  transition: var(--transition-colors);
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -64,34 +65,34 @@ body::before, body::after {
   width: 45vw;
   height: 45vw;
   border-radius: 50%;
-  filter: blur(100px);
+  filter: blur(120px);
   z-index: -2;
   pointer-events: none;
-  opacity: 0.35;
+  opacity: 0.25;
   animation: glowFloat 24s infinite alternate ease-in-out;
 }
 
 body::before {
   top: -10%;
   left: -5%;
-  background: radial-gradient(circle, hsl(215, 65%, 85%) 0%, rgba(255, 255, 255, 0) 70%);
+  background: radial-gradient(circle, hsl(220, 60%, 90%) 0%, rgba(255, 255, 255, 0) 70%);
 }
 
 body::after {
   bottom: -15%;
   right: -5%;
-  background: radial-gradient(circle, hsl(195, 60%, 85%) 0%, rgba(255, 255, 255, 0) 70%);
+  background: radial-gradient(circle, hsl(200, 50%, 90%) 0%, rgba(255, 255, 255, 0) 70%);
   animation-delay: -12s;
 }
 
 [data-theme="dark"] body::before {
-  opacity: 0.14;
-  background: radial-gradient(circle, hsl(215, 80%, 40%) 0%, rgba(0, 0, 0, 0) 70%);
+  opacity: 0.12;
+  background: radial-gradient(circle, hsl(250, 70%, 25%) 0%, rgba(0, 0, 0, 0) 70%);
 }
 
 [data-theme="dark"] body::after {
-  opacity: 0.1;
-  background: radial-gradient(circle, hsl(195, 80%, 40%) 0%, rgba(0, 0, 0, 0) 70%);
+  opacity: 0.08;
+  background: radial-gradient(circle, hsl(210, 80%, 20%) 0%, rgba(0, 0, 0, 0) 70%);
 }
 
 @keyframes glowFloat {
@@ -282,7 +283,7 @@ body::after {
   color: var(--text-ink-muted);
   font-weight: 500;
   border-radius: var(--radius-md);
-  transition: var(--transition-smooth);
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
   border: 1px solid transparent;
   outline: none;
 }
@@ -290,7 +291,11 @@ body::after {
 .nav-item:hover {
   background-color: var(--surface-paper-hover);
   color: var(--text-ink);
-  transform: translateX(3px);
+  transform: translateX(3px) scale(1.02);
+}
+
+.nav-item:active {
+  transform: scale(0.97) translateX(1px);
 }
 
 .nav-item.active {
