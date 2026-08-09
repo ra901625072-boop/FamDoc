@@ -109,11 +109,11 @@ class StorageManager:
                 cfg = family_config.get(p_name, {})
                 f_id = None
                 if p_name == "local":
-                    f_id = file.local_file_id
+                    f_id = file.local_file_id or (file._file_id if file.storage_provider == "local" or not file.storage_provider else None)
                 elif p_name == "google":
-                    f_id = file.google_drive_file_id or (file.cloud_file_id if file.storage_provider == "google" else None)
+                    f_id = file.google_drive_file_id or (file.cloud_file_id if file.storage_provider == "google" else None) or (file._file_id if file.storage_provider == "google" else None)
                 elif p_name == "mega":
-                    f_id = file.mega_file_id or (file.cloud_file_id if file.storage_provider == "mega" else None)
+                    f_id = file.mega_file_id or (file.cloud_file_id if file.storage_provider == "mega" else None) or (file._file_id if file.storage_provider == "mega" else None)
 
                 if not f_id:
                     continue

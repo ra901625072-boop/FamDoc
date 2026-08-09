@@ -284,17 +284,16 @@ def run_migrations():
             except Exception as e:
                 logger.error(f"Migration error (files backup_status): {str(e)}")
 
-        # Run data migration to populate local_file_id and cloud_file_id if either was newly added
-        if local_file_id_added or cloud_file_id_added:
-            with engine.begin() as conn:
-                try:
-                    # Migrate local files
-                    conn.execute(text("UPDATE files SET local_file_id = file_id WHERE (storage_provider = 'local' OR storage_provider IS NULL) AND local_file_id IS NULL"))
-                    # Migrate cloud files
-                    conn.execute(text("UPDATE files SET cloud_file_id = file_id WHERE storage_provider IS NOT NULL AND storage_provider != 'local' AND cloud_file_id IS NULL"))
-                    logger.info("Migration: Successfully completed data migration for files.local_file_id and files.cloud_file_id.")
-                except Exception as e:
-                    logger.error(f"Migration error during files column data migration: {str(e)}")
+        # Run data migration to populate local_file_id and cloud_file_id
+        with engine.begin() as conn:
+            try:
+                # Migrate local files
+                conn.execute(text("UPDATE files SET local_file_id = file_id WHERE (storage_provider = 'local' OR storage_provider IS NULL) AND local_file_id IS NULL"))
+                # Migrate cloud files
+                conn.execute(text("UPDATE files SET cloud_file_id = file_id WHERE storage_provider IS NOT NULL AND storage_provider != 'local' AND cloud_file_id IS NULL"))
+                logger.info("Migration: Successfully completed data migration for files.local_file_id and files.cloud_file_id.")
+            except Exception as e:
+                logger.error(f"Migration error during files column data migration: {str(e)}")
 
         # Dual-storage specific data migration
         with engine.begin() as conn:
