@@ -126,8 +126,12 @@
   transform: scale(1.08) rotate(-4deg);
 }
 
-.vault-item:hover .item-icon:not(.folder) {
+.vault-item:hover .item-icon:not(.folder):not(.item-thumbnail) {
   transform: scale(1.08) translateY(-2px);
+}
+
+.vault-item:hover .item-icon.item-thumbnail {
+  transform: translate(-50%, -50%) scale(1.05);
 }
 
 /* Folder tab flap */
