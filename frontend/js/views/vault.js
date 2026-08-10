@@ -748,12 +748,16 @@
           `;
         } else {
           const previewUrl = FamDocAPI.files.getPreviewUrl(file.id);
-          let authenticatedPreviewUrl = previewUrl + (file.preview_token ? `?token=${file.preview_token}` : "");
-          authenticatedPreviewUrl += (authenticatedPreviewUrl.includes("?") ? "&" : "?") + "thumbnail=true";
+          let authenticatedPreviewUrl = "";
+          if (file.preview_token) {
+            authenticatedPreviewUrl = previewUrl + `?token=${file.preview_token}&thumbnail=true`;
+          } else {
+            authenticatedPreviewUrl = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+          }
           iconHtml = `
             <div class="thumbnail-wrapper">
               <i class="item-icon ${fallbackIconClass} thumbnail-fallback"></i>
-              <img class="item-icon item-thumbnail" data-file-id="${file.id}" src="${authenticatedPreviewUrl}" alt="${FamDocAPI.utils.escapeHtml(file.filename)}" onload="cacheImageThumbnail(this, '${file.id}', ${isGooglePdf});" onerror="this.style.display='none';">
+              <img class="item-icon item-thumbnail" data-file-id="${file.id}" src="${authenticatedPreviewUrl}" alt="${FamDocAPI.utils.escapeHtml(file.filename)}" onload="if (this.src.startsWith('data:image/gif;')) return; this.style.display=''; cacheImageThumbnail(this, '${file.id}', ${isGooglePdf});" onerror="if (this.src.startsWith('data:image/gif;')) return; this.style.display='none';">
             </div>
           `;
         }

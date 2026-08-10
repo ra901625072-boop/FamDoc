@@ -238,12 +238,16 @@
           const cacheKey = isGooglePdf ? ("famdoc-pdf-thumb-" + file.id) : ("famdoc-image-thumb-" + file.id);
           const cachedThumb = localStorage.getItem(cacheKey);
           const previewUrl = FamDocAPI.files.getPreviewUrl(file.id);
-          let authenticatedPreviewUrl = previewUrl + (file.preview_token ? `?token=${file.preview_token}` : "");
-          authenticatedPreviewUrl += (authenticatedPreviewUrl.includes("?") ? "&" : "?") + "thumbnail=true";
+          let authenticatedPreviewUrl = "";
+          if (file.preview_token) {
+            authenticatedPreviewUrl = previewUrl + `?token=${file.preview_token}&thumbnail=true`;
+          } else {
+            authenticatedPreviewUrl = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+          }
           const srcUrl = cachedThumb || authenticatedPreviewUrl;
           const loadedClass = cachedThumb ? "loaded" : "";
           
-          iconHtml = `<img class="item-icon item-thumbnail ${loadedClass}" data-file-id="${file.id}" src="${srcUrl}" alt="${FamDocAPI.utils.escapeHtml(file.filename)}" onload="cacheImageThumbnail(this, '${file.id}', ${isGooglePdf});" onerror="this.onerror=null; this.outerHTML='<i class=\'item-icon ${fallbackIconClass}\'></i>';">`;
+          iconHtml = `<img class="item-icon item-thumbnail ${loadedClass}" data-file-id="${file.id}" src="${srcUrl}" alt="${FamDocAPI.utils.escapeHtml(file.filename)}" onload="if (this.src.startsWith('data:image/gif;')) return; cacheImageThumbnail(this, '${file.id}', ${isGooglePdf});" onerror="if (this.src.startsWith('data:image/gif;')) return; this.onerror=null; this.outerHTML='<i class=\'item-icon ${fallbackIconClass}\'></i>';">`;
         } else if (isPdf) {
           const cachedThumb = localStorage.getItem("famdoc-pdf-thumb-" + file.id);
           if (cachedThumb) {
