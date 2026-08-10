@@ -650,6 +650,51 @@ const FamDocAPI = {
       return "file-generic fas fa-file";
     },
 
+    cacheImageThumbnail(img, fileId, isPdf = false) {
+      img.classList.add("loaded");
+      
+      const container = img.closest(".thumbnail-wrapper");
+      if (container) {
+        const fallback = container.querySelector(".thumbnail-fallback");
+        if (fallback) fallback.style.opacity = "0";
+      }
+
+      const cacheKey = isPdf ? ("famdoc-pdf-thumb-" + fileId) : ("famdoc-image-thumb-" + fileId);
+      
+      if (localStorage.getItem(cacheKey)) {
+        return;
+      }
+      
+      try {
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+        
+        const targetWidth = 120;
+        const scale = targetWidth / img.naturalWidth;
+        canvas.width = targetWidth;
+        canvas.height = img.naturalHeight * scale;
+        
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.6);
+        
+        try {
+          localStorage.setItem(cacheKey, dataUrl);
+        } catch (storageErr) {
+          for (let i = localStorage.length - 1; i >= 0; i--) {
+            const key = localStorage.key(i);
+            if (key && (key.startsWith("famdoc-image-thumb-") || key.startsWith("famdoc-pdf-thumb-"))) {
+              localStorage.removeItem(key);
+            }
+          }
+          try {
+            localStorage.setItem(cacheKey, dataUrl);
+          } catch (retryErr) {}
+        }
+      } catch (err) {
+        console.warn("Failed to cache image thumbnail client-side:", err);
+      }
+    },
+
     showToast(message, type = "info") {
       const containerId = "famdoc-toast-container";
       let container = document.getElementById(containerId);

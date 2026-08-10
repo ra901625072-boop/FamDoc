@@ -247,7 +247,7 @@
           const srcUrl = cachedThumb || authenticatedPreviewUrl;
           const loadedClass = cachedThumb ? "loaded" : "";
           
-          iconHtml = `<img class="item-icon item-thumbnail ${loadedClass}" data-file-id="${file.id}" src="${srcUrl}" alt="${FamDocAPI.utils.escapeHtml(file.filename)}" onload="if (this.src.startsWith('data:image/gif;')) return; cacheImageThumbnail(this, '${file.id}', ${isGooglePdf});" onerror="if (this.src.startsWith('data:image/gif;')) return; this.onerror=null; this.outerHTML='<i class=\'item-icon ${fallbackIconClass}\'></i>';">`;
+          iconHtml = `<img class="item-icon item-thumbnail ${loadedClass}" data-file-id="${file.id}" src="${srcUrl}" alt="${FamDocAPI.utils.escapeHtml(file.filename)}" onload="if (this.src.startsWith('data:image/gif;')) return; FamDocAPI.utils.cacheImageThumbnail(this, '${file.id}', ${isGooglePdf});" onerror="if (this.src.startsWith('data:image/gif;')) return; this.onerror=null; this.outerHTML='<i class=\'item-icon ${fallbackIconClass}\'></i>';">`;
         } else if (isPdf) {
           const cachedThumb = localStorage.getItem("famdoc-pdf-thumb-" + file.id);
           if (cachedThumb) {
@@ -393,45 +393,6 @@
     }
   }
 
-  function cacheImageThumbnail(img, fileId, isPdf = false) {
-    img.classList.add("loaded");
-    
-    const cacheKey = isPdf ? ("famdoc-pdf-thumb-" + fileId) : ("famdoc-image-thumb-" + fileId);
-    
-    // Check if already cached in localStorage
-    if (localStorage.getItem(cacheKey)) {
-      return;
-    }
-    
-    try {
-      const canvas = document.createElement("canvas");
-      const ctx = canvas.getContext("2d");
-      
-      const targetWidth = 120;
-      const scale = targetWidth / img.naturalWidth;
-      canvas.width = targetWidth;
-      canvas.height = img.naturalHeight * scale;
-      
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      const dataUrl = canvas.toDataURL("image/jpeg", 0.6);
-      
-      try {
-        localStorage.setItem(cacheKey, dataUrl);
-      } catch (storageErr) {
-        for (let i = localStorage.length - 1; i >= 0; i--) {
-          const key = localStorage.key(i);
-          if (key && (key.startsWith("famdoc-image-thumb-") || key.startsWith("famdoc-pdf-thumb-"))) {
-            localStorage.removeItem(key);
-          }
-        }
-        try {
-          localStorage.setItem(cacheKey, dataUrl);
-        } catch (retryErr) {}
-      }
-    } catch (err) {
-      console.warn("Failed to cache image thumbnail client-side:", err);
-    }
-  }
 
   function renderDashboardStorageBreakdown(stats) {
     const progressContainer = document.getElementById("dashboard-progress-container");
