@@ -1000,6 +1000,62 @@ class TestBackendRedesign(unittest.TestCase):
         self.assertEqual(res.status_code, 429)
         self.assertIn("Too many incorrect password attempts", res.json().get("detail", ""))
 
+    def test_single_session_validation(self):
+        # 1. Register a test user
+        email = f"session_test_{uuid.uuid4().hex[:6]}@example.com"
+        password = "Password123"
+        username = f"session_user_{uuid.uuid4().hex[:6]}"
+        
+        # Register user
+        res = self.client.post("/api/auth/register", json={"username": username, "email": email, "password": password})
+        self.assertEqual(res.status_code, 201)
+
+        # 2. Login from "Device A"
+        res_a = self.client.post("/api/auth/login", json={"email": email, "password": password})
+        self.assertEqual(res_a.status_code, 200)
+        token_a = res_a.json()["access_token"]
+
+        # Verify Device A token works
+        res_me_a = self.client.get("/api/auth/me", headers={"Authorization": f"Bearer {token_a}"})
+        self.assertEqual(res_me_a.status_code, 200)
+        user_id = res_me_a.json()["id"]
+
+        # Check that user in database has current_token_jti updated
+        db = next(override_get_db())
+        user_db = db.query(models.User).filter(models.User.id == user_id).first()
+        self.assertIsNotNone(user_db.current_token_jti)
+        jti_a = user_db.current_token_jti
+
+        # 3. Login from "Device B" (Simulates logging in on another device)
+        res_b = self.client.post("/api/auth/login", json={"email": email, "password": password})
+        self.assertEqual(res_b.status_code, 200)
+        token_b = res_b.json()["access_token"]
+
+        # Verify Device B token works
+        res_me_b = self.client.get("/api/auth/me", headers={"Authorization": f"Bearer {token_b}"})
+        self.assertEqual(res_me_b.status_code, 200)
+
+        # Verify that Device A token is now INVALID (401 Unauthorized) because of the new login
+        res_me_a_expired = self.client.get("/api/auth/me", headers={"Authorization": f"Bearer {token_a}"})
+        self.assertEqual(res_me_a_expired.status_code, 401)
+
+        # Check JTI in DB is updated to Device B's JTI
+        db.refresh(user_db)
+        jti_b = user_db.current_token_jti
+        self.assertNotEqual(jti_a, jti_b)
+
+        # 4. Logout from Device B
+        res_logout = self.client.post("/api/auth/logout", headers={"Authorization": f"Bearer {token_b}"})
+        self.assertEqual(res_logout.status_code, 200)
+
+        # Verify Device B token is also invalid now
+        res_me_b_expired = self.client.get("/api/auth/me", headers={"Authorization": f"Bearer {token_b}"})
+        self.assertEqual(res_me_b_expired.status_code, 401)
+
+        # Check that current_token_jti is cleared in DB
+        db.refresh(user_db)
+        self.assertIsNone(user_db.current_token_jti)
+
 if __name__ == "__main__":
     unittest.main()
 

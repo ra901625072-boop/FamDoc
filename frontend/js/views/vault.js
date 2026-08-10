@@ -614,7 +614,7 @@
     wrapper.style.display = currentView === "grid" ? "grid" : "flex";
     emptyState.style.display = "none";
 
-    const currentUser = JSON.parse(sessionStorage.getItem("famdoc_user")) || {};
+    const currentUser = JSON.parse(localStorage.getItem("famdoc_user")) || {};
 
     // 1. Subfolders
     subFolders.forEach((folder, index) => {

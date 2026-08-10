@@ -65,7 +65,7 @@
         return;
       }
 
-      const token = sessionStorage.getItem("famdoc_token");
+      const token = localStorage.getItem("famdoc_token");
       const requiresAuth = match.route.requiresAuth;
       const guestOnly = match.route.guestOnly;
 

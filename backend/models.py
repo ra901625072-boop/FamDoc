@@ -13,6 +13,7 @@ class User(Base):
     password_hash = Column(String(255), nullable=True) # Nullable for family members created without passwords
     role = Column(String(50), default="member") # "admin" or "member"
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    current_token_jti = Column(String(64), nullable=True)
 
     # Relationships
     families_administered = relationship("Family", back_populates="admin")

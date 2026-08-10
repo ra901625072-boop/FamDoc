@@ -104,7 +104,7 @@ const FamDocAPI = {
       throw new Error("Offline: No internet connection");
     }
 
-    const token = sessionStorage.getItem("famdoc_token");
+    const token = localStorage.getItem("famdoc_token");
     const headers = options.headers || {};
 
     // Don't set Content-Type if we're sending FormData (browser does it automatically with boundary)
@@ -151,8 +151,8 @@ const FamDocAPI = {
                              hash.startsWith("#/share");
         
         if (!isPublicPage) {
-          sessionStorage.removeItem("famdoc_token");
-          sessionStorage.removeItem("famdoc_user");
+          localStorage.removeItem("famdoc_token");
+          localStorage.removeItem("famdoc_user");
           window.location.href = "/#/login";
           window.location.reload();
           return null;
@@ -206,7 +206,7 @@ const FamDocAPI = {
         body: JSON.stringify({ email, password })
       });
       if (data && data.access_token) {
-        sessionStorage.setItem("famdoc_token", data.access_token);
+        localStorage.setItem("famdoc_token", data.access_token);
       }
       return data;
     },
@@ -217,7 +217,7 @@ const FamDocAPI = {
         body: JSON.stringify({ username, email, secret_code: secretCode, password })
       });
       if (data && data.access_token) {
-        sessionStorage.setItem("famdoc_token", data.access_token);
+        localStorage.setItem("famdoc_token", data.access_token);
       }
       return data;
     },
@@ -225,13 +225,13 @@ const FamDocAPI = {
     async me() {
       const user = await FamDocAPI.request("/api/auth/me");
       if (user) {
-        sessionStorage.setItem("famdoc_user", JSON.stringify(user));
+        localStorage.setItem("famdoc_user", JSON.stringify(user));
       }
       return user;
     },
 
     async getUser() {
-      let userJson = sessionStorage.getItem("famdoc_user");
+      let userJson = localStorage.getItem("famdoc_user");
       if (userJson) {
         try {
           return JSON.parse(userJson);
@@ -240,7 +240,7 @@ const FamDocAPI = {
       // Wait for a short duration in case auth.js is fetching the user in the background
       for (let i = 0; i < 30; i++) {
         await new Promise(resolve => setTimeout(resolve, 100));
-        userJson = sessionStorage.getItem("famdoc_user");
+        userJson = localStorage.getItem("famdoc_user");
         if (userJson) {
           try {
             return JSON.parse(userJson);
@@ -264,7 +264,7 @@ const FamDocAPI = {
         body: JSON.stringify(payload)
       });
       if (user) {
-        sessionStorage.setItem("famdoc_user", JSON.stringify(user));
+        localStorage.setItem("famdoc_user", JSON.stringify(user));
       }
       return user;
     },
@@ -273,9 +273,9 @@ const FamDocAPI = {
       try {
         await FamDocAPI.request("/api/auth/logout", { method: "POST" });
       } catch (e) {}
-      sessionStorage.removeItem("famdoc_token");
-      sessionStorage.removeItem("famdoc_user");
-      window.location.href = "/login.html";
+      localStorage.removeItem("famdoc_token");
+      localStorage.removeItem("famdoc_user");
+      window.location.href = "/";
     }
   },
 
@@ -401,7 +401,7 @@ const FamDocAPI = {
           const fullUploadPath = (API_BASE_URL && uploadPath.startsWith("/")) ? `${API_BASE_URL}${uploadPath}` : uploadPath;
           xhr.open("POST", fullUploadPath);
           
-          const token = sessionStorage.getItem("famdoc_token");
+          const token = localStorage.getItem("famdoc_token");
           if (token) {
             xhr.setRequestHeader("Authorization", `Bearer ${token}`);
           }

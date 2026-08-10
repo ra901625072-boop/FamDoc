@@ -431,7 +431,7 @@
   // 4. XHR File Uploader
   function uploadFileXHR(item, onProgress) {
     return new Promise((resolve, reject) => {
-      const token = sessionStorage.getItem("famdoc_token");
+      const token = localStorage.getItem("famdoc_token");
       const xhr = new XMLHttpRequest();
       activeXhr = xhr;
       

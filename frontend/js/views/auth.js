@@ -93,7 +93,7 @@
 
           // Get fresh profile details
           const user = await FamDocAPI.auth.me();
-          sessionStorage.setItem("famdoc_user", JSON.stringify(user));
+          localStorage.setItem("famdoc_user", JSON.stringify(user));
 
           FamDocAPI.utils.showToast(`Welcome back, ${user.username}!`, "success");
 
@@ -236,7 +236,7 @@
           await FamDocAPI.auth.login(email, password);
 
           const user = await FamDocAPI.auth.me();
-          sessionStorage.setItem("famdoc_user", JSON.stringify(user));
+          localStorage.setItem("famdoc_user", JSON.stringify(user));
 
           FamDocAPI.utils.showToast("Account created successfully!", "success");
 
@@ -398,7 +398,7 @@
           await FamDocAPI.auth.joinFamily(username, email, secretCode, password);
 
           const user = await FamDocAPI.auth.me();
-          sessionStorage.setItem("famdoc_user", JSON.stringify(user));
+          localStorage.setItem("famdoc_user", JSON.stringify(user));
 
           FamDocAPI.utils.showToast(`Joined family vault successfully! Welcome, ${user.username}.`, "success");
 

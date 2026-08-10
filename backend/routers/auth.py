@@ -129,6 +129,15 @@ def login(request: Request, credentials: schemas.UserLogin, db: Session = Depend
             "role": user.role,
         }
     )
+    from jose import jwt
+    try:
+        payload = jwt.decode(access_token, auth.JWT_SECRET, algorithms=[auth.JWT_ALGORITHM])
+        jti = payload.get("jti")
+        if jti:
+            user.current_token_jti = jti
+            db.commit()
+    except Exception:
+        pass
     return {"access_token": access_token, "token_type": "bearer"}
 
 @router.post("/family-login", response_model=schemas.Token)
@@ -236,6 +245,15 @@ def family_login(request: Request, login_in: schemas.FamilyLogin, db: Session = 
             "role": user.role,
         }
     )
+    from jose import jwt
+    try:
+        payload = jwt.decode(access_token, auth.JWT_SECRET, algorithms=[auth.JWT_ALGORITHM])
+        jti = payload.get("jti")
+        if jti:
+            user.current_token_jti = jti
+            db.commit()
+    except Exception:
+        pass
     return {"access_token": access_token, "token_type": "bearer"}
 
 @router.get("/me", response_model=schemas.UserResponse)
@@ -281,6 +299,8 @@ def logout(
         if jti:
             revoked = models.RevokedToken(jti=jti)
             db.add(revoked)
+            if current_user.current_token_jti == jti:
+                current_user.current_token_jti = None
             db.commit()
     except Exception:
         pass

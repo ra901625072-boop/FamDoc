@@ -294,6 +294,16 @@ def run_migrations():
         except Exception as e:
             pass
 
+    # Migrate users table
+    if "users" in table_names:
+        columns = [col["name"] for col in inspector.get_columns("users")]
+        if "current_token_jti" not in columns:
+            try:
+                execute_migration_statement("ALTER TABLE users ADD COLUMN current_token_jti VARCHAR(64)")
+                logger.info("Migration: Successfully added current_token_jti column to users table.")
+            except Exception as e:
+                logger.error(f"Migration error (users current_token_jti): {str(e)}")
+
     # 4. Migrate audit_logs table
     if "audit_logs" in table_names:
         columns = [col["name"] for col in inspector.get_columns("audit_logs")]

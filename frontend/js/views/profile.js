@@ -308,7 +308,7 @@
 
         // Reload user locally and update sidebar user profile badges
         const freshUser = await FamDocAPI.auth.me();
-        sessionStorage.setItem("famdoc_user", JSON.stringify(freshUser));
+        localStorage.setItem("famdoc_user", JSON.stringify(freshUser));
         window.FamDocApp.updateSidebarUserBadge(freshUser);
         currentUser = freshUser;
 
