@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 from config import BACKEND_URL
 from storage.storage_manager import StorageManager
 from utils.audit import log_action
+from utils.ip import get_client_ip
 import io
 from pydantic import BaseModel
 
@@ -62,7 +63,7 @@ def create_share_link(
     share_url = f"{base_url}/shared.html?token={token}"
 
     # Audit log
-    ip = request.client.host if request.client else "127.0.0.1"
+    ip = get_client_ip(request)
     log_action(db, "CREATE_SHARE_LINK", current_user.id, current_user.family_id, ip, f"Created share link for: {file.filename}")
 
     return {
@@ -127,7 +128,7 @@ def revoke_share_link(
     db.commit()
 
     # Audit log
-    ip = request.client.host if request.client else "127.0.0.1"
+    ip = get_client_ip(request)
     log_action(db, "REVOKE_SHARE_LINK", current_user.id, current_user.family_id, ip, f"Revoked share link for: {file_name}")
 
     return None
@@ -171,7 +172,7 @@ def download_public_shared_file(
     db: Session = Depends(get_db)
 ):
     from utils.rate_limiter import check_rate_limit as verify_rate_limit
-    ip = request.client.host if request.client else "127.0.0.1"
+    ip = get_client_ip(request)
     if verify_rate_limit(f"shared_download:{token}:{ip}", max_requests=10, window_seconds=3600):
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
@@ -225,7 +226,7 @@ def download_public_shared_file(
     db.commit()
 
     # Write audit log entry (user_id is None because this is public access)
-    ip = request.client.host if request.client else "127.0.0.1"
+    ip = get_client_ip(request)
     log_action(db, "DOWNLOAD_SHARED_FILE", None, file.family_id, ip, f"Public download of shared file: {file.filename} (Link token: {token})")
 
     filename = file.filename

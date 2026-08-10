@@ -9,6 +9,7 @@ import auth
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 
 from utils.rate_limiter import check_rate_limit as verify_rate_limit
+from utils.ip import get_client_ip
 
 def check_rate_limit(ip: str):
     if verify_rate_limit(f"auth_login:{ip}", max_requests=5, window_seconds=600):
@@ -97,7 +98,7 @@ def register(user_in: schemas.UserRegister, db: Session = Depends(get_db)):
 
 @router.post("/login", response_model=schemas.Token)
 def login(request: Request, credentials: schemas.UserLogin, db: Session = Depends(get_db)):
-    ip = request.client.host if request.client else "127.0.0.1"
+    ip = get_client_ip(request)
     check_rate_limit(ip)
     user = db.query(models.User).filter(models.User.email == credentials.email).first()
     if not user:
@@ -133,7 +134,7 @@ def login(request: Request, credentials: schemas.UserLogin, db: Session = Depend
 @router.post("/family-login", response_model=schemas.Token)
 def family_login(request: Request, login_in: schemas.FamilyLogin, db: Session = Depends(get_db)):
     # Rate Limiting: 5 attempts / 10 min per IP
-    ip = request.client.host if request.client else "127.0.0.1"
+    ip = get_client_ip(request)
     check_rate_limit(ip)
     
     # 1. All fields filled (Handled by Pydantic schema validation)

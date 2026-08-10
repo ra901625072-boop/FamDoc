@@ -7,6 +7,7 @@ import schemas
 import auth
 from sqlalchemy import func
 from utils.audit import log_action
+from utils.ip import get_client_ip
 import re
 from serializers import serialize_folder
 from cache import folder_listing_cache, invalidate_family_caches
@@ -193,7 +194,7 @@ def create_folder(
     db.refresh(new_folder)
     
     # Audit log
-    ip = request.client.host if request.client else "127.0.0.1"
+    ip = get_client_ip(request)
     log_action(db, "CREATE_FOLDER", current_user.id, current_user.family_id, ip, f"Created folder: {new_folder.name}")
     
     invalidate_family_caches(current_user.family_id)
@@ -260,7 +261,7 @@ def rename_folder(
                 )
     
     # Audit log
-    ip = request.client.host if request.client else "127.0.0.1"
+    ip = get_client_ip(request)
     log_action(db, "RENAME_FOLDER", current_user.id, current_user.family_id, ip, f"Renamed folder '{old_name}' to '{folder.name}'")
     
     invalidate_family_caches(current_user.family_id)
@@ -321,7 +322,7 @@ def delete_folder(
     db.commit()
     
     # Audit log
-    ip = request.client.host if request.client else "127.0.0.1"
+    ip = get_client_ip(request)
     log_action(db, "DELETE_FOLDER", current_user.id, current_user.family_id, ip, f"Soft-deleted folder: {folder.name}")
     
     invalidate_family_caches(current_user.family_id)
@@ -412,7 +413,7 @@ def move_folder(
     db.refresh(folder)
     
     # Audit log
-    ip = request.client.host if request.client else "127.0.0.1"
+    ip = get_client_ip(request)
     dest_name = "Root" if folder.parent_id is None else f"Folder ID {folder.parent_id}"
     log_action(db, "MOVE_FOLDER", current_user.id, current_user.family_id, ip, f"Moved folder '{folder.name}' to '{dest_name}'")
     

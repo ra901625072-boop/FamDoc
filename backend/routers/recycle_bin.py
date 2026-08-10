@@ -6,6 +6,7 @@ import schemas
 import auth
 from storage.storage_manager import StorageManager
 from utils.audit import log_action
+from utils.ip import get_client_ip
 
 router = APIRouter(prefix="/api/recycle-bin", tags=["Recycle Bin"])
 
@@ -108,7 +109,7 @@ def restore_item(
             file.deletion_batch_id = None
             db.commit()
             
-            ip = request.client.host if request.client else "127.0.0.1"
+            ip = get_client_ip(request)
             log_action(db, "RESTORE_FILE", current_user.id, current_user.family_id, ip, f"Restored file: {file.filename}")
         
         return {"message": f"Successfully restored file: {file.filename}"}
@@ -126,7 +127,7 @@ def restore_item(
             restore_folder_recursive(item_id, folder.deletion_batch_id, db)
             db.commit()
             
-            ip = request.client.host if request.client else "127.0.0.1"
+            ip = get_client_ip(request)
             log_action(db, "RESTORE_FOLDER", current_user.id, current_user.family_id, ip, f"Restored folder: {folder.name}")
         
         return {"message": f"Successfully restored folder: {folder.name}"}
@@ -239,7 +240,7 @@ def purge_item(
             db.delete(file)
             db.commit()
             
-            ip = request.client.host if request.client else "127.0.0.1"
+            ip = get_client_ip(request)
             log_action(db, "PURGE_FILE", current_user.id, current_user.family_id, ip, f"Permanently deleted file: {file.filename}")
         
         return None
@@ -257,7 +258,7 @@ def purge_item(
             purge_folder_recursive(item_id, family, db)
             db.commit()
             
-            ip = request.client.host if request.client else "127.0.0.1"
+            ip = get_client_ip(request)
             log_action(db, "PURGE_FOLDER", current_user.id, current_user.family_id, ip, f"Permanently deleted folder: {folder.name}")
         
         return None

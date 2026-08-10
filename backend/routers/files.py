@@ -14,6 +14,7 @@ import schemas
 import auth
 from sqlalchemy.orm import joinedload
 from utils.audit import log_action
+from utils.ip import get_client_ip
 import os
 from serializers import serialize_file
 from datetime import datetime, timezone
@@ -280,7 +281,7 @@ async def upload_file(
     db.refresh(db_file)
     
     # Audit log
-    ip = request.client.host if request.client else "127.0.0.1"
+    ip = get_client_ip(request)
     log_action(db, "UPLOAD_FILE", current_user.id, current_user.family_id, ip, f"Uploaded file: {db_file.filename} ({db_file.size_bytes} bytes)")
 
     invalidate_family_caches(current_user.family_id)
@@ -320,7 +321,7 @@ def download_file(
     family = current_user.family
     
     # Audit log
-    ip = request.client.host if request.client else "127.0.0.1"
+    ip = get_client_ip(request)
     log_action(db, "DOWNLOAD_FILE", current_user.id, current_user.family_id, ip, f"Downloaded file: {file.filename}")
     
     manager = StorageManager()
@@ -361,7 +362,7 @@ def preview_file(
     family = current_user.family
     
     # Audit log
-    ip = request.client.host if request.client else "127.0.0.1"
+    ip = get_client_ip(request)
     log_action(db, "PREVIEW_FILE", current_user.id, current_user.family_id, ip, f"Previewed file: {file.filename}")
     
     manager = StorageManager()
@@ -516,7 +517,7 @@ def rename_file(
     db.commit()
     db.refresh(file)
     
-    ip = request.client.host if request.client else "127.0.0.1"
+    ip = get_client_ip(request)
     log_action(db, "RENAME_FILE", current_user.id, current_user.family_id, ip, f"Renamed file '{old_name}' to '{new_name}'")
     
     invalidate_family_caches(current_user.family_id)
@@ -551,7 +552,7 @@ def delete_file(
     family_config = manager.get_family_config(family, db)
     manager.delete_file(file, family_config, db)
     
-    ip = request.client.host if request.client else "127.0.0.1"
+    ip = get_client_ip(request)
     log_action(db, "DELETE_FILE", current_user.id, current_user.family_id, ip, f"Deleted file: {file.filename}")
     
     invalidate_family_caches(current_user.family_id)
@@ -637,7 +638,7 @@ def move_file(
     db.refresh(file)
     
     # Audit log
-    ip = request.client.host if request.client else "127.0.0.1"
+    ip = get_client_ip(request)
     dest_name = "Root" if file.folder_id is None else f"Folder ID {file.folder_id}"
     log_action(db, "MOVE_FILE", current_user.id, current_user.family_id, ip, f"Moved file '{file.filename}' to '{dest_name}'")
     
