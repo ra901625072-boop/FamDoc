@@ -6,6 +6,7 @@
 // - Alternatively, set to your Render backend URL (e.g. "https://your-backend.onrender.com")
 // Supports dynamic overrides in local storage via: localStorage.setItem("famdoc_api_base_url", "YOUR_BACKEND_URL")
 const API_BASE_URL = localStorage.getItem("famdoc_api_base_url") || "";
+window.FamDocAPI_BaseURL = API_BASE_URL; // expose globally for connection manager
 
 function translateValidationError(field, message) {
   const cleanMsg = message.replace(/^value error,\s*/i, "");
@@ -100,6 +101,43 @@ const ApiCache = {
 const FamDocAPI = {
   // Base request method
   async request(path, options = {}) {
+    // If it is the health check, bypass connection manager check to avoid deadlocks
+    if (path.startsWith("/api/health")) {
+      return this._performRequest(path, options);
+    }
+
+    // Check if BackendConnectionManager is ready
+    if (window.BackendConnectionManager) {
+      const status = window.BackendConnectionManager.status;
+      
+      if (status === "CONNECTED") {
+        return this._performRequest(path, options);
+      }
+      
+      // If we are offline or in error, trigger retry/reconnection check
+      if (status === "OFFLINE" || status === "ERROR") {
+        window.BackendConnectionManager.retryConnection();
+      }
+
+      // Queue the request
+      return new Promise((resolve, reject) => {
+        window.BackendConnectionManager.queueRequest({
+          resolve: () => {
+            this._performRequest(path, options).then(resolve).catch(reject);
+          },
+          reject: (err) => {
+            reject(err);
+          }
+        });
+      });
+    }
+
+    // Fallback if Connection Manager is not loaded yet
+    return this._performRequest(path, options);
+  },
+
+  // Internal execution of network request
+  async _performRequest(path, options = {}) {
     if (typeof navigator !== "undefined" && navigator.onLine === false) {
       throw new Error("Offline: No internet connection");
     }
@@ -183,6 +221,12 @@ const FamDocAPI = {
       return text ? JSON.parse(text) : null;
     } catch (error) {
       clearTimeout(timeoutId);
+      
+      // Notify connection manager of request failure
+      if (window.BackendConnectionManager) {
+        window.BackendConnectionManager.handleRequestFailure(error);
+      }
+
       if (error.name === "AbortError") {
         throw new Error("Request timed out. Please check your connection.");
       }

@@ -260,6 +260,7 @@
 
       this.updateActiveNavLinks();
       container.classList.add("ready");
+      document.body.classList.add("layout-active");
     },
 
     // Removes structure wrapper when returning to landing/login
@@ -270,6 +271,7 @@
       const hasWrapper = container.querySelector(".layout-wrapper");
       if (hasWrapper) {
         container.classList.remove("ready");
+        document.body.classList.remove("layout-active");
         container.innerHTML = `<div id="view-mount-point"></div>`;
         layoutInjected = false;
         container.classList.add("ready");

@@ -165,6 +165,10 @@ app.include_router(search.router)
 app.include_router(dashboard.router)
 app.include_router(share.router)
 
+@app.get("/api/health")
+def health_check():
+    return {"status": "ok"}
+
 if SERVE_FRONTEND:
     app.include_router(views.router)
 else:

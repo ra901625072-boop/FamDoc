@@ -483,3 +483,113 @@ input:-webkit-autofill:active {
   -webkit-box-shadow: 0 0 0 1000px var(--surface-paper-tint) inset !important;
   -webkit-text-fill-color: var(--text-ink) !important;
 }
+
+/* ==========================================================================
+   Backend Connection Indicator Pill
+   ========================================================================== */
+#famdoc-connection-indicator {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  border-radius: 50px;
+  font-family: var(--font-sans);
+  font-size: 0.8rem;
+  font-weight: 600;
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border-paper);
+  background-color: var(--surface-card);
+  color: var(--text-ink);
+  transition: opacity 0.3s var(--transition-smooth), transform 0.3s var(--transition-smooth);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  pointer-events: auto;
+}
+
+#famdoc-connection-indicator.hidden {
+  opacity: 0;
+  transform: translateY(-10px);
+  pointer-events: none;
+}
+
+/* Status Dot with pulse transitions */
+#famdoc-connection-indicator .status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: background-color 0.3s ease;
+}
+
+@keyframes indicatorDotPulse {
+  0% { transform: scale(0.95); opacity: 0.6; }
+  50% { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(0.95); opacity: 0.6; }
+}
+
+#famdoc-connection-indicator.state-connecting .status-dot,
+#famdoc-connection-indicator.state-slow .status-dot {
+  background-color: #f59e0b; /* Amber/Orange */
+  animation: indicatorDotPulse 1.4s infinite ease-in-out;
+}
+
+#famdoc-connection-indicator.state-connected .status-dot {
+  background-color: var(--success-sage); /* Sage Green */
+}
+
+#famdoc-connection-indicator.state-offline .status-dot,
+#famdoc-connection-indicator.state-error .status-dot {
+  background-color: var(--warning-red); /* Warning Red */
+  animation: indicatorDotPulse 1.6s infinite ease-in-out;
+}
+
+/* Status retry action button */
+#famdoc-connection-indicator .status-retry-btn {
+  background: transparent;
+  border: none;
+  color: var(--accent-brand);
+  cursor: pointer;
+  padding: 0 4px;
+  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s ease, transform 0.2s ease;
+  outline: none;
+}
+
+#famdoc-connection-indicator .status-retry-btn:hover {
+  color: var(--accent-brand-hover);
+  transform: rotate(45deg);
+}
+
+#famdoc-connection-indicator .status-retry-btn:active {
+  transform: scale(0.9) rotate(90deg);
+}
+
+/* Responsive adjustment for Mobile view inside the header */
+@media (max-width: 768px) {
+  body.layout-active #famdoc-connection-indicator {
+    top: 12px;
+    right: 110px;
+    z-index: 105; /* Above mobile header glass */
+    box-shadow: none;
+    border-color: transparent;
+    background-color: transparent;
+    padding: 6px 0;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  body.layout-active #famdoc-connection-indicator .status-text {
+    max-width: 90px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
