@@ -30,13 +30,7 @@ def purge_old_recycle_bin_items(db: Session, retention_days: int = 30):
                     except Exception as e:
                         logger.warning(f"Cleanup Job: Failed to delete Google Drive file {file.google_drive_file_id}: {e}")
                         
-                if file.mega_file_id:
-                    try:
-                        cfg = family_config.get("mega", {})
-                        manager.providers["mega"].delete_file(cfg, file.mega_file_id, db=db)
-                        deleted_somewhere = True
-                    except Exception as e:
-                        logger.warning(f"Cleanup Job: Failed to delete MEGA file {file.mega_file_id}: {e}")
+
                         
                 if not deleted_somewhere:
                     provider = manager.providers.get(file.storage_provider or "local")

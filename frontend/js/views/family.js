@@ -18,7 +18,7 @@
           <p class="page-subtitle">Manage vault members and access privileges.</p>
         </div>
         <div class="toolbar-actions" id="family-toolbar-actions" style="display: none;">
-          <a href="#/profile" class="btn btn-primary">
+          <a href="#/profile?invite=true" class="btn btn-primary">
             <i class="fas fa-user-plus"></i> Invite Members
           </a>
         </div>

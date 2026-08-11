@@ -19,12 +19,12 @@
 
       <!-- Dashboard Statistics Grid -->
       <div class="dashboard-grid">
-        <div class="famdoc-card stat-card fd-fade-up fd-stagger" style="--fd-delay: 0.05s;">
+        <div class="famdoc-card stat-card fd-fade-up fd-stagger" id="card-stat-files" style="--fd-delay: 0.05s;">
           <div class="icon-chip stat-icon"><i class="fas fa-file-alt"></i></div>
           <div class="stat-label">Total Files</div>
           <div class="stat-val" id="stat-files"><span class="fd-skel" style="width: 50px; height: 30px; border-radius: 4px;"></span></div>
         </div>
-        <div class="famdoc-card stat-card fd-fade-up fd-stagger" style="--fd-delay: 0.1s;">
+        <div class="famdoc-card stat-card fd-fade-up fd-stagger" id="card-stat-size" style="--fd-delay: 0.1s;">
           <div class="icon-chip stat-icon"><i class="fas fa-database"></i></div>
           <div class="stat-label">Space Occupied</div>
           <div class="stat-val" id="stat-size"><span class="fd-skel" style="width: 100px; height: 30px; border-radius: 4px;"></span></div>
@@ -32,7 +32,7 @@
             <div id="dashboard-progress-bar" class="progress-bar-fill"></div>
           </div>
         </div>
-        <div class="famdoc-card stat-card fd-fade-up fd-stagger" style="--fd-delay: 0.15s;">
+        <div class="famdoc-card stat-card fd-fade-up fd-stagger" id="card-stat-members" style="--fd-delay: 0.15s;">
           <div class="icon-chip stat-icon"><i class="fas fa-users"></i></div>
           <div class="stat-label">Family Members</div>
           <div class="stat-val" id="stat-members"><span class="fd-skel" style="width: 40px; height: 30px; border-radius: 4px;"></span></div>
@@ -92,6 +92,24 @@
         </div>
       </div>
     `;
+
+    // Setup interactive click listeners for stat cards
+    document.getElementById("card-stat-files").addEventListener("click", () => {
+      window.FamDocRouter.navigate('/vault');
+    });
+    
+    document.getElementById("card-stat-size").addEventListener("click", async () => {
+      const user = await window.FamDocApp.getUser();
+      if (user && user.role === "admin") {
+        window.FamDocRouter.navigate('/storage');
+      } else {
+        window.FamDocRouter.navigate('/vault');
+      }
+    });
+    
+    document.getElementById("card-stat-members").addEventListener("click", () => {
+      window.FamDocRouter.navigate('/family');
+    });
 
     // Process dashboard initialization
     initDashboard();

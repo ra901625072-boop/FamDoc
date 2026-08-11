@@ -172,7 +172,22 @@
     `;
 
     setupEvents();
-    loadProfileDetails();
+    loadProfileDetails().then(() => {
+      // Auto-open invitation code wizard if invite=true query parameter is present
+      const hashParts = window.location.hash.split('?');
+      const queryParams = new URLSearchParams(hashParts[1] || '');
+      if (queryParams.get("invite") === "true") {
+        setTimeout(() => {
+          const regenBtn = document.getElementById("btn-regen-family-code");
+          if (regenBtn) {
+            regenBtn.click();
+          } else {
+            const initBtn = document.getElementById("btn-init-family");
+            if (initBtn) initBtn.click();
+          }
+        }, 150);
+      }
+    });
 
     // Register synchronization callback
     if (window.FamDocDataSync) {
