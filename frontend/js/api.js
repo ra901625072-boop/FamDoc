@@ -99,6 +99,7 @@ const ApiCache = {
 };
 
 const FamDocAPI = {
+  cache: ApiCache,
   // Base request method
   async request(path, options = {}) {
     // If it is the health check, bypass connection manager check to avoid deadlocks
@@ -337,9 +338,11 @@ const FamDocAPI = {
     },
 
     async removeMember(userId) {
-      return FamDocAPI.request(`/api/family/members/${userId}`, {
+      const result = await FamDocAPI.request(`/api/family/members/${userId}`, {
         method: "DELETE"
       });
+      ApiCache.invalidate("dashboard:stats");
+      return result;
     },
 
     async getDetails() {
@@ -368,12 +371,14 @@ const FamDocAPI = {
     },
 
     async updateMode(storageProvider) {
-      return FamDocAPI.request("/api/storage/config/mode", {
+      const result = await FamDocAPI.request("/api/storage/config/mode", {
         method: "POST",
         body: JSON.stringify({
           storage_provider: storageProvider
         })
       });
+      ApiCache.invalidateOnMutation();
+      return result;
     }
   },
 
@@ -386,10 +391,12 @@ const FamDocAPI = {
     },
 
     async create(name, parentId = null) {
-      return FamDocAPI.request("/api/folders", {
+      const result = await FamDocAPI.request("/api/folders", {
         method: "POST",
         body: JSON.stringify({ name, parent_id: parentId })
       });
+      ApiCache.invalidateOnMutation();
+      return result;
     },
 
     async rename(folderId, name) {
@@ -459,6 +466,7 @@ const FamDocAPI = {
 
           xhr.onload = () => {
             if (xhr.status >= 200 && xhr.status < 300) {
+              ApiCache.invalidateOnMutation();
               try {
                 resolve(JSON.parse(xhr.responseText));
               } catch (e) {
@@ -479,10 +487,12 @@ const FamDocAPI = {
         });
       }
 
-      return FamDocAPI.request("/api/files/upload", {
+      const result = await FamDocAPI.request("/api/files/upload", {
         method: "POST",
         body: formData
       });
+      ApiCache.invalidateOnMutation();
+      return result;
     },
 
     async rename(fileId, filename) {
@@ -529,15 +539,19 @@ const FamDocAPI = {
     },
 
     async restore(itemType, itemId) {
-      return FamDocAPI.request(`/api/recycle-bin/${itemType}/${itemId}/restore`, {
+      const result = await FamDocAPI.request(`/api/recycle-bin/${itemType}/${itemId}/restore`, {
         method: "POST"
       });
+      ApiCache.invalidateOnMutation();
+      return result;
     },
 
     async purge(itemType, itemId) {
-      return FamDocAPI.request(`/api/recycle-bin/${itemType}/${itemId}/purge`, {
+      const result = await FamDocAPI.request(`/api/recycle-bin/${itemType}/${itemId}/purge`, {
         method: "DELETE"
       });
+      ApiCache.invalidateOnMutation();
+      return result;
     }
   },
 
@@ -567,7 +581,7 @@ const FamDocAPI = {
   // Sharing Endpoints
   sharing: {
     async createLink(fileId, password = null, expiresAt = null, maxDownloads = null) {
-      return FamDocAPI.request(`/api/files/${fileId}/share`, {
+      const result = await FamDocAPI.request(`/api/files/${fileId}/share`, {
         method: "POST",
         body: JSON.stringify({
           password,
@@ -575,6 +589,8 @@ const FamDocAPI = {
           max_downloads: maxDownloads
         })
       });
+      ApiCache.invalidateOnMutation();
+      return result;
     },
 
     async getLinks(fileId) {
@@ -582,9 +598,11 @@ const FamDocAPI = {
     },
 
     async revokeLink(token) {
-      return FamDocAPI.request(`/api/shared/links/${token}`, {
+      const result = await FamDocAPI.request(`/api/shared/links/${token}`, {
         method: "DELETE"
       });
+      ApiCache.invalidateOnMutation();
+      return result;
     },
 
     // Public Sharing

@@ -173,6 +173,11 @@
 
     setupEvents();
     loadProfileDetails();
+
+    // Register synchronization callback
+    if (window.FamDocDataSync) {
+      window.FamDocDataSync.register("profile", loadFamilyDetails);
+    }
   };
 
   async function loadProfileDetails() {

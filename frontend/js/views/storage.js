@@ -144,6 +144,11 @@
 
     setupEvents();
     loadProfileAndStorage();
+
+    // Register synchronization callback
+    if (window.FamDocDataSync) {
+      window.FamDocDataSync.register("storage", loadStorageConfig);
+    }
   };
 
   async function loadProfileAndStorage() {

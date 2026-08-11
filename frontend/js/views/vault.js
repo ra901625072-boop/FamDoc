@@ -322,6 +322,11 @@
     // 3. Register DOM bindings
     setupEvents();
     setupDragAndDrop();
+
+    // Register synchronization callback
+    if (window.FamDocDataSync) {
+      window.FamDocDataSync.register("vault", refreshData);
+    }
   };
 
   async function getPreviewToken(fileId) {

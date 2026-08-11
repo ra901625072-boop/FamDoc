@@ -140,11 +140,20 @@
             if (this.slowTimer) clearTimeout(this.slowTimer);
             if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
             
+            const prevStatus = this.status;
             this.setStatus(STATUS.CONNECTED);
             this.retryCount = 0;
             
             // Release queued requests
             this.resolveQueuedRequests();
+            
+            // Reconnection targeted synchronization
+            const wasDisconnected = prevStatus === STATUS.OFFLINE || prevStatus === STATUS.ERROR;
+            if (wasDisconnected && this.queuedRequests.length === 0 && window.FamDocDataSync) {
+              console.log("[Connection] Restored/Established. Syncing active view...");
+              window.FamDocDataSync.sync();
+            }
+            
             this.isChecking = false;
             return;
           }
@@ -316,6 +325,65 @@
       }
     }
   }
+
+  // Data Synchronization Orchestrator
+  window.FamDocDataSync = {
+    activeView: null,
+    refreshCallbacks: {},
+    lastSyncTime: Date.now(),
+    staleThresholdMs: 60000, // 1 minute
+
+    register: function(viewName, callback) {
+      this.refreshCallbacks[viewName] = callback;
+      this.activeView = viewName;
+      this.lastSyncTime = Date.now();
+    },
+
+    unregister: function(viewName) {
+      if (this.activeView === viewName) {
+        this.activeView = null;
+      }
+      delete this.refreshCallbacks[viewName];
+    },
+
+    sync: function(targetView) {
+      // If backend is not connected, do not sync
+      if (window.BackendConnectionManager && window.BackendConnectionManager.status !== "CONNECTED") {
+        console.log("[DataSync] Sync skipped: Backend is not connected.");
+        return;
+      }
+
+      this.lastSyncTime = Date.now();
+
+      if (targetView) {
+        if (this.activeView === targetView && this.refreshCallbacks[targetView]) {
+          console.log(`[DataSync] Syncing active view: ${targetView}`);
+          this.refreshCallbacks[targetView]();
+        }
+        return;
+      }
+
+      if (this.activeView && this.refreshCallbacks[this.activeView]) {
+        console.log(`[DataSync] Syncing active view: ${this.activeView}`);
+        this.refreshCallbacks[this.activeView]();
+      }
+    },
+
+    checkStaleAndSync: function() {
+      const elapsed = Date.now() - this.lastSyncTime;
+      if (elapsed > this.staleThresholdMs) {
+        console.log(`[DataSync] Focus detected. Data is stale by ${Math.round(elapsed / 1000)}s. Syncing...`);
+        this.sync();
+      }
+    }
+  };
+
+  // Listen for window focus to trigger stale check
+  window.addEventListener("focus", () => {
+    if (window.FamDocDataSync) {
+      window.FamDocDataSync.checkStaleAndSync();
+    }
+  });
 
   window.BackendConnectionManager = new ConnectionManager();
 })();

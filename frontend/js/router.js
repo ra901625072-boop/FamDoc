@@ -100,6 +100,11 @@
         window.scrollTo(0, 0);
         document.body.classList.remove("modal-open");
         
+        // Reset active view synchronization to prevent callbacks from previous page
+        if (window.FamDocDataSync) {
+          window.FamDocDataSync.activeView = null;
+        }
+        
         await match.route.handler(match.params);
         
         // Synchronize toggle icons to the current active theme after page content loads

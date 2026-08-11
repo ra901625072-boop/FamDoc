@@ -65,6 +65,11 @@
 
     setupEvents();
     loadProfileAndRoster();
+
+    // Register synchronization callback
+    if (window.FamDocDataSync) {
+      window.FamDocDataSync.register("family", loadMembers);
+    }
   };
 
   async function loadProfileAndRoster() {

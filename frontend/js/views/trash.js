@@ -101,6 +101,11 @@
     // Initialize events and load data
     setupEvents();
     loadRecycleBin();
+
+    // Register synchronization callback
+    if (window.FamDocDataSync) {
+      window.FamDocDataSync.register("trash", loadRecycleBin);
+    }
   };
 
   async function loadRecycleBin() {

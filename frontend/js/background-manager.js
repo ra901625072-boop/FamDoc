@@ -141,6 +141,9 @@ class BackgroundOperationsManager {
         await op.onExecute();
       }
       op.status = "completed";
+      if (window.FamDocDataSync) {
+        window.FamDocDataSync.sync();
+      }
     } catch (err) {
       op.status = "error";
       op.errorMsg = err.message || "Failed to execute backend operation";

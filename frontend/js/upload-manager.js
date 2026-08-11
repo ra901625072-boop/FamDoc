@@ -420,9 +420,10 @@
         await clearCompleted();
         const updated = await getQueue();
         updateUI(updated);
-        // Refresh Shared Vault view if the user is currently on the shared vault page
-        if (window.location.pathname.includes("files.html") && typeof refreshData === "function") {
-          refreshData();
+        
+        // Sync active view
+        if (window.FamDocDataSync) {
+          window.FamDocDataSync.sync();
         }
       };
     }
@@ -494,8 +495,13 @@
     const nextItem = queue.find(item => item.status === "pending" || item.status === "uploading");
     
     if (!nextItem) {
-      isUploading = false;
-      updateUI(queue);
+      if (isUploading) {
+        isUploading = false;
+        updateUI(queue);
+        if (window.FamDocDataSync) {
+          window.FamDocDataSync.sync();
+        }
+      }
       return;
     }
 
@@ -516,8 +522,13 @@
       // Mark completed
       await updateProgress(nextItem.id, "completed", 100);
       
-      // Toast notification for file upload completion if on files page
-      if (window.location.pathname.includes("files.html") && typeof FamDocAPI !== "undefined") {
+      // Invalidate cache
+      if (window.FamDocAPI && window.FamDocAPI.cache) {
+        window.FamDocAPI.cache.invalidateOnMutation();
+      }
+      
+      // Toast notification for file upload completion
+      if (typeof FamDocAPI !== "undefined") {
         FamDocAPI.utils.showToast(`Uploaded: ${nextItem.name}`, "success");
       }
       

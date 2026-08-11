@@ -95,6 +95,11 @@
 
     // Process dashboard initialization
     initDashboard();
+
+    // Register synchronization callback
+    if (window.FamDocDataSync) {
+      window.FamDocDataSync.register("dashboard", initDashboard);
+    }
   };
 
   async function getPreviewToken(fileId) {
