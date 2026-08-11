@@ -344,6 +344,9 @@ body::after {
 
 .nav-item i {
   font-size: 1rem;
+  width: 20px;
+  text-align: center;
+  display: inline-block;
   transition: transform 0.3s ease;
 }
 
@@ -533,6 +536,7 @@ body::after {
   padding: 1.75rem;
   max-height: 70vh;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .modal-footer {
@@ -546,8 +550,8 @@ body::after {
 
 /* Focus styles */
 *:focus-visible {
-  outline: 2px solid var(--accent-brand) !important;
-  outline-offset: 2px !important;
+  outline: 2px solid var(--accent-brand);
+  outline-offset: 2px;
 }
 
 /* Responsive Overrides */

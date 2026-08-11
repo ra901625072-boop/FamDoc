@@ -55,7 +55,7 @@
       </div>
 
       <!-- Drag & Drop overlay indicator -->
-      <div id="drag-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: var(--overlay-bg); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); z-index: 1999; align-items: center; justify-content: center; flex-direction: column; gap: 1rem; color: white;">
+      <div id="drag-overlay">
         <i class="fas fa-cloud-upload-alt" style="font-size: 4rem;"></i>
         <h2 style="font-family: var(--font-serif); font-weight: 800;">Drop Files Anywhere to Upload</h2>
       </div>
@@ -1823,7 +1823,7 @@
 
     window.addEventListener("dragenter", (e) => {
       e.preventDefault();
-      dragOverlay.style.display = "flex";
+      dragOverlay.classList.add("show");
     });
 
     dragOverlay.addEventListener("dragover", (e) => { e.preventDefault(); });
@@ -1831,13 +1831,13 @@
     dragOverlay.addEventListener("dragleave", (e) => {
       const rect = dragOverlay.getBoundingClientRect();
       if (e.clientX < rect.left || e.clientX >= rect.right || e.clientY < rect.top || e.clientY >= rect.bottom) {
-        dragOverlay.style.display = "none";
+        dragOverlay.classList.remove("show");
       }
     });
 
     dragOverlay.addEventListener("drop", (e) => {
       e.preventDefault();
-      dragOverlay.style.display = "none";
+      dragOverlay.classList.remove("show");
       
       const files = Array.from(e.dataTransfer.files);
       if (files.length > 0) {

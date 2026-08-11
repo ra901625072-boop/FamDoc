@@ -148,6 +148,7 @@
   padding: 0.5rem 0;
   max-height: 320px;
   background-color: var(--surface-card);
+  -webkit-overflow-scrolling: touch;
 }
 
 .bg-ops-item {

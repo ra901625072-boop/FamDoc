@@ -123,6 +123,7 @@
   max-height: 380px;
   overflow-y: auto;
   padding-right: 0.25rem;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Custom Scrollbar for dashboard scrollable lists */
