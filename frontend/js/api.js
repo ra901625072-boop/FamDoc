@@ -187,7 +187,8 @@ const FamDocAPI = {
                              hash.startsWith("#/login") || 
                              hash.startsWith("#/register") || 
                              hash.startsWith("#/join") || 
-                             hash.startsWith("#/share");
+                             hash.startsWith("#/share") ||
+                             hash.startsWith("#/forgot-password");
         
         if (!isPublicPage) {
           localStorage.removeItem("famdoc_token");
@@ -321,6 +322,27 @@ const FamDocAPI = {
       localStorage.removeItem("famdoc_token");
       localStorage.removeItem("famdoc_user");
       window.location.href = "/";
+    },
+
+    async requestPasswordReset(email) {
+      return FamDocAPI.request("/api/auth/forgot-password/request", {
+        method: "POST",
+        body: JSON.stringify({ email })
+      });
+    },
+
+    async verifyResetOTP(email, otpCode) {
+      return FamDocAPI.request("/api/auth/forgot-password/verify", {
+        method: "POST",
+        body: JSON.stringify({ email, otp_code: otpCode })
+      });
+    },
+
+    async confirmPasswordReset(email, otpCode, newPassword) {
+      return FamDocAPI.request("/api/auth/forgot-password/reset", {
+        method: "POST",
+        body: JSON.stringify({ email, otp_code: otpCode, new_password: newPassword })
+      });
     }
   },
 

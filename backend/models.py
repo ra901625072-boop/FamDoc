@@ -216,3 +216,15 @@ class RevokedToken(Base):
 
     jti = Column(String(64), primary_key=True, index=True)
     revoked_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
+class PasswordResetOTP(Base):
+    __tablename__ = "password_reset_otps"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    email = Column(String(255), index=True, nullable=False)
+    otp_code = Column(String(6), nullable=False)
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    is_used = Column(Boolean, default=False, nullable=False)
+

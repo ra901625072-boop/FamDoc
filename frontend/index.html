@@ -71,6 +71,7 @@
       window.FamDocRouter.add('/login', window.FamDocViews.auth.login, { guestOnly: true });
       window.FamDocRouter.add('/register', window.FamDocViews.auth.register, { guestOnly: true });
       window.FamDocRouter.add('/join', window.FamDocViews.auth.join, { guestOnly: true });
+      window.FamDocRouter.add('/forgot-password', window.FamDocViews.auth.forgotPassword, { guestOnly: true });
 
       // 2. Register core authenticated workspace routes
       window.FamDocRouter.add('/dashboard', window.FamDocViews.dashboard, { requiresAuth: true });

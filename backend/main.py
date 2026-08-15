@@ -200,3 +200,9 @@ if SERVE_FRONTEND:
     # Mount the entire frontend directory at the root to serve all HTML files (login.html, dashboard.html, etc.)
     # This must be the last route registered so API routes take precedence.
     app.mount("/", StaticFiles(directory=frontend_path, html=True), name="frontend")
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
+

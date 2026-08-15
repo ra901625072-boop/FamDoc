@@ -256,9 +256,130 @@ def family_login(request: Request, login_in: schemas.FamilyLogin, db: Session = 
         pass
     return {"access_token": access_token, "token_type": "bearer"}
 
+@router.post("/forgot-password/request")
+def forgot_password_request(request: Request, body: schemas.PasswordResetRequest, db: Session = Depends(get_db)):
+    ip = get_client_ip(request)
+    email = body.email.strip().lower()
+
+    # Rate limiting: Max 3 requests per 10 minutes per IP/email
+    if verify_rate_limit(f"otp_req_ip:{ip}", max_requests=3, window_seconds=600) or \
+       verify_rate_limit(f"otp_req_email:{email}", max_requests=3, window_seconds=600):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many password reset requests. Please try again in 10 minutes."
+        )
+
+    # Look up user
+    user = db.query(models.User).filter(models.User.email == email).first()
+
+    # Return success even if user not found to prevent user enumeration
+    if not user:
+        return {"message": "If the email is registered, a password reset OTP has been sent."}
+
+    # Generate a 6-digit OTP
+    import secrets
+    otp = "".join(secrets.choice("0123456789") for _ in range(6))
+    expiry = datetime.now(timezone.utc) + timedelta(minutes=10)
+
+    # Save to DB
+    db_otp = models.PasswordResetOTP(
+        email=email,
+        otp_code=otp,
+        expires_at=expiry,
+        is_used=False
+    )
+    db.add(db_otp)
+    db.commit()
+
+    # Send OTP email
+    from utils.email import send_otp_email
+    send_otp_email(email, otp)
+
+    return {"message": "If the email is registered, a password reset OTP has been sent."}
+
+
+@router.post("/forgot-password/verify")
+def forgot_password_verify(request: Request, body: schemas.PasswordResetVerify, db: Session = Depends(get_db)):
+    ip = get_client_ip(request)
+    email = body.email.strip().lower()
+
+    # Rate limiting: Max 5 attempts per 10 minutes per IP/email to avoid brute-forcing
+    if verify_rate_limit(f"otp_ver_ip:{ip}", max_requests=5, window_seconds=600) or \
+       verify_rate_limit(f"otp_ver_email:{email}", max_requests=5, window_seconds=600):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many verification attempts. Please try again in 10 minutes."
+        )
+
+    # Check for the latest active OTP
+    now = datetime.now(timezone.utc)
+    db_otp = db.query(models.PasswordResetOTP).filter(
+        models.PasswordResetOTP.email == email,
+        models.PasswordResetOTP.is_used == False,
+        models.PasswordResetOTP.expires_at > now
+    ).order_by(models.PasswordResetOTP.created_at.desc()).first()
+
+    if not db_otp or db_otp.otp_code != body.otp_code:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired verification code."
+        )
+
+    return {"message": "Verification code is valid."}
+
+
+@router.post("/forgot-password/reset")
+def forgot_password_reset(request: Request, body: schemas.PasswordResetConfirm, db: Session = Depends(get_db)):
+    ip = get_client_ip(request)
+    email = body.email.strip().lower()
+
+    # Rate limiting: Max 5 attempts per 10 minutes
+    if verify_rate_limit(f"otp_res_ip:{ip}", max_requests=5, window_seconds=600) or \
+       verify_rate_limit(f"otp_res_email:{email}", max_requests=5, window_seconds=600):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many verification attempts. Please try again in 10 minutes."
+        )
+
+    # Validate the OTP
+    now = datetime.now(timezone.utc)
+    db_otp = db.query(models.PasswordResetOTP).filter(
+        models.PasswordResetOTP.email == email,
+        models.PasswordResetOTP.is_used == False,
+        models.PasswordResetOTP.expires_at > now
+    ).order_by(models.PasswordResetOTP.created_at.desc()).first()
+
+    if not db_otp or db_otp.otp_code != body.otp_code:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired verification code."
+        )
+
+    # Find the user
+    user = db.query(models.User).filter(models.User.email == email).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User account not found."
+        )
+
+    # Update password
+    user.password_hash = auth.get_password_hash(body.new_password)
+    
+    # Invalidate active user tokens/sessions
+    user.current_token_jti = None
+
+    # Mark OTP as used
+    db_otp.is_used = True
+    db.commit()
+
+    return {"message": "Password has been successfully reset. Please log in with your new password."}
+
+
 @router.get("/me", response_model=schemas.UserResponse)
 def get_me(current_user: models.User = Depends(auth.get_current_user)):
     return current_user
+
 
 @router.put("/profile", response_model=schemas.UserResponse)
 def update_profile(

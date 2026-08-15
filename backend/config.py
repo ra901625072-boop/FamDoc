@@ -54,3 +54,17 @@ HEALTH_CHECK_CACHE_TTL = int(os.getenv("HEALTH_CHECK_CACHE_TTL", "30"))
 DASHBOARD_CACHE_TTL = int(os.getenv("DASHBOARD_CACHE_TTL", "30"))
 FOLDER_LISTING_CACHE_TTL = int(os.getenv("FOLDER_LISTING_CACHE_TTL", "15"))
 SEARCH_CACHE_TTL = int(os.getenv("SEARCH_CACHE_TTL", "10"))
+
+# SMTP Email Configuration for OTP Verification
+SMTP_HOST = os.getenv("SMTP_HOST", "")
+SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
+SMTP_USERNAME = os.getenv("SMTP_USERNAME", "")
+SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
+SMTP_FROM_EMAIL = os.getenv("SMTP_FROM_EMAIL", "")
+SMTP_TLS = os.getenv("SMTP_TLS", "true").lower() == "true"
+SMTP_SSL = os.getenv("SMTP_SSL", "false").lower() == "true"
+
+# Resend Email Configuration for OTP Verification
+RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
+
+
