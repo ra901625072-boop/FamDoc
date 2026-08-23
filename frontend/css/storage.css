@@ -146,3 +146,107 @@
 #dual-options-container input[type="radio"] {
   margin-top: 0.15rem;
 }
+
+/* Multi-Account Cards Layout */
+.account-cards-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.account-card {
+  background-color: var(--surface-card, #ffffff);
+  border: 1px solid var(--border-paper-dark, #e2e8f0);
+  border-radius: var(--radius-md, 8px);
+  padding: 1.25rem 1.5rem;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.account-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.account-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.account-title-group {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.account-email {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--text-ink, #1e293b);
+}
+
+.account-label-tag {
+  font-size: 0.78rem;
+  padding: 0.15rem 0.5rem;
+  background-color: var(--surface-paper-tint, #f1f5f9);
+  border-radius: 4px;
+  color: var(--text-ink-muted, #64748b);
+}
+
+.status-badge-active {
+  background-color: #dcfce7;
+  color: #166534;
+  padding: 0.2rem 0.6rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.status-badge-error {
+  background-color: #fee2e2;
+  color: #991b1b;
+  padding: 0.2rem 0.6rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.status-badge-disconnecting {
+  background-color: #fef3c7;
+  color: #92400e;
+  padding: 0.2rem 0.6rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.account-quota-bar-container {
+  height: 8px;
+  background-color: var(--surface-paper-tint, #e2e8f0);
+  border-radius: 4px;
+  overflow: hidden;
+  margin: 0.5rem 0;
+}
+
+.account-quota-fill {
+  height: 100%;
+  background-color: var(--accent-brand, #3b82f6);
+  transition: width 0.3s ease;
+}
+
+.account-card-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+

@@ -294,6 +294,14 @@ def run_migrations():
         except Exception as e:
             pass
 
+        if "storage_account_id" not in columns:
+            try:
+                execute_migration_statement("ALTER TABLE files ADD COLUMN storage_account_id INTEGER REFERENCES storage_accounts(id)")
+                execute_migration_statement("CREATE INDEX ix_files_storage_account_id ON files(storage_account_id)")
+                logger.info("Migration: Successfully added storage_account_id column to files table.")
+            except Exception as e:
+                logger.error(f"Migration error (files storage_account_id): {str(e)}")
+
     # Migrate users table
     if "users" in table_names:
         columns = [col["name"] for col in inspector.get_columns("users")]
@@ -339,3 +347,47 @@ def run_migrations():
                 logger.info(f"Migration: Successfully created index {index_name}.")
             except Exception:
                 pass  # Index likely already exists
+
+    # 6. One-time auto-backfill of existing single Google account into storage_accounts table
+    if "families" in table_names and "storage_accounts" in table_names:
+        try:
+            from models import Family, StorageAccount, File
+            db_session = SessionLocal()
+            try:
+                families = db_session.query(Family).all()
+                for family in families:
+                    if family.storage_provider == "google" and family.storage_config:
+                        cfg = family.storage_config
+                        g_cfg = cfg.get("google", cfg) if isinstance(cfg, dict) else {}
+                        if g_cfg.get("client_id") and g_cfg.get("refresh_token"):
+                            existing_acct = db_session.query(StorageAccount).filter(
+                                StorageAccount.family_id == family.id,
+                                StorageAccount.provider == "google"
+                            ).first()
+                            if not existing_acct:
+                                acct = StorageAccount(
+                                    family_id=family.id,
+                                    provider="google",
+                                    email=g_cfg.get("email") or f"{family.name} (Google)",
+                                    vault_folder_id=cfg.get("google_vault_folder_id") or family.vault_folder_id,
+                                    status="active",
+                                    priority=0
+                                )
+                                acct.config = g_cfg
+                                db_session.add(acct)
+                                db_session.flush()
+                                
+                                # Backfill files belonging to this family
+                                db_session.query(File).filter(
+                                    File.family_id == family.id,
+                                    File.storage_provider == "google",
+                                    File.storage_account_id == None
+                                ).update({"storage_account_id": acct.id}, synchronize_session=False)
+                                db_session.commit()
+                                logger.info(f"Migration: Backfilled StorageAccount for family {family.id} (account_id={acct.id})")
+            finally:
+                db_session.close()
+        except Exception as e:
+            logger.error(f"Migration error (storage_accounts backfill): {str(e)}")
+
+

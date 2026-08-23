@@ -1,5 +1,5 @@
 /**
- * Storage Config View Manager (Consolidates storage-config.html)
+ * Storage Config View Manager (Multi-Account Google Drive Storage Pooling)
  */
 (function() {
   window.FamDocViews = window.FamDocViews || {};
@@ -15,7 +15,7 @@
     if (urlParams.has("google_auth")) {
       const authStatus = urlParams.get("google_auth");
       if (authStatus === "success") {
-        FamDocAPI.utils.showToast("Google Drive connected successfully!", "success");
+        FamDocAPI.utils.showToast("Google Drive account linked successfully!", "success");
       } else if (authStatus === "error") {
         const detail = urlParams.get("detail") || "Unknown error";
         FamDocAPI.utils.showToast(`Failed to connect Google Drive: ${detail}`, "error");
@@ -28,7 +28,7 @@
       <div class="content-header fd-fade-in">
         <div>
           <h1 class="page-title">Cloud Storage Settings</h1>
-          <p class="page-subtitle">Configure external storage providers to synchronize family files.</p>
+          <p class="page-subtitle">Manage multi-account Google Drive storage pooling and local fallback options.</p>
         </div>
       </div>
 
@@ -57,10 +57,10 @@
             <div class="storage-usage-percent" id="storage-percent-text">0%</div>
           </div>
           <div class="storage-progress-bar-container" id="storage-progress-bar">
-            <!-- Progress segments will be injected dynamically -->
+            <!-- Progress segments injected dynamically -->
           </div>
           <div class="storage-legend-grid" id="storage-legend">
-            <!-- Legend items will be injected dynamically -->
+            <!-- Legend items injected dynamically -->
           </div>
         </div>
 
@@ -71,15 +71,15 @@
             Active Storage Mode Selection
           </h3>
           <p style="font-size: 0.85rem; color: var(--text-ink-muted); margin-bottom: 1.5rem;">
-            Choose how your family documents are stored. Connecting Google Drive enables robust cloud synchronization.
+            Choose how your family documents are stored. Connecting Google Drive enables multi-account cloud pooling and synchronization.
           </p>
           
           <form id="storage-mode-form">
             <div class="storage-modes-list" style="display: flex; flex-direction: column; gap: 1rem;">
               
               <!-- Local Mode -->
-              <label class="storage-mode-option" style="display: flex; align-items: flex-start; gap: 1rem; padding: 1rem; border: 1px solid var(--border-paper-dark); border-radius: var(--radius-md); cursor: pointer; transition: var(--transition-smooth);">
-                <input type="radio" name="storage_provider" value="local" style="margin-top: 0.25rem;" checked>
+              <label class="storage-mode-option">
+                <input type="radio" name="storage_provider" value="local" checked>
                 <div>
                   <strong style="display: block; font-size: 0.95rem; color: var(--text-ink);">Local Storage Only</strong>
                   <span style="font-size: 0.82rem; color: var(--text-ink-muted);">Keep all files on the local vault without uploading to external cloud drives.</span>
@@ -87,11 +87,11 @@
               </label>
 
               <!-- Google Drive Only -->
-              <label class="storage-mode-option" id="mode-opt-google" style="display: flex; align-items: flex-start; gap: 1rem; padding: 1rem; border: 1px solid var(--border-paper-dark); border-radius: var(--radius-md); cursor: pointer; transition: var(--transition-smooth);">
-                <input type="radio" name="storage_provider" value="google" style="margin-top: 0.25rem;">
+              <label class="storage-mode-option" id="mode-opt-google">
+                <input type="radio" name="storage_provider" value="google">
                 <div>
-                  <strong style="display: block; font-size: 0.95rem; color: var(--text-ink);"><i class="fab fa-google" style="color: #4285F4; margin-right: 0.25rem;"></i> Google Drive Only</strong>
-                  <span style="font-size: 0.82rem; color: var(--text-ink-muted);">Store files on your linked Google Drive account. Requires Google Drive to be connected.</span>
+                  <strong style="display: block; font-size: 0.95rem; color: var(--text-ink);"><i class="fab fa-google" style="color: #4285F4; margin-right: 0.25rem;"></i> Google Drive (Multi-Account Pooling)</strong>
+                  <span style="font-size: 0.82rem; color: var(--text-ink-muted);">Route uploads across connected Google accounts based on available capacity.</span>
                 </div>
               </label>
 
@@ -103,17 +103,23 @@
           </form>
         </div>
 
-        <div class="storage-grid">
-          <!-- Google Drive card -->
-          <div class="famdoc-card storage-config-card" id="google-card">
-            <div class="famdoc-card-header">
-              <h2 class="famdoc-card-title"><i class="fab fa-google" style="color: #4285F4; margin-right: 0.5rem;"></i>Google Drive Link</h2>
-              <div id="google-active-badge-container"></div>
-            </div>
-            <p style="font-size: 0.85rem; color: var(--text-ink-muted); margin-bottom: 1.5rem;">
-              Connect your family's personal Google Drive account. Files uploaded to FamDoc will automatically sync to a dedicated folder.
-            </p>
+        <!-- Google Drive Multi-Account Management Section -->
+        <div class="famdoc-card storage-config-card fd-fade-up" id="google-card" style="margin-bottom: 2rem;">
+          <div class="famdoc-card-header">
+            <h2 class="famdoc-card-title"><i class="fab fa-google" style="color: #4285F4; margin-right: 0.5rem;"></i>Connected Google Accounts</h2>
+            <div id="google-active-badge-container"></div>
+          </div>
+          <p style="font-size: 0.85rem; color: var(--text-ink-muted); margin-bottom: 1.5rem;">
+            Link one or more personal Google Drive accounts for your family. Uploads will be automatically routed to whichever connected account has the most available space.
+          </p>
 
+          <!-- Accounts List Grid -->
+          <div id="accounts-cards-container" class="account-cards-list">
+            <!-- Account Cards rendered dynamically -->
+          </div>
+
+          <!-- Add Account / Initial Credentials Form -->
+          <div id="google-connect-panel" style="margin-top: 1rem;">
             <form id="google-storage-form">
               <div class="form-group">
                 <label class="form-label" for="google-client-id">Google Client ID</label>
@@ -134,7 +140,7 @@
                 </div>
               </div>
               <button type="submit" id="btn-save-google-storage" class="btn btn-primary" style="width: 100%; margin-top: 1.5rem; justify-content: center; gap: 0.5rem;">
-                <i class="fab fa-google"></i> Link Google Drive Account
+                <i class="fab fa-google"></i> Connect New Google Drive Account
               </button>
             </form>
           </div>
@@ -201,21 +207,22 @@
       activeProviderEl.style.cssText = "font-size: 0.85rem; padding: 0.25rem 0.6rem; vertical-align: middle;";
       activeProviderEl.textContent = provider.toUpperCase();
       
-      // Populate inputs regardless of whether they are active
       if (config.client_id) {
         const gInput = document.getElementById("google-client-id");
         if (gInput) gInput.value = config.client_id;
       }
 
+      const activeAccounts = (config.accounts || []).filter(a => a.status === "active");
+
       if (provider === "google") {
-        activeDetailEl.textContent = `Google Drive connected. Client ID: ${config.client_id || "Not set"}`;
+        activeDetailEl.textContent = `Google Drive Pooling Active (${activeAccounts.length} connected account${activeAccounts.length === 1 ? '' : 's'}).`;
         if (googleCard) googleCard.classList.add("active-card");
         if (googleBadgeContainer) googleBadgeContainer.innerHTML = `<span class="active-badge"><i class="fas fa-check-circle"></i> Active</span>`;
       } else {
         activeDetailEl.textContent = "Currently using local database storage folder.";
       }
 
-      // Configure Storage Mode Panel elements state based on provider status
+      // Configure Storage Mode Panel
       const googleConfigured = config.google_configured;
       const optGoogle = document.getElementById("mode-opt-google");
 
@@ -231,11 +238,14 @@
         }
       }
 
-      // Set active values in the form
+      // Set active values in radio form
       const radioInput = document.querySelector(`input[name="storage_provider"][value="${provider}"]`);
       if (radioInput) {
         radioInput.checked = true;
       }
+
+      // Render Connected Accounts Cards
+      renderAccountCards(config.accounts || [], config.client_id);
 
       // Render visual breakdown if stats are available
       if (stats) {
@@ -246,6 +256,169 @@
     }
   }
 
+  function renderAccountCards(accounts, existingClientId) {
+    const container = document.getElementById("accounts-cards-container");
+    if (!container) return;
+
+    if (accounts.length === 0) {
+      container.innerHTML = `
+        <div class="famdoc-alert warning" style="margin-bottom: 1.5rem;">
+          <i class="fas fa-info-circle"></i>
+          <div>No Google Drive accounts connected yet. Use the form below to link your first account.</div>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = accounts.map(acct => {
+      let statusBadge = `<span class="status-badge-active"><i class="fas fa-check-circle"></i> Active</span>`;
+      let alertBanner = "";
+
+      if (acct.status === "error") {
+        statusBadge = `<span class="status-badge-error"><i class="fas fa-exclamation-circle"></i> Re-auth Required</span>`;
+        alertBanner = `
+          <div class="famdoc-alert warning" style="margin-top: 0.75rem; padding: 0.5rem 1rem; font-size: 0.82rem;">
+            <i class="fas fa-exclamation-triangle"></i>
+            <div>Google OAuth token expired or revoked. Click Re-authenticate to reconnect this account.</div>
+          </div>
+        `;
+      } else if (acct.status === "disconnecting") {
+        statusBadge = `<span class="status-badge-disconnecting"><i class="fas fa-spinner fa-spin"></i> Disconnecting...</span>`;
+        alertBanner = `
+          <div class="famdoc-alert warning" style="margin-top: 0.75rem; padding: 0.5rem 1rem; font-size: 0.82rem;">
+            <i class="fas fa-sync fa-spin"></i>
+            <div>Files stored on this account are being migrated to other storage backends in the background.</div>
+          </div>
+        `;
+      } else if (acct.status === "disconnected") {
+        statusBadge = `<span class="badge badge-secondary">Disconnected</span>`;
+      }
+
+      let quotaText = "Quota details pending refresh";
+      let percentUsed = 0;
+      if (acct.cached_quota_total) {
+        const used = acct.cached_quota_used || 0;
+        const total = acct.cached_quota_total;
+        percentUsed = Math.min(100, Math.round((used / total) * 100));
+        quotaText = `Used ${FamDocAPI.utils.formatBytes(used)} of ${FamDocAPI.utils.formatBytes(total)} (${percentUsed}%)`;
+      } else if (acct.cached_quota_total === None || acct.cached_quota_total === 0) {
+        quotaText = `Workspace Account (Unlimited Capacity)`;
+      }
+
+      return `
+        <div class="account-card fd-fade-in" data-account-id="${acct.id}">
+          <div class="account-card-header">
+            <div class="account-title-group">
+              <i class="fab fa-google" style="color: #4285F4; font-size: 1.2rem;"></i>
+              <div>
+                <div class="account-email">${FamDocAPI.utils.escapeHtml(acct.email || acct.label || 'Google Account')}</div>
+                <span class="account-label-tag">${FamDocAPI.utils.escapeHtml(acct.label || 'Account #' + acct.id)}</span>
+              </div>
+            </div>
+            <div>${statusBadge}</div>
+          </div>
+
+          <div style="font-size: 0.82rem; color: var(--text-ink-muted); margin-top: 0.5rem;">
+            ${quotaText}
+          </div>
+          <div class="account-quota-bar-container">
+            <div class="account-quota-fill" style="width: ${percentUsed}%;"></div>
+          </div>
+
+          ${alertBanner}
+
+          <div class="account-card-actions" style="margin-top: 1rem;">
+            <button class="btn btn-secondary btn-sm btn-edit-account" data-id="${acct.id}" data-label="${FamDocAPI.utils.escapeHtml(acct.label || '')}">
+              <i class="fas fa-edit"></i> Edit Label
+            </button>
+            ${acct.status === "error" ? `
+              <button class="btn btn-primary btn-sm btn-reauth-account" data-id="${acct.id}">
+                <i class="fas fa-redo"></i> Re-authenticate
+              </button>
+            ` : ''}
+            ${acct.status === "active" ? `
+              <button class="btn btn-danger btn-sm btn-disconnect-account" data-id="${acct.id}" data-email="${FamDocAPI.utils.escapeHtml(acct.email || '')}">
+                <i class="fas fa-unlink"></i> Disconnect
+              </button>
+            ` : ''}
+            ${acct.status === "disconnected" ? `
+              <button class="btn btn-danger btn-sm btn-delete-account" data-id="${acct.id}">
+                <i class="fas fa-trash"></i> Remove Account
+              </button>
+            ` : ''}
+          </div>
+        </div>
+      `;
+    }).join("");
+
+    // Add action handlers to dynamically rendered account cards
+    container.querySelectorAll(".btn-edit-account").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        const id = btn.dataset.id;
+        const currentLabel = btn.dataset.label;
+        const newLabel = prompt("Enter a nickname for this account (e.g., Dad's Drive):", currentLabel);
+        if (newLabel !== null && newLabel.trim() !== "") {
+          try {
+            await FamDocAPI.storage.updateAccount(id, { label: newLabel.trim() });
+            FamDocAPI.utils.showToast("Account label updated!", "success");
+            await loadStorageConfig();
+          } catch (err) {
+            FamDocAPI.utils.showToast(err.message || "Failed to update label", "error");
+          }
+        }
+      });
+    });
+
+    container.querySelectorAll(".btn-disconnect-account").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        const id = btn.dataset.id;
+        const email = btn.dataset.email;
+        const confirmed = await FamDocAPI.utils.confirm({
+          title: "Disconnect Account",
+          message: `Are you sure you want to disconnect ${email}? Files currently stored on this account will be automatically migrated to other available backends in the background.`,
+          confirmText: "Disconnect Account",
+          type: "danger"
+        });
+        if (confirmed) {
+          try {
+            await FamDocAPI.storage.disconnectAccount(id);
+            FamDocAPI.utils.showToast("Account disconnect & background migration started.", "info");
+            await loadStorageConfig();
+          } catch (err) {
+            FamDocAPI.utils.showToast(err.message || "Failed to disconnect account", "error");
+          }
+        }
+      });
+    });
+
+    container.querySelectorAll(".btn-delete-account").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        const id = btn.dataset.id;
+        try {
+          await FamDocAPI.storage.deleteAccount(id);
+          FamDocAPI.utils.showToast("Account record removed.", "success");
+          await loadStorageConfig();
+        } catch (err) {
+          FamDocAPI.utils.showToast(err.message || "Failed to delete account", "error");
+        }
+      });
+    });
+
+    container.querySelectorAll(".btn-reauth-account").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        const clientIdInput = document.getElementById("google-client-id");
+        const clientId = clientIdInput ? clientIdInput.value.trim() : null;
+        try {
+          const result = await FamDocAPI.storage.getGoogleAuthUrl(clientId, null, "add");
+          if (result && result.url) {
+            window.location.href = result.url;
+          }
+        } catch (err) {
+          FamDocAPI.utils.showToast(err.message || "Failed to initiate re-authentication", "error");
+        }
+      });
+    });
+  }
 
   function setupEvents() {
     const googleForm = document.getElementById("google-storage-form");
@@ -263,7 +436,7 @@
           submitBtn.disabled = true;
           submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Redirecting...';
           
-          const result = await FamDocAPI.storage.getGoogleAuthUrl(clientId, clientSecret);
+          const result = await FamDocAPI.storage.getGoogleAuthUrl(clientId, clientSecret, "add");
           if (result && result.url) {
             window.location.href = result.url;
           } else {
@@ -273,7 +446,7 @@
           FamDocAPI.utils.showToast(err.message || "Failed to start Google OAuth process.", "error");
         } finally {
           submitBtn.disabled = false;
-          submitBtn.innerHTML = '<i class="fab fa-google"></i> Link Google Drive Account';
+          submitBtn.innerHTML = '<i class="fab fa-google"></i> Connect New Google Drive Account';
         }
       });
     }

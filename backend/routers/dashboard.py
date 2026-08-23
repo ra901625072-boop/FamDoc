@@ -96,6 +96,15 @@ def get_dashboard_stats(
 
     # 8. Storage Quota & Breakdown
     storage_quota_bytes = family.storage_quota_bytes if family else 524288000
+    if family:
+        active_accts = db.query(models.StorageAccount).filter(
+            models.StorageAccount.family_id == family.id,
+            models.StorageAccount.status == "active"
+        ).all()
+        acct_total = sum(a.cached_quota_total for a in active_accts if a.cached_quota_total)
+        if acct_total > 0:
+            storage_quota_bytes = min(acct_total, family.storage_quota_bytes) if family.storage_quota_bytes else acct_total
+
     
     active_files = db.query(models.File.file_type, models.File.filename, models.File.size_bytes).filter(
         models.File.family_id == current_user.family_id,

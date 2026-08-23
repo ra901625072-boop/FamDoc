@@ -117,9 +117,33 @@ class FamilyMemberResponse(BaseModel):
 class StorageSetupGoogle(BaseModel):
     folder_id: str
 
+class StorageAccountResponse(BaseModel):
+    id: int
+    family_id: str
+    provider: str
+    external_account_id: Optional[str] = None
+    email: Optional[str] = None
+    label: Optional[str] = None
+    vault_folder_id: Optional[str] = None
+    status: str
+    priority: int
+    cached_quota_total: Optional[int] = None
+    cached_quota_used: Optional[int] = None
+    quota_checked_at: Optional[datetime] = None
+    created_at: datetime
+    disconnected_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+class StorageAccountUpdate(BaseModel):
+    label: Optional[str] = None
+    priority: Optional[int] = None
+
 class OAuthUrlRequest(BaseModel):
     client_id: Optional[str] = None
     client_secret: Optional[str] = None
+    action: Optional[str] = "connect" # "connect" or "add"
 
 class StorageConfigResponse(BaseModel):
     storage_provider: Optional[str] = None
@@ -127,6 +151,9 @@ class StorageConfigResponse(BaseModel):
     folder_id: Optional[str] = None # For Google Drive configuration verification
     client_id: Optional[str] = None # For Google OAuth client verification
     google_configured: Optional[bool] = False
+    accounts: List[StorageAccountResponse] = []
+    total_capacity_bytes: Optional[int] = 0
+    total_used_bytes: Optional[int] = 0
     # Deprecated fields kept for frontend compatibility
     email: Optional[str] = None
     mega_configured: Optional[bool] = False

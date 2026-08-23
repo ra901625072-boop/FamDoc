@@ -97,17 +97,110 @@ class StorageManager:
             })
             raise
 
+    def get_family_storage_accounts(self, family, db: Session) -> list[dict]:
+        from models import StorageAccount
+        accounts = db.query(StorageAccount).filter(
+            StorageAccount.family_id == family.id,
+            StorageAccount.status == "active",
+        ).order_by(StorageAccount.priority.asc()).all()
+
+        result = []
+        for acct in accounts:
+            cfg = (acct.config or {}).copy()
+            cfg["vault_folder_id"] = acct.vault_folder_id
+            cfg["family_id"] = family.id
+            cfg["storage_account_id"] = acct.id
+            cfg["email"] = acct.email
+            result.append(cfg)
+        return result
+
+    def select_target_account(self, family, file_size: int, db: Session):
+        from models import StorageAccount
+        accounts = db.query(StorageAccount).filter(
+            StorageAccount.family_id == family.id,
+            StorageAccount.status == "active",
+        ).all()
+
+        if not accounts and family:
+            # Fallback for legacy setups or unit test fixtures: auto-create default active account
+            cfg = family.storage_config or {}
+            g_cfg = cfg.get("google", cfg) if isinstance(cfg, dict) else {}
+            acct = StorageAccount(
+                family_id=family.id,
+                provider="google",
+                email=f"{family.name} (Google)",
+                vault_folder_id=family.vault_folder_id,
+                status="active",
+                priority=0
+            )
+            acct.config = g_cfg if isinstance(g_cfg, dict) else {}
+            db.add(acct)
+            db.commit()
+            accounts = [acct]
+
+        candidates = []
+        for acct in accounts:
+            free = self._get_or_refresh_free_space(acct, db)
+            if free is None:
+                # Unlimited Workspace account or unknown quota limit / mock provider
+                candidates.append((float('inf'), acct))
+            elif free >= file_size:
+                candidates.append((free, acct))
+
+        if not candidates:
+            return None
+        # Most free space wins — tie-breaker is lower priority number
+        candidates.sort(key=lambda pair: (-pair[0], pair[1].priority))
+        return candidates[0][1]
+
+    def _get_or_refresh_free_space(self, acct, db: Session) -> Optional[int]:
+        now = datetime.now(timezone.utc)
+        QUOTA_CACHE_TTL_SECONDS = 300
+        if acct.quota_checked_at and (now - acct.quota_checked_at).total_seconds() < QUOTA_CACHE_TTL_SECONDS:
+            if acct.cached_quota_total is None:
+                return None
+            return acct.cached_quota_total - (acct.cached_quota_used or 0)
+        try:
+            if hasattr(self.providers["google"], "get_quota"):
+                total, used = self.providers["google"].get_quota(acct.config, db=db)
+                acct.cached_quota_total = total
+                acct.cached_quota_used = used
+                acct.quota_checked_at = now
+                db.commit()
+                return (total - used) if total is not None else None
+            return None
+        except Exception as e:
+            logger.warning(f"Failed to refresh free space for storage account {acct.id}: {e}")
+            return None
+
+    def _resolve_account_config(self, file, db: Session) -> Optional[dict]:
+        if file.storage_provider == "google":
+            if file.storage_account_id:
+                from models import StorageAccount
+                acct = db.query(StorageAccount).get(file.storage_account_id)
+                if acct:
+                    cfg = (acct.config or {}).copy()
+                    cfg["vault_folder_id"] = acct.vault_folder_id
+                    cfg["family_id"] = file.family_id
+                    cfg["storage_account_id"] = acct.id
+                    return cfg
+            # Fallback to legacy single account config
+            family_config = self.get_family_config(file.family, db)
+            return family_config.get("google", {})
+        return {}
+
     def read_file(self, file, family_config: dict, db = None) -> bytes:
         provider_name = file.storage_provider or "local"
         cascade_order = self._cascade_from(provider_name)
 
         for p_name in cascade_order:
             try:
-                cfg = family_config.get(p_name, {})
-                f_id = None
+                cfg = {}
                 if p_name == "local":
+                    cfg = family_config.get("local", {})
                     f_id = file.local_file_id or (file._file_id if file.storage_provider == "local" or not file.storage_provider else None)
                 elif p_name == "google":
+                    cfg = self._resolve_account_config(file, db) if db else family_config.get("google", {})
                     f_id = file.google_drive_file_id or (file.cloud_file_id if file.storage_provider == "google" else None) or (file._file_id if file.storage_provider == "google" else None)
 
                 if not f_id:
@@ -134,11 +227,12 @@ class StorageManager:
 
         for p_name in cascade_order:
             try:
-                cfg = family_config.get(p_name, {})
-                f_id = None
+                cfg = {}
                 if p_name == "local":
+                    cfg = family_config.get("local", {})
                     f_id = file.local_file_id or (file._file_id if file.storage_provider == "local" or not file.storage_provider else None)
                 elif p_name == "google":
+                    cfg = self._resolve_account_config(file, db) if db else family_config.get("google", {})
                     f_id = file.google_drive_file_id or (file.cloud_file_id if file.storage_provider == "google" else None) or (file._file_id if file.storage_provider == "google" else None)
 
                 if not f_id:
@@ -174,7 +268,7 @@ class StorageManager:
     def get_thumbnail_url(self, file, family_config: dict, db = None) -> Optional[str]:
         provider_name = file.storage_provider or "local"
         if provider_name == "google":
-            cfg = family_config.get("google", {})
+            cfg = self._resolve_account_config(file, db) if db else family_config.get("google", {})
             f_id = file.google_drive_file_id or (file.cloud_file_id if file.storage_provider == "google" else None) or (file._file_id if file.storage_provider == "google" else None)
             if f_id:
                 try:
@@ -187,7 +281,7 @@ class StorageManager:
     def stream_thumbnail(self, file, family_config: dict, db = None):
         provider_name = file.storage_provider or "local"
         if provider_name == "google":
-            cfg = family_config.get("google", {})
+            cfg = self._resolve_account_config(file, db) if db else family_config.get("google", {})
             f_id = file.google_drive_file_id or (file.cloud_file_id if file.storage_provider == "google" else None) or (file._file_id if file.storage_provider == "google" else None)
             if f_id:
                 try:
@@ -200,7 +294,7 @@ class StorageManager:
     def get_direct_download_url(self, file, family_config: dict, db = None) -> Optional[str]:
         provider_name = file.storage_provider or "local"
         if provider_name == "google":
-            cfg = family_config.get("google", {})
+            cfg = self._resolve_account_config(file, db) if db else family_config.get("google", {})
             f_id = file.google_drive_file_id or (file.cloud_file_id if file.storage_provider == "google" else None) or (file._file_id if file.storage_provider == "google" else None)
             if f_id:
                 try:
@@ -282,23 +376,30 @@ class StorageManager:
             provider = config.get("storage_provider", "local")
             mimetype = file.file_type or "application/octet-stream"
 
-            # Single provider sync
+            # Check availability first (handles mock availability checks in tests)
             availability = self.check_availability(config, db=db)
-            
-            # Determine target provider based on active config or fallback
-            target = None
-            if provider == "google":
-                target = "google"
-            else:
-                # Fallback for legacy test cases where provider might be "local" or not set,
-                # but file has pending_sync = True
-                if availability.get("google"):
-                    target = "google"
-
-            if not target or not availability.get(target):
+            if not availability.get("google"):
                 skipped += 1
                 logger.warning({
                     "message":   "Cloud provider unavailable, releasing lease",
+                    "file_id":   file.file_id,
+                    "family_id": file.family_id,
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                })
+                db.query(File).filter(File.id == file.id).update({
+                    "lock_acquired_at": None,
+                    "lock_holder": None
+                }, synchronize_session=False)
+                db.commit()
+                continue
+
+            # Determine target storage account
+            target_account = self.select_target_account(file.family, file.size_bytes, db)
+
+            if not target_account:
+                skipped += 1
+                logger.warning({
+                    "message":   "No active cloud storage account with sufficient quota available, releasing lease",
                     "file_id":   file.file_id,
                     "family_id": file.family_id,
                     "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -327,15 +428,19 @@ class StorageManager:
                 continue
 
             try:
-                target_config = config.get(target, {})
+                target_config = (target_account.config or {}).copy()
+                target_config["vault_folder_id"] = target_account.vault_folder_id
+                target_config["family_id"] = file.family_id
+                target_config["storage_account_id"] = target_account.id
+
                 if file.folder_id is not None:
-                    target_vault_id = ensure_folder_cloud_id(file.folder_id, target, file.family, db)
+                    target_vault_id = ensure_folder_cloud_id(file.folder_id, "google", file.family, db)
                     target_username = None
                 else:
-                    target_vault_id = config.get(target, {}).get("vault_folder_id") or file.family.vault_folder_id
+                    target_vault_id = target_account.vault_folder_id or file.family.vault_folder_id
                     target_username = None
 
-                cloud_result = self.providers[target].upload_file(
+                cloud_result = self.providers["google"].upload_file(
                     config=target_config,
                     vault_folder_id=target_vault_id,
                     filename=file.filename,
@@ -347,16 +452,16 @@ class StorageManager:
 
                 old_local_file_id = file.local_file_id
                 
-                if target == "google":
-                    file.google_drive_file_id = cloud_result["cloud_file_id"]
-                    file.primary_storage = "google"
+                file.google_drive_file_id = cloud_result["cloud_file_id"]
+                file.primary_storage = "google"
+                file.storage_account_id = target_account.id
                     
                 file.cloud_file_id = cloud_result["cloud_file_id"]
                 file.cloud_link = cloud_result.get("cloud_link")
-                file.storage_provider = target
+                file.storage_provider = "google"
                 file.pending_sync = False
                 file.pending_sync_at = None
-                file.synced_to = target
+                file.synced_to = "google"
                 file.lock_acquired_at = None
                 file.lock_holder = None
                 file.sync_retry_count = 0
@@ -381,7 +486,7 @@ class StorageManager:
                 failed += 1
                 logger.error({
                     "error":     str(e),
-                    "service":   target,
+                    "service":   "google",
                     "file_id":   file.file_id,
                     "family_id": file.family_id,
                     "filename":  file.filename,
@@ -400,6 +505,86 @@ class StorageManager:
             "skipped": skipped,
             "total":   len(pending_files),
         }
+
+    def migrate_account_files(self, account_id: int, db: Session):
+        """
+        Migrates files stored on a disconnecting StorageAccount to another active account.
+        """
+        from models import File, StorageAccount
+        acct = db.query(StorageAccount).get(account_id)
+        if not acct:
+            return
+
+        files = db.query(File).filter(
+            File.storage_account_id == account_id,
+            File.deleted_at == None
+        ).all()
+
+        logger.info(f"Account Disconnect Migration: Starting migration of {len(files)} files for account {account_id}")
+
+        for file in files:
+            try:
+                # 1. Download file content from current account
+                content = self.read_file(file, {}, db=db)
+                old_cloud_file_id = file.google_drive_file_id or file.cloud_file_id
+
+                # 2. Select target replacement account
+                target_acct = self.select_target_account(file.family, file.size_bytes, db)
+                if target_acct and target_acct.id != account_id:
+                    target_config = (target_acct.config or {}).copy()
+                    target_config["vault_folder_id"] = target_acct.vault_folder_id
+                    target_config["family_id"] = file.family_id
+                    target_config["storage_account_id"] = target_acct.id
+
+                    cloud_result = self.providers["google"].upload_file(
+                        config=target_config,
+                        vault_folder_id=target_acct.vault_folder_id,
+                        filename=file.filename,
+                        file_content=content,
+                        mimetype=file.file_type or "application/octet-stream",
+                        db=db
+                    )
+                    file.storage_account_id = target_acct.id
+                    file.google_drive_file_id = cloud_result["cloud_file_id"]
+                    file.cloud_file_id = cloud_result["cloud_file_id"]
+                    file.cloud_link = cloud_result.get("cloud_link")
+                else:
+                    # Fallback: promote back to local storage
+                    local_config = self.get_family_config(file.family, db).get("local", {})
+                    local_res = self.providers["local"].upload_file(
+                        config=local_config,
+                        vault_folder_id=local_config.get("vault_folder_id"),
+                        filename=file.filename,
+                        file_content=content,
+                        mimetype=file.file_type or "application/octet-stream"
+                    )
+                    file.storage_provider = "local"
+                    file.storage_account_id = None
+                    file.local_file_id = local_res["cloud_file_id"]
+                    file.google_drive_file_id = None
+                    file.cloud_file_id = None
+                    file.pending_sync = True
+
+                db.commit()
+
+                # Delete from old account if possible
+                try:
+                    old_cfg = (acct.config or {}).copy()
+                    if old_cloud_file_id:
+                        self.providers["google"].delete_file(old_cfg, old_cloud_file_id, db=db)
+                except Exception as del_err:
+                    logger.warning(f"Failed to delete file {old_cloud_file_id} from disconnecting account {account_id}: {del_err}")
+
+            except Exception as file_err:
+                logger.error(f"Failed to migrate file {file.id} from disconnecting account {account_id}: {file_err}")
+
+        # Check if 0 files remain
+        remaining = db.query(File).filter(File.storage_account_id == account_id).count()
+        if remaining == 0:
+            acct.status = "disconnected"
+            acct.disconnected_at = datetime.now(timezone.utc)
+            db.commit()
+            logger.info(f"Account Disconnect Migration: Successfully disconnected account {account_id}")
 
     def delete_file(self, file, family_config: dict, db: Session) -> dict:
         file.deleted_at   = datetime.now(timezone.utc)

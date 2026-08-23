@@ -385,11 +385,44 @@ const FamDocAPI = {
       return FamDocAPI.request("/api/storage/config");
     },
 
-    async getGoogleAuthUrl(clientId, clientSecret) {
+    async getAccounts() {
+      return FamDocAPI.request("/api/storage/accounts");
+    },
+
+    async getGoogleAuthUrl(clientId, clientSecret, action = "connect") {
       return FamDocAPI.request("/api/storage/oauth/url", {
         method: "POST",
-        body: JSON.stringify({ client_id: clientId || null, client_secret: clientSecret || null })
+        body: JSON.stringify({
+          client_id: clientId || null,
+          client_secret: clientSecret || null,
+          action: action || "connect"
+        })
       });
+    },
+
+    async updateAccount(accountId, payload) {
+      const result = await FamDocAPI.request(`/api/storage/accounts/${accountId}`, {
+        method: "PATCH",
+        body: JSON.stringify(payload)
+      });
+      ApiCache.invalidateOnMutation();
+      return result;
+    },
+
+    async disconnectAccount(accountId) {
+      const result = await FamDocAPI.request(`/api/storage/accounts/${accountId}/disconnect`, {
+        method: "POST"
+      });
+      ApiCache.invalidateOnMutation();
+      return result;
+    },
+
+    async deleteAccount(accountId) {
+      const result = await FamDocAPI.request(`/api/storage/accounts/${accountId}`, {
+        method: "DELETE"
+      });
+      ApiCache.invalidateOnMutation();
+      return result;
     },
 
     async updateMode(storageProvider) {

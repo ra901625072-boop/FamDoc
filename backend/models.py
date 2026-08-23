@@ -70,6 +70,8 @@ class Family(Base):
     members = relationship("FamilyMember", back_populates="family", cascade="all, delete-orphan")
     folders = relationship("Folder", back_populates="family", cascade="all, delete-orphan")
     files = relationship("File", back_populates="family", cascade="all, delete-orphan")
+    storage_accounts = relationship("StorageAccount", back_populates="family", cascade="all, delete-orphan")
+
 
 
 class FamilyMember(Base):
@@ -169,11 +171,55 @@ class File(Base):
     lock_acquired_at = Column(DateTime(timezone=True), nullable=True, index=True)
     lock_holder = Column(String(255), nullable=True, index=True)
     sync_retry_count = Column(Integer, default=0, nullable=False)
+    storage_account_id = Column(Integer, ForeignKey("storage_accounts.id", ondelete="SET NULL"), nullable=True, index=True)
 
     # Relationships
     family = relationship("Family", back_populates="files")
     uploader = relationship("User", back_populates="uploaded_files", foreign_keys=[uploader_id])
     folder = relationship("Folder", back_populates="files")
+    storage_account = relationship("StorageAccount", back_populates="files")
+
+
+class StorageAccount(Base):
+    __tablename__ = "storage_accounts"
+    __table_args__ = (
+        UniqueConstraint('family_id', 'provider', 'external_account_id', name='uq_storage_account_identity'),
+    )
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    family_id = Column(String(36), ForeignKey("families.id", ondelete="CASCADE"), nullable=False, index=True)
+    provider = Column(String(50), nullable=False) # "google"
+    external_account_id = Column(String(255), nullable=True) # Google's stable user id
+    email = Column(String(255), nullable=True)
+    label = Column(String(100), nullable=True)
+    vault_folder_id = Column(String(255), nullable=True)
+    _config = Column("config", String(4096), nullable=True)
+    status = Column(String(20), default="active", nullable=False) # active | error | disconnecting | disconnected
+    priority = Column(Integer, default=0, nullable=False)
+    cached_quota_total = Column(Integer, nullable=True)
+    cached_quota_used = Column(Integer, nullable=True)
+    quota_checked_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    disconnected_at = Column(DateTime(timezone=True), nullable=True)
+
+    # Relationships
+    family = relationship("Family", back_populates="storage_accounts")
+    files = relationship("File", back_populates="storage_account")
+
+    @property
+    def config(self) -> Optional[dict]:
+        if not self._config:
+            return None
+        from utils.crypto import decrypt_config
+        return decrypt_config(self._config)
+
+    @config.setter
+    def config(self, value: Optional[dict]):
+        if value is None:
+            self._config = None
+        else:
+            from utils.crypto import encrypt_config
+            self._config = encrypt_config(value)
 
 
 class AuditLog(Base):

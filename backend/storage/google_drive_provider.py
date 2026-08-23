@@ -7,6 +7,7 @@ from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload, MediaIoBaseDownload
 from googleapiclient.errors import HttpError
+from typing import Optional
 from storage.base import StorageProvider
 
 logger = logging.getLogger(__name__)
@@ -43,7 +44,31 @@ class GoogleDriveProvider(StorageProvider):
                 }
                 r = requests.post(url, data=payload, timeout=10)
                 if r.status_code != 200:
-                    raise Exception(f"Failed to refresh Google token: {r.text}")
+                    err_msg = r.text
+                    if "invalid_grant" in err_msg.lower():
+                        storage_account_id = config.get("storage_account_id")
+                        if storage_account_id:
+                            try:
+                                if db:
+                                    from models import StorageAccount
+                                    acct = db.query(StorageAccount).get(storage_account_id)
+                                    if acct:
+                                        acct.status = "error"
+                                        db.commit()
+                                else:
+                                    from database import SessionLocal
+                                    from models import StorageAccount
+                                    session = SessionLocal()
+                                    try:
+                                        acct = session.query(StorageAccount).get(storage_account_id)
+                                        if acct:
+                                            acct.status = "error"
+                                            session.commit()
+                                    finally:
+                                        session.close()
+                            except Exception:
+                                pass
+                    raise Exception(f"Failed to refresh Google token: {err_msg}")
                 res = r.json()
                 access_token = res["access_token"]
                 expires_in = res["expires_in"]
@@ -53,8 +78,27 @@ class GoogleDriveProvider(StorageProvider):
                 config["access_token"] = access_token
                 config["expires_at"] = expires_at
                 
-                # Update DB if family_id is provided
-                if family_id:
+                # Update DB if storage_account_id or family_id is provided
+                storage_account_id = config.get("storage_account_id")
+                if storage_account_id:
+                    if db:
+                        from models import StorageAccount
+                        acct = db.query(StorageAccount).get(storage_account_id)
+                        if acct:
+                            acct.config = config
+                            db.commit()
+                    else:
+                        from database import SessionLocal
+                        from models import StorageAccount
+                        session = SessionLocal()
+                        try:
+                            acct = session.query(StorageAccount).get(storage_account_id)
+                            if acct:
+                                acct.config = config
+                                session.commit()
+                        finally:
+                            session.close()
+                elif family_id:
                     if db:
                         import models
                         family = db.query(models.Family).filter(models.Family.id == family_id).first()
@@ -85,6 +129,16 @@ class GoogleDriveProvider(StorageProvider):
         # cache_discovery=False prevents stale cached discovery docs from causing issues
         service = build('drive', 'v3', credentials=creds, static_discovery=True, cache_discovery=False)
         return service
+
+    def get_quota(self, config: dict, db=None) -> tuple[Optional[int], int]:
+        def _quota(service):
+            about = service.about().get(fields="storageQuota").execute()
+            q = about.get("storageQuota", {})
+            limit = q.get("limit")
+            usage = int(q.get("usage", 0))
+            return (int(limit) if limit else None, usage)
+        return self._execute_with_retry(_quota, config, db)
+
 
     def _execute_with_retry(self, request_fn, config, db=None, max_retries=3):
         """
