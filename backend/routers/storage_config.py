@@ -32,6 +32,28 @@ def get_storage_config(
         models.StorageAccount.family_id == family.id
     ).order_by(models.StorageAccount.priority.asc(), models.StorageAccount.created_at.asc()).all()
 
+    # Self-healing fallback: If family has google storage configured but no storage_accounts rows exist, create it
+    if not accounts and family.storage_config:
+        g_cfg = family.storage_config.get("google", family.storage_config) if isinstance(family.storage_config, dict) else {}
+        if g_cfg.get("client_id") and (g_cfg.get("refresh_token") or g_cfg.get("access_token")):
+            acct = models.StorageAccount(
+                family_id=family.id,
+                provider="google",
+                email=g_cfg.get("email") or f"{family.name} (Google)",
+                label="Primary Google Drive",
+                vault_folder_id=family.vault_folder_id,
+                status="active",
+                priority=0
+            )
+            acct.config = g_cfg
+            db.add(acct)
+            try:
+                db.commit()
+                db.refresh(acct)
+                accounts = [acct]
+            except Exception:
+                db.rollback()
+
     active_accounts = [a for a in accounts if a.status == "active"]
     google_configured = len(active_accounts) > 0 or bool(config.get("google", {}).get("refresh_token"))
     provider = family.storage_provider or "local"
@@ -213,9 +235,9 @@ def get_oauth_url(
         "client_id": client_id,
         "redirect_uri": redirect_uri,
         "response_type": "code",
-        "scope": "https://www.googleapis.com/auth/drive.file",
+        "scope": "https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email openid",
         "access_type": "offline",
-        "prompt": "consent",
+        "prompt": "select_account consent",
         "state": state_token
     }
     auth_url = "https://accounts.google.com/o/oauth2/v2/auth?" + urllib.parse.urlencode(params)
@@ -289,13 +311,25 @@ def oauth2callback(
         "family_id": family.id
     }
 
-    # Query Google about endpoint to get stable external user ID and email
+    # Query Google endpoints to get stable external user ID and email
     ext_id = None
     email = None
     quota_limit = None
     quota_usage = None
 
     try:
+        # 1. Fetch user email and ID from standard OAuth userinfo endpoint
+        user_res = requests.get(
+            "https://www.googleapis.com/oauth2/v3/userinfo",
+            headers={"Authorization": f"Bearer {access_token}"},
+            timeout=10
+        )
+        if user_res.status_code == 200:
+            u_data = user_res.json()
+            email = u_data.get("email")
+            ext_id = u_data.get("sub") or email
+
+        # 2. Fetch Drive storage quota and fallback user info
         about_res = requests.get(
             "https://www.googleapis.com/drive/v3/about?fields=user,storageQuota",
             headers={"Authorization": f"Bearer {access_token}"},
@@ -304,8 +338,10 @@ def oauth2callback(
         if about_res.status_code == 200:
             about_data = about_res.json()
             user_info = about_data.get("user", {})
-            ext_id = user_info.get("permissionId") or user_info.get("emailAddress")
-            email = user_info.get("emailAddress")
+            if not ext_id:
+                ext_id = user_info.get("permissionId") or user_info.get("emailAddress")
+            if not email:
+                email = user_info.get("emailAddress")
             sq = about_data.get("storageQuota", {})
             if sq.get("limit"):
                 quota_limit = int(sq["limit"])
