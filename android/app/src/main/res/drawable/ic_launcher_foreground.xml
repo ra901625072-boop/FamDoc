@@ -1,0 +1,73 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- House Roof & Arch Shelter Outline -->
+    <path
+        android:strokeColor="#0066FF"
+        android:strokeWidth="6"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="#00000000"
+        android:pathData="M26,68 L26,45 L54,23 L82,45 L82,68" />
+
+    <!-- Left Parent (Head & Torso) -->
+    <path
+        android:fillColor="#0052FF"
+        android:pathData="M43,43 m-6.5,0 a6.5,6.5 0 1,0 13,0 a6.5,6.5 0 1,0 -13,0" />
+    <path
+        android:fillColor="#0052FF"
+        android:pathData="M31,68 L53,68 L53,55 C53,50 49,49 42,49 C35,49 31,50 31,55 Z" />
+
+    <!-- Right Parent (Head & Torso) -->
+    <path
+        android:fillColor="#0052FF"
+        android:pathData="M65,43 m-6.5,0 a6.5,6.5 0 1,0 13,0 a6.5,6.5 0 1,0 -13,0" />
+    <path
+        android:fillColor="#0052FF"
+        android:pathData="M55,68 L77,68 L77,55 C77,50 73,49 66,49 C59,49 55,50 55,55 Z" />
+
+    <!-- Center Child (Head & Torso) -->
+    <path
+        android:fillColor="#0052FF"
+        android:pathData="M54,51 m-4.5,0 a4.5,4.5 0 1,0 9,0 a4.5,4.5 0 1,0 -9,0" />
+    <path
+        android:fillColor="#0052FF"
+        android:pathData="M45,68 L63,68 L63,59 C63,56 60,55 54,55 C48,55 45,56 45,59 Z" />
+
+    <!-- Sheet of Document Paper Behind Folder on Right -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:strokeColor="#0052FF"
+        android:strokeWidth="1.5"
+        android:pathData="M54,55 L78,55 A2,2 0 0,1 80,57 L80,68 L54,68 Z" />
+
+    <!-- Foreground Document Vault Folder -->
+    <path
+        android:fillColor="#0052FF"
+        android:pathData="M27,62 L48,62 L52,65 L81,65 A4,4 0 0,1 85,69 L81,84 A5,5 0 0,1 76,88 L32,88 A5,5 0 0,1 27,84 L24,66 A4,4 0 0,1 27,62 Z" />
+
+    <!-- White Padlock Shackle -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2.8"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M49,74 C49,70.5 59,70.5 59,74 L59,76 L49,76 Z" />
+
+    <!-- White Padlock Body -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M46,75 L62,75 A2,2 0 0,1 64,77 L64,83 A2,2 0 0,1 62,85 L46,85 A2,2 0 0,1 44,83 L44,77 A2,2 0 0,1 46,75 Z" />
+
+    <!-- Padlock Keyhole in Blue -->
+    <path
+        android:fillColor="#0052FF"
+        android:pathData="M54,78 m-1.5,0 a1.5,1.5 0 1,0 3,0 a1.5,1.5 0 1,0 -3,0" />
+    <path
+        android:fillColor="#0052FF"
+        android:pathData="M53,78 L55,78 L54.5,82 L53.5,82 Z" />
+
+</vector>

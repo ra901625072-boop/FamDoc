@@ -34,8 +34,8 @@ graph TD
 
 ### Decoupled Routing Patterns
 To connect the frontend client and the backend server when hosted across different domain names:
-*   **Option A (Proxy Rewrite):** A proxy setup defined in [vercel.json](file:///d:/FDMS/frontend/vercel.json) redirects all `/api/*` requests on the frontend domain to the backend server domain. This naturally bypasses Cross-Origin Resource Sharing (CORS) security issues and allows cookies and tokens to be handled seamlessly.
-*   **Option B (Direct CORS Requests):** The frontend sets `API_BASE_URL` in [api.js](file:///d:/FDMS/frontend/js/api.js) to the backend API domain, while the backend configures `CORS_ORIGINS` in [config.py](file:///d:/FDMS/backend/config.py) to allow requests from the frontend domain.
+*   **Option A (Proxy Rewrite):** A proxy setup defined in [`vercel.json`](../frontend/vercel.json) redirects all `/api/*` requests on the frontend domain to the backend server domain. This naturally bypasses Cross-Origin Resource Sharing (CORS) security issues and allows cookies and tokens to be handled seamlessly.
+*   **Option B (Direct CORS Requests):** The frontend sets `API_BASE_URL` in [`api.js`](../frontend/js/api.js) to the backend API domain, while the backend configures `CORS_ORIGINS` in [`config.py`](../backend/config.py) to allow requests from the frontend domain.
 
 ---
 

@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">FamDoc</string>
+    <string name="app_tagline">Family Document Management System</string>
+    <string name="connecting_server">Connecting to secure vault...</string>
+    <string name="server_waking_up">Waking up server, please hold on...</string>
+    <string name="offline_mode">You are currently offline. Viewing cached files.</string>
+</resources>
