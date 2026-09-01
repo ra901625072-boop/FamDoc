@@ -183,11 +183,24 @@ async def upload_file(
         models.File.deleted_at == None
     ).scalar() or 0
 
-    if used_bytes + file_size > family.storage_quota_bytes:
-        quota_mb = family.storage_quota_bytes / (1024 * 1024)
+    effective_quota = family.storage_quota_bytes
+    if family.storage_provider == "google":
+        active_accts = db.query(models.StorageAccount).filter(
+            models.StorageAccount.family_id == family.id,
+            models.StorageAccount.status == "active"
+        ).all()
+        acct_total = sum(a.cached_quota_total for a in active_accts if a.cached_quota_total)
+        if acct_total > 0:
+            effective_quota = acct_total
+
+    if effective_quota and (used_bytes + file_size > effective_quota):
+        if effective_quota >= 1024 * 1024 * 1024:
+            quota_str = f"{effective_quota / (1024 * 1024 * 1024):.1f} GB"
+        else:
+            quota_str = f"{effective_quota / (1024 * 1024):.1f} MB"
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Storage quota exceeded. Your family is allowed up to {quota_mb:.1f} MB of total vault storage."
+            detail=f"Storage quota exceeded. Your family is allowed up to {quota_str} of total vault storage."
         )
 
     manager = StorageManager()

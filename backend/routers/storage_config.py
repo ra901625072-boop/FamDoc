@@ -45,9 +45,9 @@ def get_storage_config(
         if acct.cached_quota_used:
             total_used += acct.cached_quota_used
 
-    # Cap by family.storage_quota_bytes if custom cap set lower
-    if family.storage_quota_bytes and total_cap > family.storage_quota_bytes:
-        total_cap = family.storage_quota_bytes
+    # If no storage account quota is cached or in local mode, default to family quota
+    if total_cap == 0:
+        total_cap = family.storage_quota_bytes or 524288000
 
     account_responses = [schemas.StorageAccountResponse.model_validate(acct) for acct in accounts]
     

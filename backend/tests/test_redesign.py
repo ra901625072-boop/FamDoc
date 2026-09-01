@@ -289,6 +289,54 @@ class TestBackendRedesign(unittest.TestCase):
             self.assertEqual(res2.status_code, 400)
             self.assertIn("Storage quota exceeded", res2.json().get("detail", ""))
 
+    def test_google_drive_expanded_storage_quota(self):
+        # Configure family with default 500 MB quota and google provider
+        self.family.storage_quota_bytes = 524288000
+        self.family.storage_provider = "google"
+        self.db.commit()
+
+        # Add an active Google Drive StorageAccount with 15 GB quota
+        google_acct = models.StorageAccount(
+            family_id=self.family.id,
+            provider="google",
+            email="dad@gmail.com",
+            label="Dad's Drive",
+            status="active",
+            priority=0,
+            cached_quota_total=15 * 1024 * 1024 * 1024, # 15 GB
+            cached_quota_used=1 * 1024 * 1024 * 1024,   # 1 GB
+        )
+        self.db.add(google_acct)
+        self.db.commit()
+
+        admin_token = auth.create_access_token(data={"sub": self.admin.email, "id": self.admin.id, "role": self.admin.role})
+        headers = {"Authorization": f"Bearer {admin_token}"}
+
+        # Verify Dashboard stats return expanded 15 GB quota instead of 500 MB
+        dash_res = self.client.get("/api/dashboard/stats", headers=headers)
+        self.assertEqual(dash_res.status_code, 200)
+        self.assertEqual(dash_res.json().get("storage_quota_bytes"), 15 * 1024 * 1024 * 1024)
+
+        # Verify Storage config returns expanded 15 GB total capacity
+        cfg_res = self.client.get("/api/storage/config", headers=headers)
+        self.assertEqual(cfg_res.status_code, 200)
+        self.assertEqual(cfg_res.json().get("total_capacity_bytes"), 15 * 1024 * 1024 * 1024)
+
+        # Helper payload for uploading files
+        def upload_file_mock(filename, content_bytes):
+            if filename.endswith(".pdf") and len(content_bytes) >= 4:
+                content_bytes = b"%PDF" + content_bytes[4:]
+            file_payload = {"file": (filename, content_bytes, "application/pdf")}
+            return self.client.post("/api/files/upload", files=file_payload, headers=headers)
+
+        from unittest.mock import patch
+        with patch("utils.virus_scan.scan_file_for_viruses", return_value=True), \
+             patch("storage.storage_manager.StorageManager.write_file", return_value={"file_id": "test-uuid-expanded"}), \
+             patch("storage.storage_manager.StorageManager.initialize_family_storage", return_value=None):
+            # Upload a file larger than the local quota (e.g. 2000 bytes) -> Should succeed
+            res = upload_file_mock("large_cloud_doc.pdf", b"x" * 2000)
+            self.assertEqual(res.status_code, 201)
+
     def test_two_phase_sync_safety_and_recovery(self):
         # Insert a file pending sync with local_file_id
         test_file = models.File(

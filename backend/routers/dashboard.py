@@ -103,7 +103,7 @@ def get_dashboard_stats(
         ).all()
         acct_total = sum(a.cached_quota_total for a in active_accts if a.cached_quota_total)
         if acct_total > 0:
-            storage_quota_bytes = min(acct_total, family.storage_quota_bytes) if family.storage_quota_bytes else acct_total
+            storage_quota_bytes = acct_total
 
     
     active_files = db.query(models.File.file_type, models.File.filename, models.File.size_bytes).filter(
