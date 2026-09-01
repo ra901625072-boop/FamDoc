@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Policy - Family Document Vault (FDMS)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    body {
+      background-color: #f8fafc;
+      color: #1e293b;
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      line-height: 1.6;
+      padding: 2rem 1rem;
+      margin: 0;
+    }
+    .policy-container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 2.5rem;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+    }
+    h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 2rem;
+      color: #0f172a;
+      margin-bottom: 0.5rem;
+    }
+    h2 {
+      font-size: 1.25rem;
+      color: #1e293b;
+      margin-top: 1.75rem;
+      margin-bottom: 0.5rem;
+      border-bottom: 1px solid #f1f5f9;
+      padding-bottom: 0.35rem;
+    }
+    p, li {
+      font-size: 0.92rem;
+      color: #475569;
+    }
+    .badge-scope {
+      background-color: #eff6ff;
+      color: #1d4ed8;
+      border: 1px solid #bfdbfe;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 0.82rem;
+    }
+    .nav-back {
+      display: inline-block;
+      margin-bottom: 1.5rem;
+      color: #3b82f6;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.88rem;
+    }
+    .nav-back:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="policy-container">
+    <a href="/" class="nav-back">← Back to Family Document Vault</a>
+    <h1>Privacy Policy</h1>
+    <p><em>Last updated: September 1, 2026</em></p>
+
+    <p>Family Document Management System (FDMS / "Family Document Vault") is dedicated to protecting the privacy and security of you and your family members. This Privacy Policy outlines how our application collects, uses, and safeguards information when you connect personal storage services, including Google Drive.</p>
+
+    <h2>1. Information We Collect</h2>
+    <ul>
+      <li><strong>Account Details:</strong> Basic profile information including email address and username used during family vault registration.</li>
+      <li><strong>Google Account Information:</strong> When you connect Google Drive, we collect your Google email address and public account ID solely to identify your connected drive in the family roster.</li>
+      <li><strong>Uploaded Document Metadata:</strong> File names, file sizes, document categories, and timestamps to organize family archives.</li>
+    </ul>
+
+    <h2>2. Google Drive API Usage & Data Isolation</h2>
+    <p>FDMS accesses Google Drive strictly through the restricted <span class="badge-scope">https://www.googleapis.com/auth/drive.file</span> scope.</p>
+    <ul>
+      <li><strong>Strict App Isolation:</strong> FDMS only accesses, creates, and modifies files and folders that were uploaded through FDMS. <strong>FDMS cannot see, read, modify, or delete your existing personal Google Drive files, photos, or emails.</strong></li>
+      <li><strong>No Data Sharing / Selling:</strong> We do not sell, rent, monetize, or transfer your personal files, Google user data, or document contents to third parties or advertising networks.</li>
+      <li><strong>Storage Pooling:</strong> The Google Drive API is used exclusively to store encrypted family documents and calculate available free storage quotas.</li>
+    </ul>
+
+    <h2>3. Data Retention and Deletion</h2>
+    <p>You can disconnect your personal Google Drive account at any time from the Cloud Storage settings page. Upon disconnection, your OAuth access tokens are permanently deleted from our system, and family files are safely transferred to other family drives.</p>
+
+    <h2>4. Security Measures</h2>
+    <p>All authentication tokens are securely encrypted in the database. Communications between your browser, backend server, and Google Cloud APIs occur exclusively over encrypted HTTPS/TLS connections.</p>
+
+    <h2>5. Contact Information</h2>
+    <p>If you have any questions or concerns regarding this Privacy Policy, please contact your family vault administrator or developer contact email.</p>
+  </div>
+</body>
+</html>

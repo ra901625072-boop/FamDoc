@@ -98,11 +98,16 @@ def get_storage_config(
     # Compute aggregate storage numbers
     total_cap = 0
     total_used = 0
+    user_contributed_cap = 0
+    user_has_connected = False
     for acct in active_accounts:
         if acct.cached_quota_total:
             total_cap += acct.cached_quota_total
         if acct.cached_quota_used:
             total_used += acct.cached_quota_used
+        if acct.user_id == current_user.id or (acct.email and current_user.email and acct.email.lower() == current_user.email.lower()):
+            user_has_connected = True
+            user_contributed_cap += (acct.cached_quota_total or 16106127360) # Default 15 GB
 
     # If no storage account quota is cached or in local mode, default to family quota
     if total_cap == 0:
@@ -110,7 +115,9 @@ def get_storage_config(
 
     account_responses = [serialize_storage_account(acct, db) for acct in accounts]
     
-    first_client_id = active_accounts[0].config.get("client_id") if active_accounts and active_accounts[0].config else config.get("google", {}).get("client_id")
+    from config import GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET
+    has_env = bool(GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET)
+    first_client_id = active_accounts[0].config.get("client_id") if active_accounts and active_accounts[0].config else (config.get("google", {}).get("client_id") or GOOGLE_CLIENT_ID)
     first_email = active_accounts[0].email if active_accounts else None
 
     return {
@@ -120,6 +127,9 @@ def get_storage_config(
         "folder_id": family.vault_folder_id,
         "client_id": first_client_id,
         "google_configured": google_configured,
+        "has_env_credentials": has_env,
+        "user_contributed_storage_bytes": user_contributed_cap,
+        "user_has_connected_account": user_has_connected,
         "accounts": account_responses,
         "total_capacity_bytes": total_cap,
         "total_used_bytes": total_used,
@@ -180,7 +190,7 @@ def update_storage_account(
 def disconnect_storage_account(
     account_id: int,
     background_tasks: BackgroundTasks,
-    current_user: models.User = Depends(auth.get_admin_user),
+    current_user: models.User = Depends(auth.get_current_user),
     db: Session = Depends(get_db)
 ):
     acct = db.query(models.StorageAccount).filter(
@@ -189,6 +199,11 @@ def disconnect_storage_account(
     ).first()
     if not acct:
         raise HTTPException(status_code=404, detail="Storage account not found")
+
+    # Allow if user is admin OR if this account belongs to current_user
+    is_owner = (acct.user_id == current_user.id) or (acct.email and current_user.email and acct.email.lower() == current_user.email.lower())
+    if current_user.role != "admin" and not is_owner:
+        raise HTTPException(status_code=403, detail="You can only disconnect your own connected storage drive.")
 
     if acct.status in ("disconnecting", "disconnected"):
         return {"status": acct.status, "message": "Account disconnect already in progress or completed"}
@@ -237,7 +252,7 @@ def delete_storage_account(
 @router.post("/oauth/url")
 def get_oauth_url(
     req: schemas.OAuthUrlRequest,
-    current_user: models.User = Depends(auth.get_admin_user),
+    current_user: models.User = Depends(auth.get_current_user),
     db: Session = Depends(get_db)
 ):
     family = db.query(models.Family).filter(models.Family.id == current_user.family_id).first()
@@ -252,6 +267,12 @@ def get_oauth_url(
         client_id = GOOGLE_CLIENT_ID
     if not client_secret and GOOGLE_CLIENT_SECRET:
         client_secret = GOOGLE_CLIENT_SECRET
+        
+    # Also check stored family config if not provided
+    if not client_id and family.storage_config:
+        client_id = family.storage_config.get("client_id") or family.storage_config.get("pending_client_id")
+    if not client_secret and family.storage_config:
+        client_secret = family.storage_config.get("client_secret") or family.storage_config.get("pending_client_secret")
         
     if not client_id or not client_secret:
         raise HTTPException(
@@ -269,6 +290,7 @@ def get_oauth_url(
     
     state_payload = {
         "family_id": family.id,
+        "user_id": current_user.id,
         "action": req.action or "connect",
         "client_id": client_id,
         "client_secret": client_secret,
@@ -324,6 +346,7 @@ def oauth2callback(
         try:
             payload = jwt.decode(state, JWT_SECRET, algorithms=[JWT_ALGORITHM])
             family_id = payload.get("family_id")
+            state_user_id = payload.get("user_id")
             action = payload.get("action", "connect")
             state_client_id = payload.get("client_id")
             state_client_secret = payload.get("client_secret")
@@ -456,9 +479,15 @@ def oauth2callback(
             
         active_config["vault_folder_id"] = vault_id
 
-        # Match member user in family by email
+        # Match member user in family by user_id from state or email
         matched_user = None
-        if email:
+        if state_user_id:
+            matched_user = db.query(models.User).filter(
+                models.User.id == state_user_id,
+                models.User.family_id == family.id
+            ).first()
+
+        if not matched_user and email:
             try:
                 matched_member = db.query(models.FamilyMember).filter(
                     models.FamilyMember.family_id == family.id
@@ -487,7 +516,7 @@ def oauth2callback(
             account_count = db.query(models.StorageAccount).filter(
                 models.StorageAccount.family_id == family.id
             ).count()
-            default_label = f"{matched_user.username}'s Drive" if (matched_user and matched_user.username) else f"Google Account #{account_count + 1}"
+            default_label = f"{matched_user.username}'s Drive" if (matched_user and matched_user.username) else f"Google Drive #{account_count + 1}"
             new_acct = models.StorageAccount(
                 family_id=family.id,
                 provider="google",
@@ -505,7 +534,7 @@ def oauth2callback(
             new_acct.config = active_config
             db.add(new_acct)
 
-        # Keep family model in sync with primary account
+        # Auto-activate Google Drive mode on family
         family.storage_provider = "google"
         family.vault_folder_id = vault_id
         family.storage_config = active_config

@@ -135,6 +135,18 @@
             </div>
           </div>
         </div>
+
+        <!-- Personal Cloud Storage Contribution Card -->
+        <div class="famdoc-card fd-fade-up" style="--fd-delay: 0.15s;" id="profile-storage-card">
+          <div class="famdoc-card-header">
+            <h2 class="famdoc-card-title"><i class="fab fa-google" style="color: #4285F4; margin-right: 0.5rem;"></i>Cloud Storage Contribution</h2>
+          </div>
+          <div id="profile-storage-box" style="padding: 0.5rem 0;">
+            <div class="empty-state" style="padding: 1rem 0;">
+              <i class="fas fa-spinner fa-spin state-icon loading"></i>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Family Code Setup / Regenerator Dialog -->
@@ -205,7 +217,109 @@
     if (emailInput) emailInput.value = currentUser.email;
     if (usernameInput) usernameInput.value = currentUser.username;
 
-    await loadFamilyDetails();
+    await Promise.all([
+      loadFamilyDetails(),
+      loadStorageContribution()
+    ]);
+  }
+
+  async function loadStorageContribution() {
+    const box = document.getElementById("profile-storage-box");
+    if (!box) return;
+
+    try {
+      const config = await FamDocAPI.storage.getConfig();
+      const accounts = config.accounts || [];
+      const userAccounts = accounts.filter(a => 
+        (a.user_id === currentUser.id) || (a.email && currentUser.email && a.email.toLowerCase() === currentUser.email.toLowerCase())
+      );
+      const activeAcct = userAccounts.find(a => a.status === "active");
+
+      if (activeAcct) {
+        const quotaTotal = activeAcct.cached_quota_total || (15 * 1024 * 1024 * 1024);
+        const quotaUsed = activeAcct.cached_quota_used || 0;
+        const percent = Math.min(100, Math.round((quotaUsed / quotaTotal) * 100));
+
+        box.innerHTML = `
+          <div style="background-color: var(--surface-paper-tint); border: 1px solid var(--border-paper-dark); border-radius: var(--radius-md); padding: 1rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+              <span class="status-badge-active"><i class="fas fa-check-circle"></i> Active (+15 GB)</span>
+              <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-ink);">${FamDocAPI.utils.escapeHtml(activeAcct.label || 'Google Drive')}</span>
+            </div>
+            <div style="font-size: 0.82rem; color: var(--text-ink-muted); margin-bottom: 0.75rem;">
+              Account: <strong>${FamDocAPI.utils.escapeHtml(activeAcct.email || '—')}</strong>
+            </div>
+            <div style="font-size: 0.76rem; color: var(--text-ink-muted); margin-bottom: 0.35rem; display: flex; justify-content: space-between;">
+              <span>Quota Used</span>
+              <span>${FamDocAPI.utils.formatBytes(quotaUsed)} of ${FamDocAPI.utils.formatBytes(quotaTotal)} (${percent}%)</span>
+            </div>
+            <div class="account-quota-bar-container" style="margin-bottom: 1rem;">
+              <div class="account-quota-fill" style="width: ${percent}%;"></div>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <a href="#/storage" class="btn btn-secondary btn-sm" style="font-size: 0.76rem; padding: 0.25rem 0.6rem;">
+                <i class="fas fa-chart-pie"></i> View Vault Pool
+              </a>
+              <button type="button" id="btn-profile-disconnect-drive" class="btn btn-secondary btn-sm" style="font-size: 0.76rem; padding: 0.25rem 0.6rem; color: #ef4444;">
+                <i class="fas fa-unlink"></i> Disconnect
+              </button>
+            </div>
+          </div>
+        `;
+
+        document.getElementById("btn-profile-disconnect-drive")?.addEventListener("click", async () => {
+          const confirmed = await FamDocAPI.utils.confirm({
+            title: "Disconnect Google Drive",
+            message: "Are you sure you want to disconnect your personal Google Drive from the family vault?",
+            confirmText: "Disconnect",
+            type: "danger"
+          });
+          if (confirmed) {
+            try {
+              await FamDocAPI.storage.disconnectAccount(activeAcct.id);
+              FamDocAPI.utils.showToast("Drive disconnect started.", "info");
+              await loadStorageContribution();
+            } catch (err) {
+              FamDocAPI.utils.showToast(err.message || "Failed to disconnect drive", "error");
+            }
+          }
+        });
+      } else {
+        box.innerHTML = `
+          <div style="background-color: var(--surface-paper-tint); border: 1px dashed var(--border-paper-dark); border-radius: var(--radius-md); padding: 1.25rem; text-align: center;">
+            <div style="font-weight: 600; font-size: 0.9rem; color: var(--text-ink); margin-bottom: 0.35rem;">
+              No Google Drive Connected
+            </div>
+            <p style="font-size: 0.8rem; color: var(--text-ink-muted); margin: 0 0 1rem 0;">
+              Share your free personal Google Drive to add +15 GB to the family vault pool.
+            </p>
+            <button type="button" id="btn-profile-connect-drive" class="btn btn-primary btn-sm" style="display: inline-flex; align-items: center; gap: 0.4rem; margin: auto;">
+              <i class="fab fa-google"></i> Connect My Google Drive (+15 GB)
+            </button>
+          </div>
+        `;
+
+        document.getElementById("btn-profile-connect-drive")?.addEventListener("click", async () => {
+          try {
+            FamDocAPI.utils.showToast("Redirecting to Google Sign-In...", "info");
+            const res = await FamDocAPI.storage.getGoogleAuthUrl("", "", "add");
+            if (res && res.url) {
+              window.location.href = res.url;
+            } else {
+              throw new Error("Failed to obtain OAuth authorization URL");
+            }
+          } catch (err) {
+            FamDocAPI.utils.showToast(err.message || "Failed to initiate Google connection", "error");
+          }
+        });
+      }
+    } catch (err) {
+      box.innerHTML = `
+        <div style="font-size: 0.8rem; color: var(--text-ink-muted);">
+          Could not load cloud storage contribution details.
+        </div>
+      `;
+    }
   }
 
   async function loadFamilyDetails() {

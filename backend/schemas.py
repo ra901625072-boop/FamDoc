@@ -159,6 +159,9 @@ class StorageConfigResponse(BaseModel):
     folder_id: Optional[str] = None # For Google Drive configuration verification
     client_id: Optional[str] = None # For Google OAuth client verification
     google_configured: Optional[bool] = False
+    has_env_credentials: Optional[bool] = False
+    user_contributed_storage_bytes: Optional[int] = 0
+    user_has_connected_account: Optional[bool] = False
     accounts: List[StorageAccountResponse] = []
     total_capacity_bytes: Optional[int] = 0
     total_used_bytes: Optional[int] = 0

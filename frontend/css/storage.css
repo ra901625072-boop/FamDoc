@@ -532,3 +532,119 @@
   gap: 0.75rem;
 }
 
+/* ==========================================================================
+   6. CREDENTIALS JSON DROPZONE & DIRECT COPY URI
+   ========================================================================== */
+.credentials-dropzone {
+  border: 2px dashed var(--border-paper-dark, #cbd5e1);
+  border-radius: var(--radius-md, 8px);
+  padding: 1.25rem;
+  text-align: center;
+  background-color: var(--surface-paper-tint, #f8fafc);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-bottom: 1.25rem;
+}
+
+.credentials-dropzone:hover,
+.credentials-dropzone.dragover {
+  border-color: #4285F4;
+  background-color: rgba(66, 133, 244, 0.04);
+}
+
+.credentials-dropzone-icon {
+  font-size: 1.75rem;
+  color: #4285F4;
+  margin-bottom: 0.4rem;
+}
+
+.uri-copy-container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--surface-paper-tint, #f1f5f9);
+  border: 1px solid var(--border-paper, #e2e8f0);
+  border-radius: var(--radius-sm, 6px);
+  padding: 0.45rem 0.75rem;
+  margin-top: 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--text-ink);
+  word-break: break-all;
+}
+
+.oauth-server-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background-color: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+  border-radius: 9999px;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* ==========================================================================
+   7. MEMBER STORAGE SELF-SERVICE CARD (FOR NON-ADMINS & PROFILE)
+   ========================================================================== */
+.member-self-storage-card {
+  background: var(--surface-card, #ffffff);
+  border: 1px solid var(--border-paper-dark, #e2e8f0);
+  border-radius: var(--radius-lg, 12px);
+  padding: 1.5rem 1.75rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+  position: relative;
+  overflow: hidden;
+}
+
+.member-self-storage-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 4px;
+  background: linear-gradient(180deg, #4285F4, #34A853);
+}
+
+.member-storage-hero-flex {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+}
+
+/* ==========================================================================
+   8. STORAGE INVITE MODAL
+   ========================================================================== */
+.storage-modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 1rem;
+}
+
+.storage-modal-box {
+  background: var(--surface-card, #ffffff);
+  border: 1px solid var(--border-paper-dark, #e2e8f0);
+  border-radius: var(--radius-lg, 12px);
+  max-width: 520px;
+  width: 100%;
+  padding: 1.75rem;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  position: relative;
+}
+
+
