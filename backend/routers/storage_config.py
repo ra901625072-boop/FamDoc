@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
+from sqlalchemy import func
+from typing import Optional
 from database import get_db
 import models
 import schemas
@@ -18,26 +20,29 @@ def serialize_storage_account(acct: models.StorageAccount, db: Session) -> schem
     member_username = None
     member_email = None
     member_role = None
-    if acct.user:
-        member_username = acct.user.username
-        member_email = acct.user.email
-        member_role = acct.user.role
-    elif acct.email:
-        # Auto-match user by email in this family if user_id is not yet set
-        matched_member = db.query(models.FamilyMember).filter(
-            models.FamilyMember.family_id == acct.family_id
-        ).join(models.User).filter(
-            models.User.email == acct.email
-        ).first()
-        if matched_member and matched_member.user:
-            member_username = matched_member.user.username
-            member_email = matched_member.user.email
-            member_role = matched_member.user.role
-            acct.user_id = matched_member.user.id
-            try:
-                db.commit()
-            except Exception:
-                pass
+    try:
+        if acct.user:
+            member_username = acct.user.username
+            member_email = acct.user.email
+            member_role = acct.user.role
+        elif acct.email:
+            # Auto-match user by email in this family if user_id is not yet set
+            matched_member = db.query(models.FamilyMember).filter(
+                models.FamilyMember.family_id == acct.family_id
+            ).join(models.User).filter(
+                func.lower(models.User.email) == acct.email.lower().strip()
+            ).first()
+            if matched_member and matched_member.user:
+                member_username = matched_member.user.username
+                member_email = matched_member.user.email
+                member_role = matched_member.user.role
+                acct.user_id = matched_member.user.id
+                try:
+                    db.commit()
+                except Exception:
+                    db.rollback()
+    except Exception as e:
+        logger.warning(f"Failed to serialize storage account member details: {e}")
 
     resp = schemas.StorageAccountResponse.model_validate(acct)
     resp.member_username = member_username
@@ -290,185 +295,233 @@ def get_oauth_url(
 
 @router.get("/oauth2callback")
 def oauth2callback(
-    code: str,
-    state: str,
+    code: Optional[str] = None,
+    state: Optional[str] = None,
+    error: Optional[str] = None,
+    error_description: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
     from jose import jwt, JWTError
     from config import JWT_SECRET, JWT_ALGORITHM, FRONTEND_URL
+    from logging_config import logger
+    import traceback
+
+    # 1. Handle Google OAuth errors (e.g., user cancelled consent or access denied)
+    if error:
+        err_msg = error_description or error
+        logger.warning(f"Google OAuth callback error received: {err_msg}")
+        return RedirectResponse(
+            url=f"{FRONTEND_URL.rstrip('/')}/?google_auth=error&detail={urllib.parse.quote(err_msg)}#/storage"
+        )
+
+    if not code or not state:
+        logger.warning("Google OAuth callback received without code or state.")
+        return RedirectResponse(
+            url=f"{FRONTEND_URL.rstrip('/')}/?google_auth=error&detail={urllib.parse.quote('Missing required OAuth authorization code or state parameter.')}#/storage"
+        )
+
     try:
-        payload = jwt.decode(state, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-        family_id = payload.get("family_id")
-        action = payload.get("action", "connect")
-        state_client_id = payload.get("client_id")
-        state_client_secret = payload.get("client_secret")
-        if not family_id:
-            raise Exception("Invalid state payload")
-    except JWTError as e:
-        raise HTTPException(status_code=400, detail=f"OAuth state parameter error: {str(e)}")
-        
-    family = db.query(models.Family).filter(models.Family.id == family_id).first()
-    if not family:
-        raise HTTPException(status_code=404, detail="Family record not found")
-        
-    config = family.storage_config or {}
-    client_id = state_client_id or config.get("pending_client_id") or config.get("client_id")
-    client_secret = state_client_secret or config.get("pending_client_secret") or config.get("client_secret")
-    
-    if not client_id or not client_secret:
-        raise HTTPException(status_code=400, detail="Pending OAuth credentials not found")
-        
-    redirect_uri = f"{BACKEND_URL.rstrip('/')}/api/storage/oauth2callback"
-    
-    token_payload = {
-        "code": code,
-        "client_id": client_id,
-        "client_secret": client_secret,
-        "redirect_uri": redirect_uri,
-        "grant_type": "authorization_code"
-    }
-    
-    r = requests.post("https://oauth2.googleapis.com/token", data=token_payload, timeout=10)
-    if r.status_code != 200:
-        return RedirectResponse(url=f"{FRONTEND_URL.rstrip('/')}/?google_auth=error&detail={urllib.parse.quote(r.text)}#/storage")
-        
-    res = r.json()
-    access_token = res.get("access_token")
-    refresh_token = res.get("refresh_token")
-    expires_in = res.get("expires_in", 3600)
-    
-    if not refresh_token:
-        refresh_token = config.get("refresh_token")
-        if not refresh_token:
+        try:
+            payload = jwt.decode(state, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+            family_id = payload.get("family_id")
+            action = payload.get("action", "connect")
+            state_client_id = payload.get("client_id")
+            state_client_secret = payload.get("client_secret")
+            if not family_id:
+                raise Exception("Invalid state payload: missing family_id")
+        except JWTError as e:
+            logger.error(f"JWT state error in oauth2callback: {e}")
             return RedirectResponse(
-                url=f"{FRONTEND_URL.rstrip('/')}/?google_auth=error&detail=" + 
-                    urllib.parse.quote("No refresh token returned. Please remove application access from your Google account settings and try again.") +
-                    "#/storage"
+                url=f"{FRONTEND_URL.rstrip('/')}/?google_auth=error&detail={urllib.parse.quote(f'OAuth state validation error: {str(e)}')}#/storage"
             )
             
-    active_config = {
-        "client_id": client_id,
-        "client_secret": client_secret,
-        "access_token": access_token,
-        "refresh_token": refresh_token,
-        "expires_at": int(time.time()) + expires_in,
-        "family_id": family.id
-    }
-
-    # Query Google endpoints to get stable external user ID and email
-    ext_id = None
-    email = None
-    quota_limit = None
-    quota_usage = None
-
-    try:
-        # 1. Fetch user email and ID from standard OAuth userinfo endpoint
-        user_res = requests.get(
-            "https://www.googleapis.com/oauth2/v3/userinfo",
-            headers={"Authorization": f"Bearer {access_token}"},
-            timeout=10
-        )
-        if user_res.status_code == 200:
-            u_data = user_res.json()
-            email = u_data.get("email")
-            ext_id = u_data.get("sub") or email
-
-        # 2. Fetch Drive storage quota and fallback user info
-        about_res = requests.get(
-            "https://www.googleapis.com/drive/v3/about?fields=user,storageQuota",
-            headers={"Authorization": f"Bearer {access_token}"},
-            timeout=10
-        )
-        if about_res.status_code == 200:
-            about_data = about_res.json()
-            user_info = about_data.get("user", {})
-            if not ext_id:
-                ext_id = user_info.get("permissionId") or user_info.get("emailAddress")
-            if not email:
-                email = user_info.get("emailAddress")
-            sq = about_data.get("storageQuota", {})
-            if sq.get("limit"):
-                quota_limit = int(sq["limit"])
-            quota_usage = int(sq.get("usage", 0))
-    except Exception as user_err:
-        print(f"Warning: Could not fetch user details during OAuth callback: {user_err}")
-    
-    # Check if account already linked to family (by external_account_id or email)
-    existing_acct = None
-    if ext_id:
-        existing_acct = db.query(models.StorageAccount).filter(
-            models.StorageAccount.family_id == family.id,
-            models.StorageAccount.provider == "google",
-            models.StorageAccount.external_account_id == ext_id
-        ).first()
-    if not existing_acct and email:
-        existing_acct = db.query(models.StorageAccount).filter(
-            models.StorageAccount.family_id == family.id,
-            models.StorageAccount.provider == "google",
-            models.StorageAccount.email == email
-        ).first()
-
-    try:
-        provider = get_storage_provider("google")
-        vault_id = provider.ensure_vault_folder(family.id, active_config, db=db)
-    except Exception as err:
-        return RedirectResponse(url=f"{FRONTEND_URL.rstrip('/')}/?google_auth=error&detail={urllib.parse.quote(str(err))}#/storage")
+        family = db.query(models.Family).filter(models.Family.id == family_id).first()
+        if not family:
+            return RedirectResponse(
+                url=f"{FRONTEND_URL.rstrip('/')}/?google_auth=error&detail={urllib.parse.quote('Family record not found.')}#/storage"
+            )
+            
+        config = family.storage_config or {}
+        client_id = state_client_id or config.get("pending_client_id") or config.get("client_id")
+        client_secret = state_client_secret or config.get("pending_client_secret") or config.get("client_secret")
         
-    active_config["vault_folder_id"] = vault_id
+        if not client_id or not client_secret:
+            return RedirectResponse(
+                url=f"{FRONTEND_URL.rstrip('/')}/?google_auth=error&detail={urllib.parse.quote('Google OAuth credentials (client_id / client_secret) not found.')}#/storage"
+            )
+            
+        redirect_uri = f"{BACKEND_URL.rstrip('/')}/api/storage/oauth2callback"
+        
+        token_payload = {
+            "code": code,
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "redirect_uri": redirect_uri,
+            "grant_type": "authorization_code"
+        }
+        
+        r = requests.post("https://oauth2.googleapis.com/token", data=token_payload, timeout=15)
+        if r.status_code != 200:
+            err_text = r.text
+            try:
+                err_json = r.json()
+                err_text = err_json.get("error_description") or err_json.get("error") or r.text
+            except Exception:
+                pass
+            logger.error(f"Google token exchange failed: {err_text}")
+            return RedirectResponse(url=f"{FRONTEND_URL.rstrip('/')}/?google_auth=error&detail={urllib.parse.quote(err_text)}#/storage")
+            
+        res = r.json()
+        access_token = res.get("access_token")
+        refresh_token = res.get("refresh_token")
+        expires_in = res.get("expires_in", 3600)
+        
+        if not refresh_token:
+            refresh_token = config.get("refresh_token")
+            if not refresh_token:
+                return RedirectResponse(
+                    url=f"{FRONTEND_URL.rstrip('/')}/?google_auth=error&detail=" + 
+                        urllib.parse.quote("No refresh token returned by Google. Please remove app access at myaccount.google.com/permissions and reconnect.") +
+                        "#/storage"
+                )
+                
+        active_config = {
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "expires_at": int(time.time()) + expires_in,
+            "family_id": family.id
+        }
 
-    # Match member user in family by email
-    matched_user = None
-    if email:
-        matched_member = db.query(models.FamilyMember).filter(
-            models.FamilyMember.family_id == family.id
-        ).join(models.User).filter(
-            models.User.email == email
-        ).first()
-        if matched_member:
-            matched_user = matched_member.user
+        # Query Google endpoints to get stable external user ID and email
+        ext_id = None
+        email = None
+        quota_limit = None
+        quota_usage = None
 
-    if existing_acct:
-        existing_acct.config = active_config
-        existing_acct.vault_folder_id = vault_id
-        existing_acct.status = "active"
+        try:
+            # 1. Fetch user email and ID from standard OAuth userinfo endpoint
+            user_res = requests.get(
+                "https://www.googleapis.com/oauth2/v3/userinfo",
+                headers={"Authorization": f"Bearer {access_token}"},
+                timeout=10
+            )
+            if user_res.status_code == 200:
+                u_data = user_res.json()
+                email = u_data.get("email")
+                ext_id = u_data.get("sub") or email
+
+            # 2. Fetch Drive storage quota and fallback user info
+            about_res = requests.get(
+                "https://www.googleapis.com/drive/v3/about?fields=user,storageQuota",
+                headers={"Authorization": f"Bearer {access_token}"},
+                timeout=10
+            )
+            if about_res.status_code == 200:
+                about_data = about_res.json()
+                user_info = about_data.get("user", {})
+                if not ext_id:
+                    ext_id = user_info.get("permissionId") or user_info.get("emailAddress")
+                if not email:
+                    email = user_info.get("emailAddress")
+                sq = about_data.get("storageQuota", {})
+                if sq.get("limit"):
+                    quota_limit = int(sq["limit"])
+                quota_usage = int(sq.get("usage", 0))
+        except Exception as user_err:
+            logger.warning(f"Could not fetch user details during OAuth callback: {user_err}")
+        
+        # Check if account already linked to family (by external_account_id or email)
+        existing_acct = None
+        if ext_id:
+            existing_acct = db.query(models.StorageAccount).filter(
+                models.StorageAccount.family_id == family.id,
+                models.StorageAccount.provider == "google",
+                models.StorageAccount.external_account_id == ext_id
+            ).first()
+        if not existing_acct and email:
+            existing_acct = db.query(models.StorageAccount).filter(
+                models.StorageAccount.family_id == family.id,
+                models.StorageAccount.provider == "google",
+                models.StorageAccount.email == email
+            ).first()
+
+        try:
+            provider = get_storage_provider("google")
+            vault_id = provider.ensure_vault_folder(family.id, active_config, db=db)
+        except Exception as err:
+            logger.error(f"Failed to ensure vault folder in Google Drive: {err}")
+            return RedirectResponse(url=f"{FRONTEND_URL.rstrip('/')}/?google_auth=error&detail={urllib.parse.quote(str(err))}#/storage")
+            
+        active_config["vault_folder_id"] = vault_id
+
+        # Match member user in family by email
+        matched_user = None
         if email:
-            existing_acct.email = email
-        if matched_user and not existing_acct.user_id:
-            existing_acct.user_id = matched_user.id
-        if quota_limit is not None:
-            existing_acct.cached_quota_total = quota_limit
-        if quota_usage is not None:
-            existing_acct.cached_quota_used = quota_usage
-        existing_acct.quota_checked_at = datetime.now(timezone.utc)
-    else:
-        account_count = db.query(models.StorageAccount).filter(
-            models.StorageAccount.family_id == family.id
-        ).count()
-        default_label = f"{matched_user.username}'s Drive" if matched_user else f"Google Account #{account_count + 1}"
-        new_acct = models.StorageAccount(
-            family_id=family.id,
-            provider="google",
-            external_account_id=ext_id,
-            email=email or f"Google Account #{account_count + 1}",
-            label=default_label,
-            vault_folder_id=vault_id,
-            status="active",
-            priority=account_count,
-            user_id=matched_user.id if matched_user else None,
-            cached_quota_total=quota_limit,
-            cached_quota_used=quota_usage,
-            quota_checked_at=datetime.now(timezone.utc)
-        )
-        new_acct.config = active_config
-        db.add(new_acct)
+            try:
+                matched_member = db.query(models.FamilyMember).filter(
+                    models.FamilyMember.family_id == family.id
+                ).join(models.User).filter(
+                    func.lower(models.User.email) == email.lower().strip()
+                ).first()
+                if matched_member:
+                    matched_user = matched_member.user
+            except Exception as m_err:
+                logger.warning(f"Could not match family member by email: {m_err}")
 
-    # Keep family model in sync with primary account
-    family.storage_provider = "google"
-    family.vault_folder_id = vault_id
-    family.storage_config = active_config
-    db.commit()
-    
-    return RedirectResponse(url=f"{FRONTEND_URL.rstrip('/')}/?google_auth=success#/storage")
+        if existing_acct:
+            existing_acct.config = active_config
+            existing_acct.vault_folder_id = vault_id
+            existing_acct.status = "active"
+            if email:
+                existing_acct.email = email
+            if matched_user and not existing_acct.user_id:
+                existing_acct.user_id = matched_user.id
+            if quota_limit is not None:
+                existing_acct.cached_quota_total = quota_limit
+            if quota_usage is not None:
+                existing_acct.cached_quota_used = quota_usage
+            existing_acct.quota_checked_at = datetime.now(timezone.utc)
+        else:
+            account_count = db.query(models.StorageAccount).filter(
+                models.StorageAccount.family_id == family.id
+            ).count()
+            default_label = f"{matched_user.username}'s Drive" if (matched_user and matched_user.username) else f"Google Account #{account_count + 1}"
+            new_acct = models.StorageAccount(
+                family_id=family.id,
+                provider="google",
+                external_account_id=ext_id,
+                email=email or f"Google Account #{account_count + 1}",
+                label=default_label,
+                vault_folder_id=vault_id,
+                status="active",
+                priority=account_count,
+                user_id=matched_user.id if matched_user else None,
+                cached_quota_total=quota_limit,
+                cached_quota_used=quota_usage,
+                quota_checked_at=datetime.now(timezone.utc)
+            )
+            new_acct.config = active_config
+            db.add(new_acct)
+
+        # Keep family model in sync with primary account
+        family.storage_provider = "google"
+        family.vault_folder_id = vault_id
+        family.storage_config = active_config
+        db.commit()
+        
+        return RedirectResponse(url=f"{FRONTEND_URL.rstrip('/')}/?google_auth=success#/storage")
+
+    except Exception as main_err:
+        logger.error(f"Unhandled error in oauth2callback: {main_err}\n{traceback.format_exc()}")
+        try:
+            db.rollback()
+        except Exception:
+            pass
+        return RedirectResponse(
+            url=f"{FRONTEND_URL.rstrip('/')}/?google_auth=error&detail={urllib.parse.quote(f'Internal callback error: {str(main_err)}')}#/storage"
+        )
 
 
 @router.post("/config/mode", response_model=schemas.StorageConfigResponse)

@@ -353,7 +353,7 @@ def run_migrations():
         columns = [col["name"] for col in inspector.get_columns("storage_accounts")]
         if "user_id" not in columns:
             try:
-                execute_migration_statement("ALTER TABLE storage_accounts ADD COLUMN user_id INTEGER REFERENCES users(id)")
+                execute_migration_statement("ALTER TABLE storage_accounts ADD COLUMN user_id INTEGER")
                 execute_migration_statement("CREATE INDEX ix_storage_accounts_user_id ON storage_accounts(user_id)")
                 logger.info("Migration: Successfully added user_id column to storage_accounts table.")
             except Exception as e:
