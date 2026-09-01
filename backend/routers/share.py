@@ -85,7 +85,7 @@ def get_file_share_links(
     db: Session = Depends(get_db)
 ):
     # Verify file belongs to family
-    file = auth.verify_resource_access(
+    auth.verify_resource_access(
         models.File,
         file_id,
         current_user.family_id,

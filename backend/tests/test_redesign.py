@@ -1,9 +1,7 @@
 import os
 import sys
 import unittest
-import time
 import uuid
-import socket
 from datetime import datetime, timezone, timedelta
 
 # Adjust python path to import backend modules
@@ -17,7 +15,6 @@ from main import app
 from database import Base, get_db
 import models
 import auth
-import schemas
 from utils.rate_limiter import check_rate_limit, _global_rate_limiter
 from storage.storage_manager import StorageManager
 
@@ -267,7 +264,6 @@ class TestBackendRedesign(unittest.TestCase):
         headers = {"Authorization": f"Bearer {admin_token}"}
 
         # Mock VirusTotal scanner to return clean
-        import httpx
         from unittest.mock import patch
         
         # Helper payload for uploading files

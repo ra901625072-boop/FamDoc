@@ -1,14 +1,10 @@
 import io
 import re
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, BackgroundTasks, Request
-from fastapi.responses import StreamingResponse, RedirectResponse
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from database import get_db, SessionLocal
-import models
-import schemas
-import auth
-from database import get_db, SessionLocal
+from database import get_db
 import models
 import schemas
 import auth
@@ -115,7 +111,7 @@ async def upload_file(
 
     # Validate parent folder if provided
     if folder_id is not None:
-        folder = auth.verify_resource_access(
+        auth.verify_resource_access(
             models.Folder,
             folder_id,
             current_user.family_id,
@@ -589,7 +585,7 @@ def move_file(
         
     # Verify destination folder exists
     if file_in.folder_id is not None:
-        folder = auth.verify_resource_access(
+        auth.verify_resource_access(
             models.Folder,
             file_in.folder_id,
             current_user.family_id,

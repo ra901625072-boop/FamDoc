@@ -1,4 +1,3 @@
-import os
 import io
 import time
 import logging
@@ -184,8 +183,9 @@ class GoogleDriveProvider(StorageProvider):
                     )
                     time.sleep(wait_time)
                     continue
-                raise
-        raise last_error
+        if last_error is not None:
+            raise last_error
+        raise RuntimeError("Google Drive operation failed after maximum retries.")
 
     def health_check(self, config: dict, db = None) -> bool:
         """Lightweight ping: GET /drive/v3/about with 3s timeout."""

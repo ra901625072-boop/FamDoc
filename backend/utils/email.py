@@ -90,7 +90,7 @@ def send_otp_email(to_email: str, otp: str):
 
     # 3. Ultimate developer fallback: Log OTP to server console
     logger.warning("\n" + "=" * 60)
-    logger.warning(f"NO EMAIL DELIVERY METHODS AVAILABLE. LOGGING OTP CODE FOR DEV ENVIRONMENT:")
+    logger.warning("NO EMAIL DELIVERY METHODS AVAILABLE. LOGGING OTP CODE FOR DEV ENVIRONMENT:")
     logger.warning(f"TO: {to_email}")
     logger.warning(f"OTP CODE: {otp}")
     logger.warning("=" * 60 + "\n")

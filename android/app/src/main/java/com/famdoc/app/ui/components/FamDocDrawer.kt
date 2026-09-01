@@ -132,18 +132,14 @@ fun FamDocDrawer(
             onNavigate("family")
             onCloseDrawer()
         }
+        DrawerItem("Cloud Storage & Quotas", Icons.Default.CloudQueue, currentRoute == "storage") {
+            onNavigate("storage")
+            onCloseDrawer()
+        }
         DrawerItem("Recycle Bin", Icons.Default.Delete, currentRoute == "trash") {
             onNavigate("trash")
             onCloseDrawer()
         }
-
-        if (currentUser?.isAdmin == true) {
-            DrawerItem("Cloud Storage Config", Icons.Default.Storage, currentRoute == "storage") {
-                onNavigate("storage")
-                onCloseDrawer()
-            }
-        }
-
         DrawerItem("Profile & Credentials", Icons.Default.Person, currentRoute == "profile") {
             onNavigate("profile")
             onCloseDrawer()

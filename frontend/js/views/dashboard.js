@@ -17,32 +17,118 @@
         </div>
       </div>
 
-      <!-- Dashboard Statistics Grid -->
+      <!-- Quick Actions Toolbar -->
+      <div class="quick-actions-bar fd-fade-in">
+        <input type="file" id="dashboard-file-picker" style="display: none;">
+        <button type="button" class="quick-action-btn primary" id="btn-quick-upload">
+          <i class="fas fa-cloud-upload-alt"></i>
+          <span>Upload File</span>
+        </button>
+        <a href="#/vault?action=new-folder" class="quick-action-btn" id="btn-quick-folder">
+          <i class="fas fa-folder-plus"></i>
+          <span>New Folder</span>
+        </a>
+        <a href="#/profile?invite=true" class="quick-action-btn" id="btn-quick-invite">
+          <i class="fas fa-ticket-alt"></i>
+          <span>Invite Member</span>
+        </a>
+        <a href="#/storage" class="quick-action-btn" id="btn-quick-storage">
+          <i class="fas fa-hdd"></i>
+          <span>Cloud Storage Pool</span>
+        </a>
+      </div>
+
+      <!-- Dashboard Statistics Grid (4 Cards) -->
       <div class="dashboard-grid">
-        <div class="famdoc-card stat-card fd-fade-up fd-stagger" id="card-stat-files" style="--fd-delay: 0.05s;">
+        <div class="stat-card fd-fade-up fd-stagger" id="card-stat-files" style="--fd-delay: 0.05s;">
           <div class="icon-chip stat-icon"><i class="fas fa-file-alt"></i></div>
           <div class="stat-label">Total Files</div>
-          <div class="stat-val" id="stat-files"><span class="fd-skel" style="width: 50px; height: 30px; border-radius: 4px;"></span></div>
+          <div class="stat-val" id="stat-files"><span class="fd-skel" style="width: 50px; height: 28px; border-radius: 4px;"></span></div>
         </div>
-        <div class="famdoc-card stat-card fd-fade-up fd-stagger" id="card-stat-size" style="--fd-delay: 0.1s;">
+        <div class="stat-card fd-fade-up fd-stagger" id="card-stat-folders" style="--fd-delay: 0.1s;">
+          <div class="icon-chip stat-icon"><i class="fas fa-folder"></i></div>
+          <div class="stat-label">Folders</div>
+          <div class="stat-val" id="stat-folders"><span class="fd-skel" style="width: 40px; height: 28px; border-radius: 4px;"></span></div>
+        </div>
+        <div class="stat-card fd-fade-up fd-stagger" id="card-stat-size" style="--fd-delay: 0.15s;">
           <div class="icon-chip stat-icon"><i class="fas fa-database"></i></div>
           <div class="stat-label">Space Occupied</div>
-          <div class="stat-val" id="stat-size"><span class="fd-skel" style="width: 100px; height: 30px; border-radius: 4px;"></span></div>
+          <div class="stat-val" id="stat-size"><span class="fd-skel" style="width: 90px; height: 28px; border-radius: 4px;"></span></div>
           <div id="dashboard-progress-container" class="stat-card-bottom-progress" style="display: none;">
             <div id="dashboard-progress-bar" class="progress-bar-fill"></div>
           </div>
         </div>
-        <div class="famdoc-card stat-card fd-fade-up fd-stagger" id="card-stat-members" style="--fd-delay: 0.15s;">
+        <div class="stat-card fd-fade-up fd-stagger" id="card-stat-members" style="--fd-delay: 0.2s;">
           <div class="icon-chip stat-icon"><i class="fas fa-users"></i></div>
           <div class="stat-label">Family Members</div>
-          <div class="stat-val" id="stat-members"><span class="fd-skel" style="width: 40px; height: 30px; border-radius: 4px;"></span></div>
+          <div class="stat-val" id="stat-members"><span class="fd-skel" style="width: 40px; height: 28px; border-radius: 4px;"></span></div>
         </div>
       </div>
 
-      <!-- Double Sections -->
+      <!-- Storage Category Distribution Card -->
+      <div class="storage-breakdown-card fd-fade-up" id="dashboard-storage-card" style="--fd-delay: 0.22s;">
+        <div class="breakdown-header">
+          <h2 class="breakdown-title">
+            <i class="fas fa-chart-pie" style="color: var(--accent-brand);"></i>
+            <span>Storage Category Distribution</span>
+          </h2>
+          <div class="breakdown-subtitle" id="breakdown-pooled-info">Pooled Cloud Storage</div>
+        </div>
+
+        <div class="breakdown-progress-container" id="category-progress-container">
+          <div id="category-progress-bar" class="progress-bar-fill"></div>
+        </div>
+
+        <div class="breakdown-legend-grid" id="breakdown-legend-grid">
+          <div class="breakdown-legend-chip">
+            <div class="chip-color-dot dot-image"></div>
+            <div class="chip-info">
+              <span class="chip-label">Images</span>
+              <span class="chip-meta" id="meta-cat-image">0 B (0)</span>
+            </div>
+          </div>
+          <div class="breakdown-legend-chip">
+            <div class="chip-color-dot dot-pdf"></div>
+            <div class="chip-info">
+              <span class="chip-label">PDFs</span>
+              <span class="chip-meta" id="meta-cat-pdf">0 B (0)</span>
+            </div>
+          </div>
+          <div class="breakdown-legend-chip">
+            <div class="chip-color-dot dot-document"></div>
+            <div class="chip-info">
+              <span class="chip-label">Docs</span>
+              <span class="chip-meta" id="meta-cat-document">0 B (0)</span>
+            </div>
+          </div>
+          <div class="breakdown-legend-chip">
+            <div class="chip-color-dot dot-sheet"></div>
+            <div class="chip-info">
+              <span class="chip-label">Sheets</span>
+              <span class="chip-meta" id="meta-cat-sheet">0 B (0)</span>
+            </div>
+          </div>
+          <div class="breakdown-legend-chip">
+            <div class="chip-color-dot dot-text"></div>
+            <div class="chip-info">
+              <span class="chip-label">Text</span>
+              <span class="chip-meta" id="meta-cat-text">0 B (0)</span>
+            </div>
+          </div>
+          <div class="breakdown-legend-chip">
+            <div class="chip-color-dot dot-other"></div>
+            <div class="chip-info">
+              <span class="chip-label">Other</span>
+              <span class="chip-meta" id="meta-cat-other">0 B (0)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Double Sections: Recent Uploads & Activity -->
       <div class="dashboard-sections">
         <!-- Recent Uploads Card -->
-        <div class="famdoc-card fd-fade-up" style="--fd-delay: 0.2s;">
+        <div class="famdoc-card fd-fade-up" style="--fd-delay: 0.25s;">
           <div class="famdoc-card-header">
             <h2 class="famdoc-card-title"><i class="fas fa-clock" style="color: var(--accent-brand); margin-right: 0.5rem;"></i>Recent Vault Uploads</h2>
             <a href="#/vault" style="font-size: 0.85rem; font-weight: 600;">Browse All <i class="fas fa-chevron-right" style="font-size: 0.75rem;"></i></a>
@@ -72,7 +158,7 @@
         </div>
 
         <!-- Activity Feed Card -->
-        <div class="famdoc-card fd-fade-up" style="--fd-delay: 0.25s;">
+        <div class="famdoc-card fd-fade-up" style="--fd-delay: 0.3s;">
           <div class="famdoc-card-header">
             <h2 class="famdoc-card-title"><i class="fas fa-history" style="color: var(--accent-brand); margin-right: 0.5rem;"></i>Vault Activity</h2>
           </div>
@@ -94,22 +180,51 @@
     `;
 
     // Setup interactive click listeners for stat cards
-    document.getElementById("card-stat-files").addEventListener("click", () => {
+    document.getElementById("card-stat-files")?.addEventListener("click", () => {
       window.FamDocRouter.navigate('/vault');
     });
     
-    document.getElementById("card-stat-size").addEventListener("click", async () => {
-      const user = await window.FamDocApp.getUser();
-      if (user && user.role === "admin") {
-        window.FamDocRouter.navigate('/storage');
-      } else {
-        window.FamDocRouter.navigate('/vault');
-      }
+    document.getElementById("card-stat-folders")?.addEventListener("click", () => {
+      window.FamDocRouter.navigate('/vault');
+    });
+
+    document.getElementById("card-stat-size")?.addEventListener("click", async () => {
+      window.FamDocRouter.navigate('/storage');
     });
     
-    document.getElementById("card-stat-members").addEventListener("click", () => {
+    document.getElementById("card-stat-members")?.addEventListener("click", () => {
       window.FamDocRouter.navigate('/family');
     });
+
+    // Setup Quick Upload File action
+    const quickUploadBtn = document.getElementById("btn-quick-upload");
+    const quickFilePicker = document.getElementById("dashboard-file-picker");
+    if (quickUploadBtn && quickFilePicker) {
+      quickUploadBtn.addEventListener("click", () => {
+        quickFilePicker.click();
+      });
+
+      quickFilePicker.addEventListener("change", async (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+
+        try {
+          quickUploadBtn.disabled = true;
+          quickUploadBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i><span>Uploading...</span>`;
+          FamDocAPI.utils.showToast(`Uploading ${file.name}...`, "info");
+          
+          await FamDocAPI.files.upload(file);
+          FamDocAPI.utils.showToast(`Successfully uploaded ${file.name}!`, "success");
+          quickFilePicker.value = "";
+          initDashboard();
+        } catch (err) {
+          FamDocAPI.utils.showToast(err.message || "Failed to upload file", "error");
+        } finally {
+          quickUploadBtn.disabled = false;
+          quickUploadBtn.innerHTML = `<i class="fas fa-cloud-upload-alt"></i><span>Upload File</span>`;
+        }
+      });
+    }
 
     // Process dashboard initialization
     initDashboard();
@@ -221,10 +336,12 @@
   function renderDashboardStats(stats) {
     // Set stats numbers
     const statFiles = document.getElementById("stat-files");
+    const statFolders = document.getElementById("stat-folders");
     const statSize = document.getElementById("stat-size");
     const statMembers = document.getElementById("stat-members");
 
     if (statFiles) statFiles.textContent = stats.total_files;
+    if (statFolders) statFolders.textContent = stats.total_folders || 0;
     if (statSize) statSize.textContent = FamDocAPI.utils.formatBytes(stats.total_size_bytes);
     if (statMembers) statMembers.textContent = stats.total_members;
 
@@ -345,56 +462,47 @@
     } else {
       activityFeed.innerHTML = `
         <div class="empty-state fd-fade-in" style="padding: 2rem 0;">
-          <i class="fas fa-stream state-icon empty"></i>
+          <i class="fas fa-history state-icon empty"></i>
           <h4 class="empty-state-title">No recent activity</h4>
-          <p class="empty-state-text">Actions like uploads will appear here.</p>
+          <p class="empty-state-text">Your family vault activity log will show up here.</p>
         </div>
       `;
     }
   }
 
   function cleanActionDetails(action, details) {
-    if (!details) return action.toLowerCase().replace("_", " ");
-    return details
-      .replace("Uploaded file: ", "uploaded ")
-      .replace("Created folder: ", "created folder ")
-      .replace("Soft-deleted file: ", "deleted ")
-      .replace("Soft-deleted folder: ", "deleted folder ")
-      .replace("Downloaded file: ", "downloaded ")
-      .replace("Renamed file ", "renamed ")
-      .replace("Renamed folder ", "renamed folder ");
+    if (!details) {
+      if (action.includes("UPLOAD")) return "uploaded a new document.";
+      if (action.includes("DELETE")) return "deleted a file.";
+      if (action.includes("RENAME")) return "renamed an item.";
+      if (action.includes("DOWNLOAD")) return "downloaded a file.";
+      if (action.includes("SHARE")) return "generated a shared link.";
+      return "performed an action.";
+    }
+    return FamDocAPI.utils.escapeHtml(details);
   }
 
   async function initDashboard() {
-    const user = await window.FamDocApp.getUser();
-    if (!user) return;
-
-    // Customize greeting
-    const welcome = document.getElementById("welcome-message");
-    if (welcome) {
-      const hours = new Date().getHours();
-      let greeting = "Good day";
-      if (hours < 12) greeting = "Good morning";
-      else if (hours < 17) greeting = "Good afternoon";
-      else greeting = "Good evening";
-      welcome.textContent = `${greeting}, ${user.username}`;
-    }
-
-    // Fetch fresh stats
     try {
-      const freshStats = await FamDocAPI.dashboard.getStats();
-      renderDashboardStats(freshStats);
-    } catch (err) {
-      console.error("Dashboard failed to load fresh data:", err);
-      FamDocAPI.utils.showToast("Failed to retrieve dashboard statistics.", "error");
-      
-      const statFiles = document.getElementById("stat-files");
-      const statSize = document.getElementById("stat-size");
-      const statMembers = document.getElementById("stat-members");
-      if (statFiles) statFiles.textContent = "—";
-      if (statSize) statSize.textContent = "—";
-      if (statMembers) statMembers.textContent = "—";
+      const user = await window.FamDocApp.getUser();
+      if (!user) return;
 
+      const welcomeMessage = document.getElementById("welcome-message");
+      if (welcomeMessage) {
+        const hour = new Date().getHours();
+        let greeting = "Good morning";
+        if (hour >= 12 && hour < 17) greeting = "Good afternoon";
+        else if (hour >= 17) greeting = "Good evening";
+        welcomeMessage.textContent = `${greeting}, ${user.username || 'User'}`;
+      }
+
+      // Fetch dashboard statistics
+      const stats = await FamDocAPI.dashboard.getStats();
+      renderDashboardStats(stats);
+
+    } catch (err) {
+      console.error("Dashboard initialization error:", err);
+      FamDocAPI.utils.showToast("Failed to load dashboard data.", "error");
       const recentList = document.getElementById("recent-uploads-list");
       if (recentList) {
         recentList.innerHTML = `
@@ -416,60 +524,100 @@
     }
   }
 
-
   function renderDashboardStorageBreakdown(stats) {
     const progressContainer = document.getElementById("dashboard-progress-container");
     const progressBar = document.getElementById("dashboard-progress-bar");
-    if (!progressContainer || !progressBar) return;
-    
+    const categoryProgressBar = document.getElementById("category-progress-bar");
+    const pooledInfo = document.getElementById("breakdown-pooled-info");
+
     const usedBytes = stats.total_size_bytes || 0;
     const quotaBytes = stats.storage_quota_bytes || 524288000;
-    
-    if (usedBytes === 0) {
-      progressContainer.style.display = "none";
-      return;
+    const percentUsed = Math.min(100, Math.round((usedBytes / quotaBytes) * 100));
+
+    if (pooledInfo) {
+      pooledInfo.textContent = `${FamDocAPI.utils.formatBytes(usedBytes)} of ${FamDocAPI.utils.formatBytes(quotaBytes)} used (${percentUsed}%)`;
     }
     
-    progressContainer.style.display = "flex";
-    progressBar.innerHTML = "";
+    if (progressContainer && progressBar) {
+      if (usedBytes === 0) {
+        progressContainer.style.display = "none";
+      } else {
+        progressContainer.style.display = "flex";
+        progressBar.innerHTML = "";
+      }
+    }
+
+    if (categoryProgressBar) {
+      categoryProgressBar.innerHTML = "";
+    }
     
     const breakdown = stats.storage_breakdown || {};
     
     const categories = [
-      { key: "image", colorClass: "storage-segment-image" },
-      { key: "pdf", colorClass: "storage-segment-pdf" },
-      { key: "document", colorClass: "storage-segment-document" },
-      { key: "sheet", colorClass: "storage-segment-sheet" },
-      { key: "text", colorClass: "storage-segment-text" },
-      { key: "other", colorClass: "storage-segment-other" }
+      { key: "image", label: "Images", colorClass: "storage-segment-image", metaId: "meta-cat-image" },
+      { key: "pdf", label: "PDFs", colorClass: "storage-segment-pdf", metaId: "meta-cat-pdf" },
+      { key: "document", label: "Docs", colorClass: "storage-segment-document", metaId: "meta-cat-document" },
+      { key: "sheet", label: "Sheets", colorClass: "storage-segment-sheet", metaId: "meta-cat-sheet" },
+      { key: "text", label: "Text", colorClass: "storage-segment-text", metaId: "meta-cat-text" },
+      { key: "other", label: "Other", colorClass: "storage-segment-other", metaId: "meta-cat-other" }
     ];
     
     let totalAssignedPercent = 0;
     categories.forEach(cat => {
       const data = breakdown[cat.key] || { size: 0, count: 0 };
+      const metaElem = document.getElementById(cat.metaId);
+      if (metaElem) {
+        metaElem.textContent = `${FamDocAPI.utils.formatBytes(data.size)} (${data.count})`;
+      }
+
       if (data.size > 0) {
         let segPercent = (data.size / quotaBytes) * 100;
         if (segPercent > 0 && segPercent < 1) segPercent = 1;
         totalAssignedPercent += segPercent;
         
-        const segment = document.createElement("div");
-        segment.className = `storage-progress-segment ${cat.colorClass}`;
-        segment.style.width = `${segPercent}%`;
-        segment.style.height = "100%";
-        segment.title = `${cat.key.toUpperCase()}: ${FamDocAPI.utils.formatBytes(data.size)} (${data.count} items)`;
-        progressBar.appendChild(segment);
+        // Edge-anchored stat card fill
+        if (progressBar) {
+          const segment = document.createElement("div");
+          segment.className = `storage-progress-segment ${cat.colorClass}`;
+          segment.style.width = `${segPercent}%`;
+          segment.style.height = "100%";
+          segment.title = `${cat.label}: ${FamDocAPI.utils.formatBytes(data.size)} (${data.count} files)`;
+          progressBar.appendChild(segment);
+        }
+
+        // Dedicated breakdown card multi-color progress bar
+        if (categoryProgressBar) {
+          const seg = document.createElement("div");
+          seg.className = `storage-progress-segment ${cat.colorClass}`;
+          seg.style.width = `${segPercent}%`;
+          seg.style.height = "100%";
+          seg.title = `${cat.label}: ${FamDocAPI.utils.formatBytes(data.size)} (${data.count} files)`;
+          categoryProgressBar.appendChild(seg);
+        }
       }
     });
     
     const remainingBytes = Math.max(0, quotaBytes - usedBytes);
     if (remainingBytes > 0 && totalAssignedPercent < 100) {
       const remainingPercent = 100 - totalAssignedPercent;
-      const segment = document.createElement("div");
-      segment.style.width = `${remainingPercent}%`;
-      segment.style.height = "100%";
-      segment.style.backgroundColor = "transparent";
-      segment.title = `Free Space: ${FamDocAPI.utils.formatBytes(remainingBytes)}`;
-      progressBar.appendChild(segment);
+      
+      if (progressBar) {
+        const segment = document.createElement("div");
+        segment.style.width = `${remainingPercent}%`;
+        segment.style.height = "100%";
+        segment.style.backgroundColor = "transparent";
+        segment.title = `Free Space: ${FamDocAPI.utils.formatBytes(remainingBytes)}`;
+        progressBar.appendChild(segment);
+      }
+
+      if (categoryProgressBar) {
+        const seg = document.createElement("div");
+        seg.style.width = `${remainingPercent}%`;
+        seg.style.height = "100%";
+        seg.style.backgroundColor = "transparent";
+        seg.title = `Free Space: ${FamDocAPI.utils.formatBytes(remainingBytes)}`;
+        categoryProgressBar.appendChild(seg);
+      }
     }
   }
 })();

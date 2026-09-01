@@ -103,20 +103,18 @@
             <i class="fas fa-archive"></i>
             <span>Shared Vault</span>
           </a>
-          <a href="#/trash" class="nav-item" data-route="/trash">
-            <i class="fas fa-trash-alt"></i>
-            <span>Recycle Bin</span>
-          </a>
           <a href="#/family" class="nav-item" data-route="/family">
             <i class="fas fa-users"></i>
             <span>Family Group</span>
           </a>
-          ${user.role === 'admin' ? `
           <a href="#/storage" class="nav-item" data-route="/storage" id="sidebar-storage-link">
             <i class="fas fa-hdd"></i>
-            <span>Storage Config</span>
+            <span>Cloud Storage</span>
           </a>
-          ` : ''}
+          <a href="#/trash" class="nav-item" data-route="/trash">
+            <i class="fas fa-trash-alt"></i>
+            <span>Recycle Bin</span>
+          </a>
         </div>
 
         <div class="sidebar-footer">
@@ -306,26 +304,8 @@
       const role = existingBadge.querySelector(".user-role");
       if (role) role.textContent = user.role || 'Member';
 
-      // Dynamically add/remove storage configuration link based on admin status
-      const navContainer = document.querySelector(".sidebar-nav");
-      if (navContainer) {
-        let storageLink = document.getElementById("sidebar-storage-link");
-        if (user.role === 'admin' && !storageLink) {
-          const a = document.createElement("a");
-          a.href = "#/storage";
-          a.className = "nav-item";
-          a.id = "sidebar-storage-link";
-          a.setAttribute("data-route", "/storage");
-          a.innerHTML = `
-            <i class="fas fa-hdd"></i>
-            <span>Storage Config</span>
-          `;
-          navContainer.appendChild(a);
-          this.updateActiveNavLinks();
-        } else if (user.role !== 'admin' && storageLink) {
-          storageLink.remove();
-        }
-      }
+      // Ensure active nav link state is updated
+      this.updateActiveNavLinks();
     },
 
     // Reset session caches

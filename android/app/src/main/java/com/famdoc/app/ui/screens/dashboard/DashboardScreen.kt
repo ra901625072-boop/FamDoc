@@ -118,57 +118,65 @@ private fun DashboardContent(
         contentPadding = PaddingValues(horizontal = Dimens.ScreenPaddingHorizontal, vertical = Dimens.Spacing16),
         verticalArrangement = Arrangement.spacedBy(Dimens.Spacing16)
     ) {
-        // 1. Statistics Cards Row with Staggered Entrance
+        // 1. Statistics Cards Grid (4 Cards: 2x2 layout)
         item {
-            Row(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .staggeredEntrance(index = 0),
-                horizontalArrangement = Arrangement.spacedBy(Dimens.Spacing8)
+                verticalArrangement = Arrangement.spacedBy(Dimens.Spacing8)
             ) {
-                StatCard(
-                    title = "Total Files",
-                    value = stats.totalFiles.toString(),
-                    icon = Icons.AutoMirrored.Filled.InsertDriveFile,
-                    iconColor = MintPrimaryLight,
-                    modifier = Modifier.weight(1f),
-                    onClick = onNavigateToVault
-                )
-                StatCard(
-                    title = "Space Used",
-                    value = FileUtils.formatBytes(stats.totalSizeBytes),
-                    icon = Icons.Default.Storage,
-                    iconColor = MintSecondary,
-                    modifier = Modifier.weight(1f),
-                    onClick = if (currentUser?.isAdmin == true) onNavigateToStorage else onNavigateToVault
-                )
-                StatCard(
-                    title = "Members",
-                    value = stats.totalMembers.toString(),
-                    icon = Icons.Default.People,
-                    iconColor = BrandAccent,
-                    modifier = Modifier.weight(1f),
-                    onClick = onNavigateToFamily
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(Dimens.Spacing8)
+                ) {
+                    StatCard(
+                        title = "Total Files",
+                        value = stats.totalFiles.toString(),
+                        icon = Icons.AutoMirrored.Filled.InsertDriveFile,
+                        iconColor = MintPrimaryLight,
+                        modifier = Modifier.weight(1f),
+                        onClick = onNavigateToVault
+                    )
+                    StatCard(
+                        title = "Folders",
+                        value = stats.totalFolders.toString(),
+                        icon = Icons.Default.Folder,
+                        iconColor = CategoryDocColor,
+                        modifier = Modifier.weight(1f),
+                        onClick = onNavigateToVault
+                    )
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(Dimens.Spacing8)
+                ) {
+                    StatCard(
+                        title = "Space Used",
+                        value = FileUtils.formatBytes(stats.totalSizeBytes),
+                        icon = Icons.Default.Storage,
+                        iconColor = MintSecondary,
+                        modifier = Modifier.weight(1f),
+                        onClick = onNavigateToStorage
+                    )
+                    StatCard(
+                        title = "Members",
+                        value = stats.totalMembers.toString(),
+                        icon = Icons.Default.People,
+                        iconColor = BrandAccent,
+                        modifier = Modifier.weight(1f),
+                        onClick = onNavigateToFamily
+                    )
+                }
             }
         }
 
-        // 2. Storage Quota Progress Meter with Smooth Dynamic Animation
+        // 2. Storage Category Distribution Breakdown Card
         item {
-            val targetProgress = if (stats.storageQuotaBytes > 0) {
-                (stats.totalSizeBytes.toFloat() / stats.storageQuotaBytes).coerceIn(0f, 1f)
-            } else 0f
-
-            var progressTrigger by remember { mutableStateOf(false) }
-            LaunchedEffect(Unit) {
-                progressTrigger = true
-            }
-
-            val animatedProgress by animateFloatAsState(
-                targetValue = if (progressTrigger) targetProgress else 0f,
-                animationSpec = tween(durationMillis = 1000, easing = FastOutSlowInEasing),
-                label = "storageProgress"
-            )
+            val totalBytes = stats.storageQuotaBytes.coerceAtLeast(1L)
+            val usedBytes = stats.totalSizeBytes
+            val freeBytes = (totalBytes - usedBytes).coerceAtLeast(0L)
+            val percentUsed = ((usedBytes.toFloat() / totalBytes) * 100).toInt().coerceIn(0, 100)
 
             Card(
                 modifier = Modifier
@@ -184,6 +192,7 @@ private fun DashboardContent(
                 elevation = CardDefaults.cardElevation(defaultElevation = Dimens.CardElevation)
             ) {
                 Column(modifier = Modifier.padding(Dimens.Spacing16)) {
+                    // Header
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -198,65 +207,132 @@ private fun DashboardContent(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
-                                    Icons.Default.CloudQueue,
+                                    Icons.Default.PieChart,
                                     contentDescription = null,
                                     tint = MintSecondary,
                                     modifier = Modifier.size(18.dp)
                                 )
                             }
                             Spacer(modifier = Modifier.width(Dimens.Spacing10))
-                            Text(
-                                text = "Storage Pool Usage",
-                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                            )
+                            Column {
+                                Text(
+                                    text = "Storage Breakdown",
+                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                                )
+                                Text(
+                                    text = "${FileUtils.formatBytes(usedBytes)} of ${FileUtils.formatBytes(totalBytes)} ($percentUsed%)",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
                         Surface(
                             shape = RoundedCornerShape(Dimens.RadiusSmall),
-                            color = MintSecondary.copy(alpha = 0.15f)
+                            color = MintSecondary.copy(alpha = 0.15f),
+                            onClick = onNavigateToStorage,
+                            modifier = Modifier.bounceClick(scaleDown = 0.92f, onClick = onNavigateToStorage)
                         ) {
-                            Text(
-                                text = stats.storageProvider.uppercase(),
-                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.ExtraBold),
-                                color = MintSecondary,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                            )
+                            Row(
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Pool →",
+                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                    color = MintSecondary
+                                )
+                            }
                         }
                     }
 
                     Spacer(modifier = Modifier.height(Dimens.Spacing14))
 
-                    LinearProgressIndicator(
-                        progress = { animatedProgress },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(8.dp)
-                            .clip(RoundedCornerShape(4.dp)),
-                        color = if (animatedProgress > 0.9f) BrandError else MintSecondary,
-                        trackColor = MaterialTheme.colorScheme.surfaceVariant
+                    // Multi-segment Colored Category Progress Bar
+                    val breakdown = stats.storageBreakdown ?: emptyMap()
+                    val categories = listOf(
+                        Triple("image", "Images", CategoryImageColor),
+                        Triple("pdf", "PDFs", CategoryPdfColor),
+                        Triple("document", "Docs", CategoryDocColor),
+                        Triple("sheet", "Sheets", CategorySheetColor),
+                        Triple("text", "Text", CategoryTextColor),
+                        Triple("other", "Other", CategoryOtherColor)
                     )
 
-                    Spacer(modifier = Modifier.height(Dimens.Spacing8))
+                    var animationTrigger by remember { mutableStateOf(false) }
+                    LaunchedEffect(Unit) { animationTrigger = true }
 
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(10.dp)
+                            .clip(RoundedCornerShape(5.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
                     ) {
-                        Text(
-                            text = "Used ${FileUtils.formatBytes(stats.totalSizeBytes)}",
-                            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        var totalWeight = 0f
+                        categories.forEach { (key, _, color) ->
+                            val catSize = breakdown[key]?.size ?: 0L
+                            if (catSize > 0) {
+                                val weight = (catSize.toFloat() / totalBytes).coerceIn(0.01f, 1f)
+                                val animatedWeight by animateFloatAsState(
+                                    targetValue = if (animationTrigger) weight else 0f,
+                                    animationSpec = tween(1000, easing = FastOutSlowInEasing),
+                                    label = "catWeight_$key"
+                                )
+                                if (animatedWeight > 0f) {
+                                    totalWeight += animatedWeight
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(animatedWeight)
+                                            .fillMaxHeight()
+                                            .background(color)
+                                    )
+                                }
+                            }
+                        }
+                        val remaining = (1f - totalWeight).coerceAtLeast(0.001f)
+                        Box(
+                            modifier = Modifier
+                                .weight(remaining)
+                                .fillMaxHeight()
+                                .background(Color.Transparent)
                         )
-                        Text(
-                            text = "Limit ${FileUtils.formatBytes(stats.storageQuotaBytes)}",
-                            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(Dimens.Spacing12))
+
+                    // 2-Column Category Chips Grid
+                    Column(verticalArrangement = Arrangement.spacedBy(Dimens.Spacing6)) {
+                        for (i in categories.indices step 2) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(Dimens.Spacing8)
+                            ) {
+                                CategoryChip(
+                                    label = categories[i].second,
+                                    color = categories[i].third,
+                                    sizeBytes = breakdown[categories[i].first]?.size ?: 0L,
+                                    count = breakdown[categories[i].first]?.count ?: 0,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                if (i + 1 < categories.size) {
+                                    CategoryChip(
+                                        label = categories[i + 1].second,
+                                        color = categories[i + 1].third,
+                                        sizeBytes = breakdown[categories[i + 1].first]?.size ?: 0L,
+                                        count = breakdown[categories[i + 1].first]?.count ?: 0,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                } else {
+                                    Spacer(modifier = Modifier.weight(1f))
+                                }
+                            }
+                        }
                     }
                 }
             }
         }
 
-        // 3. Quick Actions
+        // 3. Quick Actions Toolbar
         item {
             Column(modifier = Modifier.staggeredEntrance(index = 2)) {
                 Text(
@@ -266,7 +342,7 @@ private fun DashboardContent(
                 Spacer(modifier = Modifier.height(Dimens.Spacing10))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(Dimens.Spacing10)
+                    horizontalArrangement = Arrangement.spacedBy(Dimens.Spacing8)
                 ) {
                     Button(
                         onClick = onNavigateToVault,
@@ -280,9 +356,9 @@ private fun DashboardContent(
                             contentColor = MaterialTheme.colorScheme.onPrimary
                         )
                     ) {
-                        Icon(Icons.Default.FolderOpen, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(Dimens.Spacing8))
-                        Text("Browse Vault", fontWeight = FontWeight.Bold)
+                        Icon(Icons.Default.FolderOpen, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Vault", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     }
                     OutlinedButton(
                         onClick = onNavigateToFamily,
@@ -294,9 +370,23 @@ private fun DashboardContent(
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary),
                         border = ButtonDefaults.outlinedButtonBorder(enabled = true)
                     ) {
-                        Icon(Icons.Default.PersonAdd, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(Dimens.Spacing8))
-                        Text("Invite Member", fontWeight = FontWeight.Bold)
+                        Icon(Icons.Default.PersonAdd, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Invite", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    }
+                    OutlinedButton(
+                        onClick = onNavigateToStorage,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(Dimens.SecondaryButtonHeight)
+                            .bounceClick(scaleDown = 0.96f, onClick = onNavigateToStorage),
+                        shape = RoundedCornerShape(Dimens.RadiusMedium),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MintSecondary),
+                        border = ButtonDefaults.outlinedButtonBorder(enabled = true)
+                    ) {
+                        Icon(Icons.Default.CloudQueue, contentDescription = null, modifier = Modifier.size(16.dp), tint = MintSecondary)
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Storage", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = MintSecondary)
                     }
                 }
             }
@@ -359,5 +449,47 @@ private fun DashboardContent(
         }
 
         item { Spacer(modifier = Modifier.height(Dimens.Spacing24)) }
+    }
+}
+
+@Composable
+private fun CategoryChip(
+    label: String,
+    color: Color,
+    sizeBytes: Long,
+    count: Int,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(Dimens.RadiusMedium),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(8.dp)
+                    .clip(CircleShape)
+                    .background(color)
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Column {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1
+                )
+                Text(
+                    text = "${FileUtils.formatBytes(sizeBytes)} ($count)",
+                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1
+                )
+            }
+        }
     }
 }

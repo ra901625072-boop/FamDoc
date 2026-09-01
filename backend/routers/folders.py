@@ -128,7 +128,7 @@ def create_folder(
 
     # If parent folder is specified, verify it exists, belongs to the family, and is not deleted
     if folder_in.parent_id is not None:
-        parent = auth.verify_resource_access(
+        auth.verify_resource_access(
             models.Folder,
             folder_in.parent_id,
             current_user.family_id,

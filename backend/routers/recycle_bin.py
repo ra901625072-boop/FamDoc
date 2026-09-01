@@ -2,7 +2,6 @@ from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from database import get_db
 import models
-import schemas
 import auth
 from storage.storage_manager import StorageManager
 from utils.audit import log_action

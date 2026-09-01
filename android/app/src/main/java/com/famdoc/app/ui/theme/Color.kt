@@ -42,6 +42,20 @@ val BrandError = Color(0xFFEF4444)             // Crimson Alert
 val BrandWarning = Color(0xFFF97316)           // Radiant Orange
 val BrandPurple = Color(0xFF8B5CF6)            // Vault Violet
 
+// Google Brand Colors for Multi-account Pooling
+val GoogleBrandBlue = Color(0xFF4285F4)
+val GoogleBrandGreen = Color(0xFF34A853)
+val GoogleBrandYellow = Color(0xFFFBBC05)
+val GoogleBrandRed = Color(0xFFEA4335)
+
+// Storage Category Breakdown Colors
+val CategoryImageColor = Color(0xFF3B82F6)      // Modern Blue
+val CategoryPdfColor = Color(0xFFEF4444)        // Vibrant Red
+val CategoryDocColor = Color(0xFF8B5CF6)        // Rich Purple
+val CategorySheetColor = Color(0xFF10B981)      // Emerald Green
+val CategoryTextColor = Color(0xFFF59E0B)       // Warm Amber
+val CategoryOtherColor = Color(0xFF6B7280)      // Slate Gray
+
 // Legacy Brand Colors (Mapped to modern dynamic theme tokens)
 val BrandPrimary = MintPrimary
 val BrandPrimaryLight = MintPrimaryLight

@@ -132,10 +132,17 @@ class StorageManager:
         accounts = valid_accounts
 
         if not accounts and family:
-            # Fallback for legacy setups or unit test fixtures: auto-create default active account
-            cfg = family.storage_config or {}
-            g_cfg = cfg.get("google", cfg) if isinstance(cfg, dict) else {}
-            if g_cfg.get("client_id") and (g_cfg.get("refresh_token") or g_cfg.get("access_token")):
+            # Check existing active accounts regardless of token presence (e.g. test mocks)
+            all_family_accounts = db.query(StorageAccount).filter(
+                StorageAccount.family_id == family.id,
+                StorageAccount.status == "active",
+            ).all()
+            if all_family_accounts:
+                accounts = all_family_accounts
+            else:
+                # Fallback for legacy setups or unit test fixtures: auto-create default active account
+                cfg = family.storage_config or {}
+                g_cfg = cfg.get("google", cfg) if isinstance(cfg, dict) else {}
                 acct = StorageAccount(
                     family_id=family.id,
                     provider="google",
@@ -415,7 +422,6 @@ class StorageManager:
                 continue
 
             config = family_configs.get(file.family_id, {})
-            provider = config.get("storage_provider", "local")
             mimetype = file.file_type or "application/octet-stream"
 
             # Check availability first (handles mock availability checks in tests)
@@ -669,8 +675,6 @@ class StorageManager:
         # to avoid redundant, blocking network calls on every API request.
         if family.storage_provider and family.vault_folder_id:
             return
-
-        config_data = family.storage_config or {}
 
         # 1. Try Google Drive if configured
         if family.storage_provider == "google" and family.vault_folder_id:

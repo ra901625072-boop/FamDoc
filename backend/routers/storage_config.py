@@ -11,8 +11,9 @@ import urllib.parse
 import time
 import requests
 from datetime import datetime, timezone
-from config import BACKEND_URL, FRONTEND_URL
+from config import BACKEND_URL, FRONTEND_URL, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, JWT_SECRET, JWT_ALGORITHM
 from storage import get_storage_provider
+from logging_config import logger
 
 router = APIRouter(prefix="/api/storage", tags=["Storage Configuration"])
 
@@ -116,7 +117,6 @@ def get_storage_config(
 
     account_responses = [serialize_storage_account(acct, db) for acct in accounts]
     
-    from config import GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET
     has_env = bool(GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET)
     primary_acct = valid_active_accounts[0] if valid_active_accounts else (active_accounts[0] if active_accounts else None)
     first_client_id = (primary_acct.config.get("client_id") if primary_acct and primary_acct.config else None) or (config.get("google", {}).get("client_id") or GOOGLE_CLIENT_ID)
@@ -326,8 +326,6 @@ def oauth2callback(
     db: Session = Depends(get_db)
 ):
     from jose import jwt, JWTError
-    from config import JWT_SECRET, JWT_ALGORITHM, FRONTEND_URL
-    from logging_config import logger
     import traceback
 
     # 1. Handle Google OAuth errors (e.g., user cancelled consent or access denied)
@@ -349,7 +347,6 @@ def oauth2callback(
             payload = jwt.decode(state, JWT_SECRET, algorithms=[JWT_ALGORITHM])
             family_id = payload.get("family_id")
             state_user_id = payload.get("user_id")
-            action = payload.get("action", "connect")
             state_client_id = payload.get("client_id")
             state_client_secret = payload.get("client_secret")
             if not family_id:

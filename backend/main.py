@@ -1,22 +1,31 @@
 import os
+import sys
 import socket
+import threading
+import time
+import asyncio
+from contextlib import asynccontextmanager
+
+# Ensure backend root is in sys.path
+backend_dir = os.path.dirname(os.path.abspath(__file__))
+if backend_dir not in sys.path:
+    sys.path.insert(0, backend_dir)
+
 # Set default global socket timeout of 20 seconds to prevent connection hangs 
 # to Google Drive or Supabase DB from blocking FastAPI request threads indefinitely.
 socket.setdefaulttimeout(20.0)
 
-import asyncio
 if not hasattr(asyncio, "coroutine"):
     asyncio.coroutine = lambda f: f
-from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.gzip import GZipMiddleware
 from database import engine, Base, run_migrations, SessionLocal
-import models
 from routers import auth, family, storage_config, folders, files, recycle_bin, search, dashboard, share, views
 from config import CORS_ORIGINS, IS_DEFAULT_JWT_SECRET, SERVE_FRONTEND
-
+from utils.cleanup import purge_old_recycle_bin_items
 from logging_config import logger
 
 # JWT Secret Key Security Validation
@@ -60,11 +69,6 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan
 )
-
-import threading
-import time
-from utils.cleanup import purge_old_recycle_bin_items
-from database import SessionLocal
 
 def start_cleanup_worker():
     def worker():

@@ -30,7 +30,7 @@ def decrypt_config(token: str) -> dict:
     try:
         # Attempt to decrypt Fernet encrypted string
         return json.loads(_fernet.decrypt(token.encode()).decode())
-    except Exception as decrypt_err:
+    except Exception:
         logger.warning(
             "Decryption of storage config failed. This usually indicates that the STORAGE_CONFIG_ENCRYPTION_KEY "
             "or JWT_SECRET in your environment does not match the key used to encrypt this config in the database. "

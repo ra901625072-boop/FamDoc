@@ -1,6 +1,5 @@
 from sqlalchemy import create_engine, event
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import declarative_base, sessionmaker
 from config import DATABASE_URL
 
 # Create database engine
@@ -230,12 +229,9 @@ def run_migrations():
                 logger.error(f"Migration error (files sync_retry_count): {str(e)}")
 
         # Add local_file_id and cloud_file_id columns
-        local_file_id_added = False
-        cloud_file_id_added = False
         if "local_file_id" not in columns:
             try:
                 execute_migration_statement("ALTER TABLE files ADD COLUMN local_file_id VARCHAR(255)")
-                local_file_id_added = True
                 logger.info("Migration: Successfully added local_file_id column to files table.")
             except Exception as e:
                 logger.error(f"Migration error (files local_file_id): {str(e)}")
@@ -243,7 +239,6 @@ def run_migrations():
         if "cloud_file_id" not in columns:
             try:
                 execute_migration_statement("ALTER TABLE files ADD COLUMN cloud_file_id VARCHAR(255)")
-                cloud_file_id_added = True
                 logger.info("Migration: Successfully added cloud_file_id column to files table.")
             except Exception as e:
                 logger.error(f"Migration error (files cloud_file_id): {str(e)}")
@@ -291,7 +286,7 @@ def run_migrations():
         try:
             execute_migration_statement("CREATE INDEX ix_files_pending_sync_at ON files(pending_sync_at)")
             logger.info("Migration: Successfully created index ix_files_pending_sync_at.")
-        except Exception as e:
+        except Exception:
             pass
 
         if "storage_account_id" not in columns:

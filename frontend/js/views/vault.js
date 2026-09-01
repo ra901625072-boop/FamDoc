@@ -317,6 +317,12 @@
       if (previewParam) {
         openPreview(parseInt(previewParam));
       }
+      if (queryParams.get("action") === "new-folder") {
+        setTimeout(() => {
+          const btn = document.getElementById("btn-new-folder");
+          if (btn) btn.click();
+        }, 100);
+      }
     });
 
     // 3. Register DOM bindings

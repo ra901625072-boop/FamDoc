@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 from typing import Optional, List
 from datetime import datetime
 
@@ -24,15 +24,14 @@ class UserLogin(BaseModel):
     password: str
 
 class UserResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     username: str
     email: str
     role: str
     created_at: datetime
     family_id: Optional[str] = None
-
-    class Config:
-        from_attributes = True
 
 class Token(BaseModel):
     access_token: str
@@ -88,6 +87,8 @@ class FamilyLogin(BaseModel):
         return v
 
 class FamilyResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
     name: str
     admin_id: int
@@ -95,10 +96,9 @@ class FamilyResponse(BaseModel):
     created_at: datetime
     expires_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
-
 class FamilyMemberResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     family_id: str
     user_id: int
@@ -110,9 +110,6 @@ class FamilyMemberResponse(BaseModel):
     storage_connected: Optional[bool] = False
     storage_account_email: Optional[str] = None
 
-    class Config:
-        from_attributes = True
-
 # ==========================================
 # Storage Configuration Schemas (Legacy/Existing)
 # ==========================================
@@ -121,6 +118,8 @@ class StorageSetupGoogle(BaseModel):
     folder_id: str
 
 class StorageAccountResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     family_id: str
     provider: str
@@ -139,9 +138,6 @@ class StorageAccountResponse(BaseModel):
     quota_checked_at: Optional[datetime] = None
     created_at: datetime
     disconnected_at: Optional[datetime] = None
-
-    class Config:
-        from_attributes = True
 
 class StorageAccountUpdate(BaseModel):
     label: Optional[str] = None
@@ -190,6 +186,8 @@ class FolderMove(BaseModel):
     parent_id: Optional[int] = None
 
 class FolderResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     name: str
     parent_id: Optional[int]
@@ -199,9 +197,6 @@ class FolderResponse(BaseModel):
     total_size_bytes: int = 0
     last_modified: Optional[datetime] = None
     cloud_folder_id: Optional[str] = None
-
-    class Config:
-        from_attributes = True
 
 # ==========================================
 # File Schemas (Legacy/Existing)
@@ -214,6 +209,8 @@ class FileMove(BaseModel):
     folder_id: Optional[int] = None
 
 class FileResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     filename: str
     file_type: str
@@ -228,9 +225,6 @@ class FileResponse(BaseModel):
     cloud_link: Optional[str]
     is_shared: bool = False
     preview_token: Optional[str] = None
-
-    class Config:
-        from_attributes = True
 
 
 # ==========================================
@@ -276,4 +270,3 @@ class PasswordResetConfirm(BaseModel):
         if not any(char.isdigit() for char in v):
             raise ValueError('Password must contain at least one number')
         return v
-
