@@ -106,6 +106,9 @@ class FamilyMemberResponse(BaseModel):
     joined_at: datetime
     username: Optional[str] = None
     email: Optional[str] = None
+    storage_contributed_bytes: Optional[int] = 0
+    storage_connected: Optional[bool] = False
+    storage_account_email: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -127,6 +130,10 @@ class StorageAccountResponse(BaseModel):
     vault_folder_id: Optional[str] = None
     status: str
     priority: int
+    user_id: Optional[int] = None
+    member_username: Optional[str] = None
+    member_email: Optional[str] = None
+    member_role: Optional[str] = None
     cached_quota_total: Optional[int] = None
     cached_quota_used: Optional[int] = None
     quota_checked_at: Optional[datetime] = None
@@ -139,6 +146,7 @@ class StorageAccountResponse(BaseModel):
 class StorageAccountUpdate(BaseModel):
     label: Optional[str] = None
     priority: Optional[int] = None
+    user_id: Optional[int] = None
 
 class OAuthUrlRequest(BaseModel):
     client_id: Optional[str] = None

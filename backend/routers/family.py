@@ -79,7 +79,51 @@ def get_family_members(
         raise HTTPException(status_code=404, detail="You do not belong to any family.")
 
     members = db.query(models.FamilyMember).filter(models.FamilyMember.family_id == membership.family_id).all()
-    return members
+    
+    # Query active storage accounts for this family to map member contributions
+    storage_accounts = db.query(models.StorageAccount).filter(
+        models.StorageAccount.family_id == membership.family_id,
+        models.StorageAccount.status == "active"
+    ).all()
+
+    user_storage_map = {}
+    for acct in storage_accounts:
+        uid = acct.user_id
+        if not uid and acct.email:
+            matched_member = db.query(models.FamilyMember).filter(
+                models.FamilyMember.family_id == membership.family_id
+            ).join(models.User).filter(
+                models.User.email == acct.email
+            ).first()
+            if matched_member and matched_member.user:
+                uid = matched_member.user_id
+                acct.user_id = matched_member.user_id
+                try:
+                    db.commit()
+                except Exception:
+                    pass
+        if uid:
+            if uid not in user_storage_map:
+                user_storage_map[uid] = {"capacity": 0, "email": acct.email}
+            user_storage_map[uid]["capacity"] += (acct.cached_quota_total or (15 * 1024 * 1024 * 1024))
+            if acct.email:
+                user_storage_map[uid]["email"] = acct.email
+
+    member_responses = []
+    for m in members:
+        resp = schemas.FamilyMemberResponse.model_validate(m)
+        st_info = user_storage_map.get(m.user_id)
+        if st_info:
+            resp.storage_connected = True
+            resp.storage_contributed_bytes = st_info["capacity"]
+            resp.storage_account_email = st_info.get("email")
+        else:
+            resp.storage_connected = False
+            resp.storage_contributed_bytes = 0
+            resp.storage_account_email = None
+        member_responses.append(resp)
+
+    return member_responses
 
 @router.delete("/members/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 def remove_family_member(

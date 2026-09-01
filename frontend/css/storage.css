@@ -248,5 +248,183 @@
   display: flex;
   gap: 0.5rem;
   align-items: center;
+  flex-wrap: wrap;
+}
+
+/* Member Attribution Chip & Badges */
+.member-attribution-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: linear-gradient(135deg, rgba(66, 133, 244, 0.08), rgba(99, 102, 241, 0.12));
+  border: 1px solid rgba(66, 133, 244, 0.2);
+  border-radius: 9999px;
+  padding: 0.25rem 0.65rem 0.25rem 0.35rem;
+  font-size: 0.8rem;
+  color: var(--text-ink);
+  font-weight: 500;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.member-attribution-chip:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+}
+
+.member-avatar-circle {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4285F4, #6366F1);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.member-unassigned-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background-color: var(--surface-paper-tint);
+  border: 1px dashed var(--border-paper-dark);
+  border-radius: 9999px;
+  padding: 0.25rem 0.65rem;
+  font-size: 0.78rem;
+  color: var(--text-ink-muted);
+  font-weight: 500;
+}
+
+/* Contributors Grid Widget */
+.contributors-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.contributor-card {
+  background: var(--surface-card, #ffffff);
+  border: 1px solid var(--border-paper-dark, #e2e8f0);
+  border-radius: var(--radius-md, 8px);
+  padding: 1.1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.contributor-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent-brand);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+}
+
+.contributor-card.active-contributor {
+  border-left: 4px solid #10b981;
+}
+
+.contributor-card.inactive-contributor {
+  border-left: 4px solid var(--border-paper-dark);
+  opacity: 0.85;
+}
+
+.contributor-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.contributor-user-group {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.contributor-avatar-large {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.contributor-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text-ink);
+}
+
+.contributor-email {
+  font-size: 0.76rem;
+  color: var(--text-ink-muted);
+}
+
+.contributor-status-badge {
+  font-size: 0.72rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 9999px;
+  font-weight: 600;
+}
+
+.contributor-status-badge.connected {
+  background-color: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+
+.contributor-status-badge.shared {
+  background-color: var(--surface-paper-tint);
+  color: var(--text-ink-muted);
+  border: 1px solid var(--border-paper);
+}
+
+/* Cloud Storage Table Badge on Family Page */
+.cloud-member-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.cloud-member-badge.active {
+  background-color: #f0fdf4;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
+.cloud-member-badge.none {
+  background-color: var(--surface-paper-tint);
+  color: var(--text-ink-muted);
+  border: 1px solid var(--border-paper);
+}
+
+.family-storage-summary-banner {
+  background: linear-gradient(135deg, rgba(66, 133, 244, 0.07), rgba(99, 102, 241, 0.08));
+  border: 1px solid rgba(66, 133, 244, 0.2);
+  border-radius: var(--radius-md, 8px);
+  padding: 0.9rem 1.25rem;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
 }
 

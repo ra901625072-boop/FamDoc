@@ -14,6 +14,38 @@ from storage import get_storage_provider
 
 router = APIRouter(prefix="/api/storage", tags=["Storage Configuration"])
 
+def serialize_storage_account(acct: models.StorageAccount, db: Session) -> schemas.StorageAccountResponse:
+    member_username = None
+    member_email = None
+    member_role = None
+    if acct.user:
+        member_username = acct.user.username
+        member_email = acct.user.email
+        member_role = acct.user.role
+    elif acct.email:
+        # Auto-match user by email in this family if user_id is not yet set
+        matched_member = db.query(models.FamilyMember).filter(
+            models.FamilyMember.family_id == acct.family_id
+        ).join(models.User).filter(
+            models.User.email == acct.email
+        ).first()
+        if matched_member and matched_member.user:
+            member_username = matched_member.user.username
+            member_email = matched_member.user.email
+            member_role = matched_member.user.role
+            acct.user_id = matched_member.user.id
+            try:
+                db.commit()
+            except Exception:
+                pass
+
+    resp = schemas.StorageAccountResponse.model_validate(acct)
+    resp.member_username = member_username
+    resp.member_email = member_email
+    resp.member_role = member_role
+    return resp
+
+
 @router.get("/config", response_model=schemas.StorageConfigResponse)
 def get_storage_config(
     current_user: models.User = Depends(auth.get_current_user),
@@ -71,7 +103,7 @@ def get_storage_config(
     if total_cap == 0:
         total_cap = family.storage_quota_bytes or 524288000
 
-    account_responses = [schemas.StorageAccountResponse.model_validate(acct) for acct in accounts]
+    account_responses = [serialize_storage_account(acct, db) for acct in accounts]
     
     first_client_id = active_accounts[0].config.get("client_id") if active_accounts and active_accounts[0].config else config.get("google", {}).get("client_id")
     first_email = active_accounts[0].email if active_accounts else None
@@ -100,7 +132,7 @@ def list_storage_accounts(
     accounts = db.query(models.StorageAccount).filter(
         models.StorageAccount.family_id == current_user.family_id
     ).order_by(models.StorageAccount.priority.asc(), models.StorageAccount.created_at.asc()).all()
-    return accounts
+    return [serialize_storage_account(acct, db) for acct in accounts]
 
 
 @router.patch("/accounts/{account_id}", response_model=schemas.StorageAccountResponse)
@@ -121,10 +153,22 @@ def update_storage_account(
         acct.label = payload.label.strip()
     if payload.priority is not None:
         acct.priority = payload.priority
+    if payload.user_id is not None:
+        if payload.user_id == 0:
+            acct.user_id = None
+        else:
+            # Validate user exists in same family
+            matched_member = db.query(models.FamilyMember).filter(
+                models.FamilyMember.family_id == current_user.family_id,
+                models.FamilyMember.user_id == payload.user_id
+            ).first()
+            if not matched_member:
+                raise HTTPException(status_code=400, detail="Specified user does not belong to your family.")
+            acct.user_id = matched_member.user_id
 
     db.commit()
     db.refresh(acct)
-    return acct
+    return serialize_storage_account(acct, db)
 
 
 @router.post("/accounts/{account_id}/disconnect")
@@ -372,12 +416,25 @@ def oauth2callback(
         
     active_config["vault_folder_id"] = vault_id
 
+    # Match member user in family by email
+    matched_user = None
+    if email:
+        matched_member = db.query(models.FamilyMember).filter(
+            models.FamilyMember.family_id == family.id
+        ).join(models.User).filter(
+            models.User.email == email
+        ).first()
+        if matched_member:
+            matched_user = matched_member.user
+
     if existing_acct:
         existing_acct.config = active_config
         existing_acct.vault_folder_id = vault_id
         existing_acct.status = "active"
         if email:
             existing_acct.email = email
+        if matched_user and not existing_acct.user_id:
+            existing_acct.user_id = matched_user.id
         if quota_limit is not None:
             existing_acct.cached_quota_total = quota_limit
         if quota_usage is not None:
@@ -387,15 +444,17 @@ def oauth2callback(
         account_count = db.query(models.StorageAccount).filter(
             models.StorageAccount.family_id == family.id
         ).count()
+        default_label = f"{matched_user.username}'s Drive" if matched_user else f"Google Account #{account_count + 1}"
         new_acct = models.StorageAccount(
             family_id=family.id,
             provider="google",
             external_account_id=ext_id,
             email=email or f"Google Account #{account_count + 1}",
-            label=f"Google Account #{account_count + 1}",
+            label=default_label,
             vault_folder_id=vault_id,
             status="active",
             priority=account_count,
+            user_id=matched_user.id if matched_user else None,
             cached_quota_total=quota_limit,
             cached_quota_used=quota_usage,
             quota_checked_at=datetime.now(timezone.utc)

@@ -199,11 +199,13 @@ class StorageAccount(Base):
     cached_quota_total = Column(Integer, nullable=True)
     cached_quota_used = Column(Integer, nullable=True)
     quota_checked_at = Column(DateTime(timezone=True), nullable=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     disconnected_at = Column(DateTime(timezone=True), nullable=True)
 
     # Relationships
     family = relationship("Family", back_populates="storage_accounts")
+    user = relationship("User")
     files = relationship("File", back_populates="storage_account")
 
     @property

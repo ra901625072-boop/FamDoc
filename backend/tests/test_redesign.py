@@ -337,6 +337,53 @@ class TestBackendRedesign(unittest.TestCase):
             res = upload_file_mock("large_cloud_doc.pdf", b"x" * 2000)
             self.assertEqual(res.status_code, 201)
 
+    def test_storage_account_member_attribution_and_assignment(self):
+        # Create a Google Drive StorageAccount assigned to Admin
+        google_acct = models.StorageAccount(
+            family_id=self.family.id,
+            provider="google",
+            email=self.admin.email,
+            label="Admin's Drive",
+            status="active",
+            priority=0,
+            user_id=self.admin.id,
+            cached_quota_total=15 * 1024 * 1024 * 1024,
+            cached_quota_used=2 * 1024 * 1024 * 1024
+        )
+        self.db.add(google_acct)
+        self.db.commit()
+
+        admin_token = auth.create_access_token(data={"sub": self.admin.email, "id": self.admin.id, "role": self.admin.role})
+        headers = {"Authorization": f"Bearer {admin_token}"}
+
+        # 1. Verify Storage Config returns member attribution details
+        res_cfg = self.client.get("/api/storage/config", headers=headers)
+        self.assertEqual(res_cfg.status_code, 200)
+        accts = res_cfg.json().get("accounts", [])
+        self.assertTrue(len(accts) > 0)
+        matching_acct = next(a for a in accts if a["id"] == google_acct.id)
+        self.assertEqual(matching_acct["user_id"], self.admin.id)
+        self.assertEqual(matching_acct["member_username"], self.admin.username)
+
+        # 2. Verify Family Members list reflects storage contribution
+        res_fam = self.client.get("/api/family/members", headers=headers)
+        self.assertEqual(res_fam.status_code, 200)
+        members = res_fam.json()
+        admin_member_resp = next(m for m in members if m["user_id"] == self.admin.id)
+        self.assertTrue(admin_member_resp["storage_connected"])
+        self.assertEqual(admin_member_resp["storage_contributed_bytes"], 15 * 1024 * 1024 * 1024)
+
+        # 3. Test reassigning storage account to another family member
+        res_patch = self.client.patch(
+            f"/api/storage/accounts/{google_acct.id}",
+            json={"user_id": self.user.id, "label": "Member's Google Drive"},
+            headers=headers
+        )
+        self.assertEqual(res_patch.status_code, 200)
+        updated_data = res_patch.json()
+        self.assertEqual(updated_data["user_id"], self.user.id)
+        self.assertEqual(updated_data["member_username"], self.user.username)
+
     def test_two_phase_sync_safety_and_recovery(self):
         # Insert a file pending sync with local_file_id
         test_file = models.File(

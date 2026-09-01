@@ -103,6 +103,23 @@
           </form>
         </div>
 
+        <!-- Family Storage Contributors Section -->
+        <div class="famdoc-card fd-fade-up" id="contributors-panel" style="margin-bottom: 2rem; padding: 1.5rem 2rem;">
+          <div class="famdoc-card-header" style="margin-bottom: 0.5rem;">
+            <h3 style="font-family: var(--font-serif); font-size: 1.25rem; display: flex; align-items: center; gap: 0.5rem;">
+              <i class="fas fa-users" style="color: var(--accent-brand);"></i>
+              Family Storage Contributors
+            </h3>
+            <span id="contributors-summary-badge" class="badge badge-primary">0 of 0 Connected</span>
+          </div>
+          <p style="font-size: 0.85rem; color: var(--text-ink-muted); margin-bottom: 1.25rem;">
+            See which family members have connected their Google Drive accounts and are contributing storage to the shared family pool.
+          </p>
+          <div id="contributors-grid-container" class="contributors-overview-grid">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+
         <!-- Google Drive Multi-Account Management Section -->
         <div class="famdoc-card storage-config-card fd-fade-up" id="google-card" style="margin-bottom: 2rem;">
           <div class="famdoc-card-header">
@@ -157,6 +174,8 @@
     }
   };
 
+  let familyMembersList = [];
+
   async function loadProfileAndStorage() {
     currentUser = await window.FamDocApp.getUser();
     if (!currentUser) return;
@@ -183,13 +202,19 @@
 
   async function loadStorageConfig() {
     try {
-      const [config, stats] = await Promise.all([
+      const [config, stats, members] = await Promise.all([
         FamDocAPI.storage.getConfig(),
         FamDocAPI.dashboard.getStats().catch(err => {
           console.error("Failed to load storage breakdown stats", err);
           return null;
+        }),
+        FamDocAPI.family.getMembers().catch(err => {
+          console.error("Failed to load family members for attribution", err);
+          return [];
         })
       ]);
+
+      familyMembersList = members || [];
 
       const activeProviderEl = document.getElementById("storage-active-provider");
       const activeDetailEl = document.getElementById("storage-active-detail");
@@ -244,8 +269,11 @@
         radioInput.checked = true;
       }
 
+      // Render Family Storage Contributors Overview
+      renderContributorsOverview(familyMembersList, config.accounts || []);
+
       // Render Connected Accounts Cards
-      renderAccountCards(config.accounts || [], config.client_id);
+      renderAccountCards(config.accounts || [], config.client_id, familyMembersList);
 
       // Render visual breakdown if stats are available
       if (stats) {
@@ -256,7 +284,91 @@
     }
   }
 
-  function renderAccountCards(accounts, existingClientId) {
+  function renderContributorsOverview(members, accounts) {
+    const container = document.getElementById("contributors-grid-container");
+    const badge = document.getElementById("contributors-summary-badge");
+    if (!container) return;
+
+    if (!members || members.length === 0) {
+      container.innerHTML = `<div class="famdoc-alert info" style="grid-column: 1 / -1;"><i class="fas fa-info-circle"></i> No family members found.</div>`;
+      return;
+    }
+
+    const activeAccounts = (accounts || []).filter(a => a.status === "active");
+    
+    // Map accounts to member user_id
+    const memberAccountsMap = {};
+    activeAccounts.forEach(acct => {
+      let uid = acct.user_id;
+      if (!uid && acct.email) {
+        const found = members.find(m => m.email && m.email.toLowerCase() === acct.email.toLowerCase());
+        if (found) uid = found.user_id;
+      }
+      if (uid) {
+        if (!memberAccountsMap[uid]) memberAccountsMap[uid] = [];
+        memberAccountsMap[uid].push(acct);
+      }
+    });
+
+    let connectedCount = 0;
+    const cardsHtml = members.map(m => {
+      const userAccts = memberAccountsMap[m.user_id] || [];
+      const isConnected = userAccts.length > 0;
+      if (isConnected) connectedCount++;
+
+      let totalCap = 0;
+      let totalUsed = 0;
+      userAccts.forEach(a => {
+        totalCap += (a.cached_quota_total || 15 * 1024 * 1024 * 1024);
+        totalUsed += (a.cached_quota_used || 0);
+      });
+
+      const initial = (m.username || 'U').charAt(0).toUpperCase();
+      const roleBadge = m.role === 'admin' ? '<span class="badge badge-primary" style="font-size: 0.7rem; padding: 0.1rem 0.4rem;">Admin</span>' : '';
+      
+      const statusBadge = isConnected
+        ? `<span class="contributor-status-badge connected"><i class="fab fa-google"></i> Connected</span>`
+        : `<span class="contributor-status-badge shared"><i class="fas fa-layer-group"></i> Shared Pool</span>`;
+
+      const quotaDetail = isConnected
+        ? `<div style="font-size: 0.85rem; font-weight: 600; color: var(--text-ink); margin-top: 0.25rem;">
+             ${FamDocAPI.utils.formatBytes(totalCap)} Contributed
+           </div>
+           <div style="font-size: 0.74rem; color: var(--text-ink-muted);">
+             ${userAccts.map(a => FamDocAPI.utils.escapeHtml(a.email || a.label || 'Google Drive')).join(', ')}
+           </div>`
+        : `<div style="font-size: 0.8rem; color: var(--text-ink-muted); margin-top: 0.25rem; font-style: italic;">
+             Accessing shared storage pool
+           </div>`;
+
+      return `
+        <div class="contributor-card ${isConnected ? 'active-contributor' : 'inactive-contributor'} fd-fade-in">
+          <div class="contributor-card-header">
+            <div class="contributor-user-group">
+              <div class="contributor-avatar-large">${initial}</div>
+              <div>
+                <div class="contributor-name" style="display: flex; align-items: center; gap: 0.35rem;">
+                  ${FamDocAPI.utils.escapeHtml(m.username || 'Member')}
+                  ${roleBadge}
+                </div>
+                <div class="contributor-email">${FamDocAPI.utils.escapeHtml(m.email || '')}</div>
+              </div>
+            </div>
+            <div>${statusBadge}</div>
+          </div>
+          ${quotaDetail}
+        </div>
+      `;
+    }).join("");
+
+    container.innerHTML = cardsHtml;
+    if (badge) {
+      badge.textContent = `${connectedCount} of ${members.length} Connected`;
+      badge.className = connectedCount > 0 ? "badge badge-success" : "badge badge-primary";
+    }
+  }
+
+  function renderAccountCards(accounts, existingClientId, members) {
     const container = document.getElementById("accounts-cards-container");
     if (!container) return;
 
@@ -305,14 +417,46 @@
         quotaText = `Workspace Account (Unlimited Capacity)`;
       }
 
+      // Determine Assigned Member
+      let assignedMember = null;
+      if (acct.user_id) {
+        assignedMember = (members || []).find(m => m.user_id === acct.user_id);
+      } else if (acct.member_username) {
+        assignedMember = { username: acct.member_username, role: acct.member_role || 'member' };
+      } else if (acct.email) {
+        assignedMember = (members || []).find(m => m.email && m.email.toLowerCase() === acct.email.toLowerCase());
+      }
+
+      let memberChip = "";
+      if (assignedMember) {
+        const initial = (assignedMember.username || 'U').charAt(0).toUpperCase();
+        memberChip = `
+          <div class="member-attribution-chip" title="Linked to family member: ${FamDocAPI.utils.escapeHtml(assignedMember.username)}">
+            <div class="member-avatar-circle">${initial}</div>
+            <span><strong>${FamDocAPI.utils.escapeHtml(assignedMember.username)}</strong> (${assignedMember.role || 'Member'})</span>
+          </div>
+        `;
+      } else {
+        memberChip = `
+          <div class="member-unassigned-chip" title="Click 'Assign Member' to link this drive to a specific member">
+            <i class="fas fa-user-tag"></i> <span>Unassigned Member</span>
+          </div>
+        `;
+      }
+
       return `
         <div class="account-card fd-fade-in" data-account-id="${acct.id}">
           <div class="account-card-header">
             <div class="account-title-group">
-              <i class="fab fa-google" style="color: #4285F4; font-size: 1.2rem;"></i>
+              <i class="fab fa-google" style="color: #4285F4; font-size: 1.3rem;"></i>
               <div>
-                <div class="account-email">${FamDocAPI.utils.escapeHtml(acct.email || acct.label || 'Google Account')}</div>
-                <span class="account-label-tag">${FamDocAPI.utils.escapeHtml(acct.label || 'Account #' + acct.id)}</span>
+                <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                  <span class="account-email">${FamDocAPI.utils.escapeHtml(acct.email || acct.label || 'Google Account')}</span>
+                  <span class="account-label-tag">${FamDocAPI.utils.escapeHtml(acct.label || 'Account #' + acct.id)}</span>
+                </div>
+                <div style="margin-top: 0.35rem;">
+                  ${memberChip}
+                </div>
               </div>
             </div>
             <div>${statusBadge}</div>
@@ -330,6 +474,9 @@
           <div class="account-card-actions" style="margin-top: 1rem;">
             <button class="btn btn-secondary btn-sm btn-edit-account" data-id="${acct.id}" data-label="${FamDocAPI.utils.escapeHtml(acct.label || '')}">
               <i class="fas fa-edit"></i> Edit Label
+            </button>
+            <button class="btn btn-secondary btn-sm btn-assign-member" data-id="${acct.id}" data-current-user-id="${acct.user_id || ''}">
+              <i class="fas fa-user-tag"></i> Assign Member
             </button>
             ${acct.status === "error" ? `
               <button class="btn btn-primary btn-sm btn-reauth-account" data-id="${acct.id}">
@@ -364,6 +511,42 @@
             await loadStorageConfig();
           } catch (err) {
             FamDocAPI.utils.showToast(err.message || "Failed to update label", "error");
+          }
+        }
+      });
+    });
+
+    container.querySelectorAll(".btn-assign-member").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        const acctId = btn.dataset.id;
+        const currentUid = parseInt(btn.dataset.currentUserId) || 0;
+        
+        if (!familyMembersList || familyMembersList.length === 0) {
+          FamDocAPI.utils.showToast("No family members found to assign.", "info");
+          return;
+        }
+
+        let optionsPrompt = "Select which family member owns this Google Drive:\n\n";
+        optionsPrompt += "0. Unassigned (No specific member)\n";
+        familyMembersList.forEach((m, idx) => {
+          optionsPrompt += `${idx + 1}. ${m.username} (${m.email || 'No email'}) [${m.role}]\n`;
+        });
+        optionsPrompt += "\nEnter number (0 to " + familyMembersList.length + "):";
+
+        const choice = prompt(optionsPrompt);
+        if (choice !== null && choice.trim() !== "") {
+          const num = parseInt(choice.trim());
+          if (!isNaN(num) && num >= 0 && num <= familyMembersList.length) {
+            const targetUserId = num === 0 ? 0 : familyMembersList[num - 1].user_id;
+            try {
+              await FamDocAPI.storage.updateAccount(acctId, { user_id: targetUserId });
+              FamDocAPI.utils.showToast("Google Drive assigned to family member successfully!", "success");
+              await loadStorageConfig();
+            } catch (err) {
+              FamDocAPI.utils.showToast(err.message || "Failed to assign member", "error");
+            }
+          } else {
+            FamDocAPI.utils.showToast("Invalid choice entered.", "warning");
           }
         }
       });
