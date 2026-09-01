@@ -107,6 +107,9 @@ class StorageManager:
         result = []
         for acct in accounts:
             cfg = (acct.config or {}).copy()
+            # Only include accounts that have valid credentials
+            if not cfg.get("client_id") or not (cfg.get("refresh_token") or cfg.get("access_token")):
+                continue
             cfg["vault_folder_id"] = acct.vault_folder_id
             cfg["family_id"] = family.id
             cfg["storage_account_id"] = acct.id
@@ -121,22 +124,30 @@ class StorageManager:
             StorageAccount.status == "active",
         ).all()
 
+        # Only select from accounts with valid, decryptable credentials
+        valid_accounts = [
+            a for a in accounts
+            if a.config and a.config.get("client_id") and (a.config.get("refresh_token") or a.config.get("access_token"))
+        ]
+        accounts = valid_accounts
+
         if not accounts and family:
             # Fallback for legacy setups or unit test fixtures: auto-create default active account
             cfg = family.storage_config or {}
             g_cfg = cfg.get("google", cfg) if isinstance(cfg, dict) else {}
-            acct = StorageAccount(
-                family_id=family.id,
-                provider="google",
-                email=f"{family.name} (Google)",
-                vault_folder_id=family.vault_folder_id,
-                status="active",
-                priority=0
-            )
-            acct.config = g_cfg if isinstance(g_cfg, dict) else {}
-            db.add(acct)
-            db.commit()
-            accounts = [acct]
+            if g_cfg.get("client_id") and (g_cfg.get("refresh_token") or g_cfg.get("access_token")):
+                acct = StorageAccount(
+                    family_id=family.id,
+                    provider="google",
+                    email=f"{family.name} (Google)",
+                    vault_folder_id=family.vault_folder_id,
+                    status="active",
+                    priority=0
+                )
+                acct.config = g_cfg if isinstance(g_cfg, dict) else {}
+                db.add(acct)
+                db.commit()
+                accounts = [acct]
 
         candidates = []
         for acct in accounts:
@@ -161,8 +172,11 @@ class StorageManager:
                 return None
             return acct.cached_quota_total - (acct.cached_quota_used or 0)
         try:
+            cfg = acct.config
+            if not cfg or not cfg.get("client_id") or not (cfg.get("refresh_token") or cfg.get("access_token")):
+                return None
             if hasattr(self.providers["google"], "get_quota"):
-                total, used = self.providers["google"].get_quota(acct.config, db=db)
+                total, used = self.providers["google"].get_quota(cfg, db=db)
                 acct.cached_quota_total = total
                 acct.cached_quota_used = used
                 acct.quota_checked_at = now
@@ -175,18 +189,46 @@ class StorageManager:
 
     def _resolve_account_config(self, file, db: Session) -> Optional[dict]:
         if file.storage_provider == "google":
+            # 1. Try file's designated storage account if valid
             if file.storage_account_id:
                 from models import StorageAccount
                 acct = db.query(StorageAccount).get(file.storage_account_id)
-                if acct:
+                if acct and acct.status == "active":
                     cfg = (acct.config or {}).copy()
-                    cfg["vault_folder_id"] = acct.vault_folder_id
-                    cfg["family_id"] = file.family_id
-                    cfg["storage_account_id"] = acct.id
-                    return cfg
-            # Fallback to legacy single account config
-            family_config = self.get_family_config(file.family, db)
-            return family_config.get("google", {})
+                    if cfg.get("client_id") and (cfg.get("refresh_token") or cfg.get("access_token")):
+                        cfg["vault_folder_id"] = acct.vault_folder_id
+                        cfg["family_id"] = file.family_id
+                        cfg["storage_account_id"] = acct.id
+                        return cfg
+
+            # 2. Fallback: Search for any active, valid Google storage account in the same family
+            fam_id = file.family_id or (file.family.id if getattr(file, "family", None) else None)
+            if fam_id and db:
+                from models import StorageAccount
+                active_accts = db.query(StorageAccount).filter(
+                    StorageAccount.family_id == fam_id,
+                    StorageAccount.status == "active",
+                    StorageAccount.provider == "google"
+                ).order_by(StorageAccount.priority.asc(), StorageAccount.id.asc()).all()
+                for active_acct in active_accts:
+                    cfg = (active_acct.config or {}).copy()
+                    if cfg.get("client_id") and (cfg.get("refresh_token") or cfg.get("access_token")):
+                        cfg["vault_folder_id"] = active_acct.vault_folder_id
+                        cfg["family_id"] = fam_id
+                        cfg["storage_account_id"] = active_acct.id
+                        return cfg
+
+            # 3. Fallback to legacy single account config on Family record
+            family = getattr(file, "family", None)
+            if not family and fam_id and db:
+                from models import Family
+                family = db.query(Family).get(fam_id)
+            if family:
+                family_config = self.get_family_config(family, db)
+                g_cfg = family_config.get("google", {})
+                if g_cfg.get("client_id") and (g_cfg.get("refresh_token") or g_cfg.get("access_token")):
+                    return g_cfg
+
         return {}
 
     def read_file(self, file, family_config: dict, db = None) -> bytes:

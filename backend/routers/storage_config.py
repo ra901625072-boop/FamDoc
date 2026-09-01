@@ -92,7 +92,8 @@ def get_storage_config(
                 db.rollback()
 
     active_accounts = [a for a in accounts if a.status == "active"]
-    google_configured = len(active_accounts) > 0 or bool(config.get("google", {}).get("refresh_token"))
+    valid_active_accounts = [a for a in active_accounts if a.config and a.config.get("client_id") and (a.config.get("refresh_token") or a.config.get("access_token"))]
+    google_configured = len(valid_active_accounts) > 0 or bool(config.get("google", {}).get("refresh_token"))
     provider = family.storage_provider or "local"
 
     # Compute aggregate storage numbers
@@ -117,8 +118,9 @@ def get_storage_config(
     
     from config import GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET
     has_env = bool(GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET)
-    first_client_id = active_accounts[0].config.get("client_id") if active_accounts and active_accounts[0].config else (config.get("google", {}).get("client_id") or GOOGLE_CLIENT_ID)
-    first_email = active_accounts[0].email if active_accounts else None
+    primary_acct = valid_active_accounts[0] if valid_active_accounts else (active_accounts[0] if active_accounts else None)
+    first_client_id = (primary_acct.config.get("client_id") if primary_acct and primary_acct.config else None) or (config.get("google", {}).get("client_id") or GOOGLE_CLIENT_ID)
+    first_email = primary_acct.email if primary_acct else None
 
     return {
         "storage_provider": provider,
