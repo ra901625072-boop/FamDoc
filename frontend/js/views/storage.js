@@ -413,7 +413,7 @@
         const total = acct.cached_quota_total;
         percentUsed = Math.min(100, Math.round((used / total) * 100));
         quotaText = `Used ${FamDocAPI.utils.formatBytes(used)} of ${FamDocAPI.utils.formatBytes(total)} (${percentUsed}%)`;
-      } else if (acct.cached_quota_total === None || acct.cached_quota_total === 0) {
+      } else if (acct.cached_quota_total === null || acct.cached_quota_total === 0) {
         quotaText = `Workspace Account (Unlimited Capacity)`;
       }
 
