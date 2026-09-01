@@ -1,10 +1,12 @@
 /**
- * Storage Config View Manager (Multi-Account Google Drive Storage Pooling)
+ * Storage Config View Manager (Modern Minimalist Multi-Account Storage Pooling)
  */
 (function() {
   window.FamDocViews = window.FamDocViews || {};
 
   let currentUser = null;
+  let familyMembersList = [];
+  let currentStorageConfig = null;
 
   window.FamDocViews.storage = function(params) {
     const mount = document.getElementById("view-mount-point");
@@ -20,147 +22,169 @@
         const detail = urlParams.get("detail") || "Unknown error";
         FamDocAPI.utils.showToast(`Failed to connect Google Drive: ${detail}`, "error");
       }
-      // Clean query params
-      window.history.replaceState({}, document.title, window.location.pathname);
+      // Clean query params from URL
+      window.history.replaceState({}, document.title, window.location.pathname + window.location.hash);
     }
 
     mount.innerHTML = `
-      <div class="content-header fd-fade-in">
+      <div class="storage-header-container fd-fade-in">
         <div>
-          <h1 class="page-title">Cloud Storage Settings</h1>
-          <p class="page-subtitle">Manage multi-account Google Drive storage pooling and local fallback options.</p>
+          <h1 class="page-title">Cloud Storage & Quotas</h1>
+          <p class="page-subtitle">Manage pooled multi-account Google Drive storage, family quotas, and active mode.</p>
+        </div>
+        <div class="storage-header-actions">
+          <button id="btn-toggle-oauth-config" class="btn btn-secondary btn-sm" style="display: inline-flex; align-items: center; gap: 0.45rem;">
+            <i class="fas fa-key" style="color: #f59e0b;"></i> API Credentials
+          </button>
         </div>
       </div>
 
-      <div id="storage-layout-content" class="fd-fade-in">
-        <!-- Storage Status Banner -->
-        <div class="famdoc-card" style="margin-bottom: 2rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; padding: 1.5rem 2rem;">
-          <div>
-            <span style="font-weight: 700; font-size: 0.95rem; color: var(--text-ink-muted);">Current Active Storage:</span>
-            <span id="storage-active-provider" class="badge badge-primary" style="font-size: 0.85rem; padding: 0.25rem 0.6rem; margin-left: 0.5rem; vertical-align: middle;">LOCAL</span>
-          </div>
-          <div id="storage-active-detail" style="font-size: 0.88rem; color: var(--text-ink-muted); font-weight: 500;">
-            Currently using local database storage folder.
-          </div>
-        </div>
-
-        <!-- Storage Space Breakdown Card -->
-        <div class="famdoc-card storage-breakdown-card fd-fade-up" id="storage-breakdown-panel" style="display: none; margin-bottom: 2rem;">
-          <h3 style="font-family: var(--font-serif); font-size: 1.25rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
-            <i class="fas fa-chart-pie" style="color: var(--accent-brand);"></i>
-            Storage Space Breakdown
+      <!-- Collapsible OAuth Credentials Drawer -->
+      <div id="oauth-config-drawer" class="oauth-config-drawer fd-fade-in">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+          <h3 style="font-family: var(--font-serif); font-size: 1.1rem; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+            <i class="fab fa-google" style="color: #4285F4;"></i> Google OAuth API Credentials
           </h3>
-          <div class="storage-usage-summary">
-            <div class="storage-usage-values">
-              Used <strong id="storage-used-text">0 B</strong> of <span id="storage-total-text">500 MB</span>
-            </div>
-            <div class="storage-usage-percent" id="storage-percent-text">0%</div>
-          </div>
-          <div class="storage-progress-bar-container" id="storage-progress-bar">
-            <!-- Progress segments injected dynamically -->
-          </div>
-          <div class="storage-legend-grid" id="storage-legend">
-            <!-- Legend items injected dynamically -->
-          </div>
+          <button type="button" id="btn-close-oauth-drawer" class="btn btn-secondary btn-sm" style="padding: 0.2rem 0.5rem;">
+            <i class="fas fa-times"></i>
+          </button>
         </div>
-
-        <!-- Storage Mode Selector Card -->
-        <div class="famdoc-card fd-fade-up" id="storage-mode-selector-panel" style="margin-bottom: 2rem; padding: 1.5rem 2rem;">
-          <h3 style="font-family: var(--font-serif); font-size: 1.25rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
-            <i class="fas fa-server" style="color: var(--accent-brand);"></i>
-            Active Storage Mode Selection
-          </h3>
-          <p style="font-size: 0.85rem; color: var(--text-ink-muted); margin-bottom: 1.5rem;">
-            Choose how your family documents are stored. Connecting Google Drive enables multi-account cloud pooling and synchronization.
-          </p>
-          
-          <form id="storage-mode-form">
-            <div class="storage-modes-list" style="display: flex; flex-direction: column; gap: 1rem;">
-              
-              <!-- Local Mode -->
-              <label class="storage-mode-option">
-                <input type="radio" name="storage_provider" value="local" checked>
-                <div>
-                  <strong style="display: block; font-size: 0.95rem; color: var(--text-ink);">Local Storage Only</strong>
-                  <span style="font-size: 0.82rem; color: var(--text-ink-muted);">Keep all files on the local vault without uploading to external cloud drives.</span>
-                </div>
-              </label>
-
-              <!-- Google Drive Only -->
-              <label class="storage-mode-option" id="mode-opt-google">
-                <input type="radio" name="storage_provider" value="google">
-                <div>
-                  <strong style="display: block; font-size: 0.95rem; color: var(--text-ink);"><i class="fab fa-google" style="color: #4285F4; margin-right: 0.25rem;"></i> Google Drive (Multi-Account Pooling)</strong>
-                  <span style="font-size: 0.82rem; color: var(--text-ink-muted);">Route uploads across connected Google accounts based on available capacity.</span>
-                </div>
-              </label>
-
+        <p style="font-size: 0.82rem; color: var(--text-ink-muted); margin-bottom: 1.25rem;">
+          Provide your Google Cloud OAuth Client ID and Secret to allow family members to link their Google Drive accounts.
+        </p>
+        <form id="google-credentials-form">
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
+            <div class="form-group">
+              <label class="form-label" for="google-client-id">Google Client ID</label>
+              <div class="password-input-wrapper">
+                <input type="password" id="google-client-id" class="form-control" placeholder="Enter Client ID" required style="width: 100%; box-sizing: border-box;">
+                <button type="button" class="password-toggle-btn" aria-label="Toggle visibility">
+                  <i class="fas fa-eye"></i>
+                </button>
+              </div>
             </div>
-
-            <button type="submit" id="btn-save-storage-mode" class="btn btn-primary" style="margin-top: 1.5rem; width: 100%; justify-content: center; gap: 0.5rem;">
-              <i class="fas fa-save"></i> Apply Storage Mode Settings
+            <div class="form-group">
+              <label class="form-label" for="google-client-secret">Google Client Secret</label>
+              <div class="password-input-wrapper">
+                <input type="password" id="google-client-secret" class="form-control" placeholder="Enter Client Secret" required style="width: 100%; box-sizing: border-box;">
+                <button type="button" class="password-toggle-btn" aria-label="Toggle visibility">
+                  <i class="fas fa-eye"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+          <div style="display: flex; gap: 0.75rem; margin-top: 1rem; justify-content: flex-end;">
+            <button type="submit" id="btn-save-credentials-action" class="btn btn-primary btn-sm">
+              <i class="fas fa-save"></i> Save & Connect Account
             </button>
-          </form>
+          </div>
+        </form>
+      </div>
+
+      <div id="storage-layout-content" class="fd-fade-in">
+        <!-- 1. HERO STORAGE POOL SUMMARY CARD -->
+        <div class="storage-hero-card fd-fade-up">
+          <div class="storage-hero-header">
+            <div class="storage-hero-title-group">
+              <span id="hero-status-pill" class="badge badge-primary" style="font-size: 0.8rem; padding: 0.3rem 0.65rem;">
+                <i class="fas fa-spinner fa-spin"></i> Loading...
+              </span>
+              <h2 class="storage-hero-title">Family Storage Capacity</h2>
+            </div>
+            <div class="storage-hero-metrics">
+              <div class="hero-metric-item">
+                <span class="hero-metric-label">Total Pool</span>
+                <span class="hero-metric-value" id="hero-total-cap">0 B</span>
+              </div>
+              <div class="hero-metric-item">
+                <span class="hero-metric-label">Used Space</span>
+                <span class="hero-metric-value accent" id="hero-used-space">0 B</span>
+              </div>
+              <div class="hero-metric-item">
+                <span class="hero-metric-label">Free Space</span>
+                <span class="hero-metric-value" id="hero-free-space">0 B</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Progress Bar & Breakdown -->
+          <div class="hero-progress-wrapper">
+            <div class="hero-progress-bar-container" id="hero-progress-bar">
+              <!-- Dynamically rendered -->
+            </div>
+            <div class="hero-legend-row" id="hero-legend-row">
+              <!-- Dynamically rendered -->
+            </div>
+          </div>
+
+          <!-- Hero Footer: Mode Switcher -->
+          <div class="storage-hero-footer">
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+              <span style="font-size: 0.82rem; font-weight: 600; color: var(--text-ink-muted);">Storage Mode:</span>
+              <div class="mode-segmented-control">
+                <button type="button" class="mode-segment-btn active" data-mode="google" id="mode-btn-google">
+                  <i class="fab fa-google" style="color: #4285F4;"></i> Google Drive Pool
+                </button>
+                <button type="button" class="mode-segment-btn" data-mode="local" id="mode-btn-local">
+                  <i class="fas fa-hdd"></i> Local Storage
+                </button>
+              </div>
+            </div>
+            <div id="hero-mode-note" style="font-size: 0.8rem; color: var(--text-ink-muted); font-style: italic;">
+              Uploads route automatically to the drive with most free space.
+            </div>
+          </div>
         </div>
 
-        <!-- Family Storage Contributors Section -->
-        <div class="famdoc-card fd-fade-up" id="contributors-panel" style="margin-bottom: 2rem; padding: 1.5rem 2rem;">
-          <div class="famdoc-card-header" style="margin-bottom: 0.5rem;">
-            <h3 style="font-family: var(--font-serif); font-size: 1.25rem; display: flex; align-items: center; gap: 0.5rem;">
-              <i class="fas fa-users" style="color: var(--accent-brand);"></i>
-              Family Storage Contributors
-            </h3>
-            <span id="contributors-summary-badge" class="badge badge-primary">0 of 0 Connected</span>
-          </div>
-          <p style="font-size: 0.85rem; color: var(--text-ink-muted); margin-bottom: 1.25rem;">
-            See which family members have connected their Google Drive accounts and are contributing storage to the shared family pool.
-          </p>
-          <div id="contributors-grid-container" class="contributors-overview-grid">
-            <!-- Rendered dynamically -->
-          </div>
-        </div>
-
-        <!-- Google Drive Multi-Account Management Section -->
-        <div class="famdoc-card storage-config-card fd-fade-up" id="google-card" style="margin-bottom: 2rem;">
-          <div class="famdoc-card-header">
-            <h2 class="famdoc-card-title"><i class="fab fa-google" style="color: #4285F4; margin-right: 0.5rem;"></i>Connected Google Accounts</h2>
-            <div id="google-active-badge-container"></div>
-          </div>
-          <p style="font-size: 0.85rem; color: var(--text-ink-muted); margin-bottom: 1.5rem;">
-            Link one or more personal Google Drive accounts for your family. Uploads will be automatically routed to whichever connected account has the most available space.
-          </p>
-
-          <!-- Accounts List Grid -->
-          <div id="accounts-cards-container" class="account-cards-list">
-            <!-- Account Cards rendered dynamically -->
-          </div>
-
-          <!-- Add Account / Initial Credentials Form -->
-          <div id="google-connect-panel" style="margin-top: 1rem;">
-            <form id="google-storage-form">
-              <div class="form-group">
-                <label class="form-label" for="google-client-id">Google Client ID</label>
-                <div class="password-input-wrapper">
-                  <input type="password" id="google-client-id" class="form-control" placeholder="Enter Client ID" required style="width: 100%; box-sizing: border-box;">
-                  <button type="button" class="password-toggle-btn" aria-label="Toggle visibility">
-                    <i class="fas fa-eye"></i>
-                  </button>
-                </div>
+        <!-- 2. TWO-COLUMN DASHBOARD GRID -->
+        <div class="storage-dashboard-grid">
+          
+          <!-- LEFT COLUMN: Connected Google Drives -->
+          <div class="storage-panel-card fd-fade-up">
+            <div class="storage-panel-header">
+              <div>
+                <h3 class="storage-panel-title">
+                  <i class="fab fa-google" style="color: #4285F4;"></i>
+                  Connected Google Drives
+                </h3>
+                <span id="drives-count-badge" style="font-size: 0.76rem; color: var(--text-ink-muted); font-weight: 500;">
+                  0 Active Drives
+                </span>
               </div>
-              <div class="form-group" style="margin-top: 1rem;">
-                <label class="form-label" for="google-client-secret">Google Client Secret</label>
-                <div class="password-input-wrapper">
-                  <input type="password" id="google-client-secret" class="form-control" placeholder="Enter Client Secret" required style="width: 100%; box-sizing: border-box;">
-                  <button type="button" class="password-toggle-btn" aria-label="Toggle visibility">
-                    <i class="fas fa-eye"></i>
-                  </button>
-                </div>
-              </div>
-              <button type="submit" id="btn-save-google-storage" class="btn btn-primary" style="width: 100%; margin-top: 1.5rem; justify-content: center; gap: 0.5rem;">
-                <i class="fab fa-google"></i> Connect New Google Drive Account
+              <button id="btn-quick-connect-drive" class="btn btn-primary btn-sm" style="display: inline-flex; align-items: center; gap: 0.4rem;">
+                <i class="fas fa-plus"></i> Connect Drive
               </button>
-            </form>
+            </div>
+
+            <!-- Drives List Container -->
+            <div id="accounts-cards-container" class="account-cards-list">
+              <!-- Dynamically rendered -->
+            </div>
           </div>
+
+          <!-- RIGHT COLUMN: Family Storage Contributors Roster -->
+          <div class="storage-panel-card fd-fade-up">
+            <div class="storage-panel-header">
+              <div>
+                <h3 class="storage-panel-title">
+                  <i class="fas fa-users" style="color: var(--accent-brand);"></i>
+                  Family Contributors
+                </h3>
+                <span id="contributors-count-badge" style="font-size: 0.76rem; color: var(--text-ink-muted); font-weight: 500;">
+                  0 of 0 Contributing
+                </span>
+              </div>
+            </div>
+            <p style="font-size: 0.8rem; color: var(--text-ink-muted); margin-bottom: 1rem;">
+              Family members who linked their personal Google Drive contribute capacity to the shared pool.
+            </p>
+
+            <!-- Contributors List -->
+            <div id="contributors-roster-container" class="contributors-roster-list">
+              <!-- Dynamically rendered -->
+            </div>
+          </div>
+
         </div>
       </div>
     `;
@@ -173,8 +197,6 @@
       window.FamDocDataSync.register("storage", loadStorageConfig);
     }
   };
-
-  let familyMembersList = [];
 
   async function loadProfileAndStorage() {
     currentUser = await window.FamDocApp.getUser();
@@ -204,181 +226,176 @@
     try {
       const [config, stats, members] = await Promise.all([
         FamDocAPI.storage.getConfig(),
-        FamDocAPI.dashboard.getStats().catch(err => {
-          console.error("Failed to load storage breakdown stats", err);
-          return null;
-        }),
-        FamDocAPI.family.getMembers().catch(err => {
-          console.error("Failed to load family members for attribution", err);
-          return [];
-        })
+        FamDocAPI.dashboard.getStats().catch(err => null),
+        FamDocAPI.family.getMembers().catch(err => [])
       ]);
 
+      currentStorageConfig = config;
       familyMembersList = members || [];
 
-      const activeProviderEl = document.getElementById("storage-active-provider");
-      const activeDetailEl = document.getElementById("storage-active-detail");
-      
-      const googleCard = document.getElementById("google-card");
-      const googleBadgeContainer = document.getElementById("google-active-badge-container");
-      
-      if (!activeProviderEl) return;
-
-      if (googleCard) googleCard.classList.remove("active-card");
-      if (googleBadgeContainer) googleBadgeContainer.innerHTML = "";
-      
-      const provider = config.storage_provider || "local";
-      activeProviderEl.className = "badge badge-primary fd-fade-in";
-      activeProviderEl.style.cssText = "font-size: 0.85rem; padding: 0.25rem 0.6rem; vertical-align: middle;";
-      activeProviderEl.textContent = provider.toUpperCase();
-      
+      // Auto-fill Client ID in credentials drawer if exists
       if (config.client_id) {
         const gInput = document.getElementById("google-client-id");
-        if (gInput) gInput.value = config.client_id;
+        if (gInput && !gInput.value) gInput.value = config.client_id;
       }
 
-      const activeAccounts = (config.accounts || []).filter(a => a.status === "active");
+      // 1. Render Hero Summary Card
+      renderHeroSummary(config, stats);
 
-      if (provider === "google") {
-        activeDetailEl.textContent = `Google Drive Pooling Active (${activeAccounts.length} connected account${activeAccounts.length === 1 ? '' : 's'}).`;
-        if (googleCard) googleCard.classList.add("active-card");
-        if (googleBadgeContainer) googleBadgeContainer.innerHTML = `<span class="active-badge"><i class="fas fa-check-circle"></i> Active</span>`;
-      } else {
-        activeDetailEl.textContent = "Currently using local database storage folder.";
-      }
-
-      // Configure Storage Mode Panel
-      const googleConfigured = config.google_configured;
-      const optGoogle = document.getElementById("mode-opt-google");
-
-      if (optGoogle) {
-        if (!googleConfigured) {
-          optGoogle.style.opacity = "0.5";
-          optGoogle.style.pointerEvents = "none";
-          optGoogle.querySelector("input").disabled = true;
-        } else {
-          optGoogle.style.opacity = "1";
-          optGoogle.style.pointerEvents = "auto";
-          optGoogle.querySelector("input").disabled = false;
-        }
-      }
-
-      // Set active values in radio form
-      const radioInput = document.querySelector(`input[name="storage_provider"][value="${provider}"]`);
-      if (radioInput) {
-        radioInput.checked = true;
-      }
-
-      // Render Family Storage Contributors Overview
-      renderContributorsOverview(familyMembersList, config.accounts || []);
-
-      // Render Connected Accounts Cards
+      // 2. Render Connected Google Drives List
       renderAccountCards(config.accounts || [], config.client_id, familyMembersList);
 
-      // Render visual breakdown if stats are available
-      if (stats) {
-        renderStorageBreakdown(stats);
-      }
+      // 3. Render Family Contributors Roster
+      renderContributorsRoster(familyMembersList, config.accounts || []);
+
     } catch (err) {
       console.error("Failed to load storage config:", err);
+      FamDocAPI.utils.showToast("Failed to load storage configuration.", "error");
     }
   }
 
-  function renderContributorsOverview(members, accounts) {
-    const container = document.getElementById("contributors-grid-container");
-    const badge = document.getElementById("contributors-summary-badge");
-    if (!container) return;
+  function renderHeroSummary(config, stats) {
+    const statusPill = document.getElementById("hero-status-pill");
+    const totalCapEl = document.getElementById("hero-total-cap");
+    const usedSpaceEl = document.getElementById("hero-used-space");
+    const freeSpaceEl = document.getElementById("hero-free-space");
+    const modeNote = document.getElementById("hero-mode-note");
+    
+    const btnGoogle = document.getElementById("mode-btn-google");
+    const btnLocal = document.getElementById("mode-btn-local");
 
-    if (!members || members.length === 0) {
-      container.innerHTML = `<div class="famdoc-alert info" style="grid-column: 1 / -1;"><i class="fas fa-info-circle"></i> No family members found.</div>`;
-      return;
+    if (!statusPill) return;
+
+    const provider = config.storage_provider || "local";
+    const totalBytes = config.total_capacity_bytes || 524288000;
+    const usedBytes = stats ? (stats.total_size_bytes || 0) : (config.total_used_bytes || 0);
+    const freeBytes = Math.max(0, totalBytes - usedBytes);
+    const percentUsed = Math.min(100, Math.round((usedBytes / totalBytes) * 100));
+
+    // Update Metrics
+    totalCapEl.textContent = FamDocAPI.utils.formatBytes(totalBytes);
+    usedSpaceEl.textContent = `${FamDocAPI.utils.formatBytes(usedBytes)} (${percentUsed}%)`;
+    freeSpaceEl.textContent = FamDocAPI.utils.formatBytes(freeBytes);
+
+    // Update Mode Buttons & Status Pill
+    const activeAccounts = (config.accounts || []).filter(a => a.status === "active");
+
+    if (provider === "google") {
+      statusPill.className = "badge badge-success";
+      statusPill.innerHTML = `<i class="fab fa-google"></i> Google Cloud Active (${activeAccounts.length} Drive${activeAccounts.length === 1 ? '' : 's'})`;
+      
+      if (btnGoogle) btnGoogle.classList.add("active");
+      if (btnLocal) btnLocal.classList.remove("active");
+      if (modeNote) modeNote.textContent = `Uploads route automatically to the drive with most free space.`;
+    } else {
+      statusPill.className = "badge badge-secondary";
+      statusPill.innerHTML = `<i class="fas fa-hdd"></i> Local Storage Mode`;
+      
+      if (btnGoogle) btnGoogle.classList.remove("active");
+      if (btnLocal) btnLocal.classList.add("active");
+      if (modeNote) modeNote.textContent = `Files are saved securely to your local family database storage folder.`;
     }
 
-    const activeAccounts = (accounts || []).filter(a => a.status === "active");
-    
-    // Map accounts to member user_id
-    const memberAccountsMap = {};
-    activeAccounts.forEach(acct => {
-      let uid = acct.user_id;
-      if (!uid && acct.email) {
-        const found = members.find(m => m.email && m.email.toLowerCase() === acct.email.toLowerCase());
-        if (found) uid = found.user_id;
+    // Disable Google mode toggle if no accounts connected and not configured
+    if (btnGoogle) {
+      if (!config.google_configured && activeAccounts.length === 0) {
+        btnGoogle.disabled = true;
+        btnGoogle.title = "Connect a Google Drive account first to enable cloud mode";
+      } else {
+        btnGoogle.disabled = false;
+        btnGoogle.title = "";
       }
-      if (uid) {
-        if (!memberAccountsMap[uid]) memberAccountsMap[uid] = [];
-        memberAccountsMap[uid].push(acct);
+    }
+
+    // Render Multi-segment Progress Bar & Legend
+    renderHeroProgressBar(stats, totalBytes, usedBytes);
+  }
+
+  function renderHeroProgressBar(stats, totalBytes, usedBytes) {
+    const progressBar = document.getElementById("hero-progress-bar");
+    const legendRow = document.getElementById("hero-legend-row");
+    if (!progressBar || !legendRow) return;
+
+    progressBar.innerHTML = "";
+    legendRow.innerHTML = "";
+
+    const breakdown = stats ? (stats.storage_breakdown || {}) : {};
+
+    const categories = [
+      { key: "image", name: "Images", colorClass: "storage-segment-image", hex: "#3b82f6" },
+      { key: "pdf", name: "PDFs", colorClass: "storage-segment-pdf", hex: "#ef4444" },
+      { key: "document", name: "Docs", colorClass: "storage-segment-document", hex: "#8b5cf6" },
+      { key: "sheet", name: "Sheets", colorClass: "storage-segment-sheet", hex: "#10b981" },
+      { key: "text", name: "Text", colorClass: "storage-segment-text", hex: "#f59e0b" },
+      { key: "other", name: "Other", colorClass: "storage-segment-other", hex: "#6b7280" }
+    ];
+
+    let totalAssignedPercent = 0;
+
+    categories.forEach(cat => {
+      const data = breakdown[cat.key] || { size: 0, count: 0 };
+      if (data.size > 0) {
+        let segPercent = (data.size / totalBytes) * 100;
+        if (segPercent > 0 && segPercent < 1) segPercent = 1;
+        totalAssignedPercent += segPercent;
+
+        const segment = document.createElement("div");
+        segment.className = `storage-progress-segment ${cat.colorClass}`;
+        segment.style.width = `${segPercent}%`;
+        segment.title = `${cat.name}: ${FamDocAPI.utils.formatBytes(data.size)} (${data.count} files)`;
+        progressBar.appendChild(segment);
+
+        const legendItem = document.createElement("div");
+        legendItem.className = "hero-legend-item fd-fade-in";
+        legendItem.innerHTML = `
+          <div class="hero-legend-dot" style="background-color: ${cat.hex};"></div>
+          <span>${cat.name}: <strong>${FamDocAPI.utils.formatBytes(data.size)}</strong></span>
+        `;
+        legendRow.appendChild(legendItem);
       }
     });
 
-    let connectedCount = 0;
-    const cardsHtml = members.map(m => {
-      const userAccts = memberAccountsMap[m.user_id] || [];
-      const isConnected = userAccts.length > 0;
-      if (isConnected) connectedCount++;
-
-      let totalCap = 0;
-      let totalUsed = 0;
-      userAccts.forEach(a => {
-        totalCap += (a.cached_quota_total || 15 * 1024 * 1024 * 1024);
-        totalUsed += (a.cached_quota_used || 0);
-      });
-
-      const initial = (m.username || 'U').charAt(0).toUpperCase();
-      const roleBadge = m.role === 'admin' ? '<span class="badge badge-primary" style="font-size: 0.7rem; padding: 0.1rem 0.4rem;">Admin</span>' : '';
-      
-      const statusBadge = isConnected
-        ? `<span class="contributor-status-badge connected"><i class="fab fa-google"></i> Connected</span>`
-        : `<span class="contributor-status-badge shared"><i class="fas fa-layer-group"></i> Shared Pool</span>`;
-
-      const quotaDetail = isConnected
-        ? `<div style="font-size: 0.85rem; font-weight: 600; color: var(--text-ink); margin-top: 0.25rem;">
-             ${FamDocAPI.utils.formatBytes(totalCap)} Contributed
-           </div>
-           <div style="font-size: 0.74rem; color: var(--text-ink-muted);">
-             ${userAccts.map(a => FamDocAPI.utils.escapeHtml(a.email || a.label || 'Google Drive')).join(', ')}
-           </div>`
-        : `<div style="font-size: 0.8rem; color: var(--text-ink-muted); margin-top: 0.25rem; font-style: italic;">
-             Accessing shared storage pool
-           </div>`;
-
-      return `
-        <div class="contributor-card ${isConnected ? 'active-contributor' : 'inactive-contributor'} fd-fade-in">
-          <div class="contributor-card-header">
-            <div class="contributor-user-group">
-              <div class="contributor-avatar-large">${initial}</div>
-              <div>
-                <div class="contributor-name" style="display: flex; align-items: center; gap: 0.35rem;">
-                  ${FamDocAPI.utils.escapeHtml(m.username || 'Member')}
-                  ${roleBadge}
-                </div>
-                <div class="contributor-email">${FamDocAPI.utils.escapeHtml(m.email || '')}</div>
-              </div>
-            </div>
-            <div>${statusBadge}</div>
-          </div>
-          ${quotaDetail}
-        </div>
-      `;
-    }).join("");
-
-    container.innerHTML = cardsHtml;
-    if (badge) {
-      badge.textContent = `${connectedCount} of ${members.length} Connected`;
-      badge.className = connectedCount > 0 ? "badge badge-success" : "badge badge-primary";
+    const remainingBytes = Math.max(0, totalBytes - usedBytes);
+    if (remainingBytes > 0 && totalAssignedPercent < 100) {
+      const remainingPercent = 100 - totalAssignedPercent;
+      const segment = document.createElement("div");
+      segment.className = "storage-progress-segment";
+      segment.style.width = `${remainingPercent}%`;
+      segment.style.backgroundColor = "transparent";
+      segment.title = `Free Space: ${FamDocAPI.utils.formatBytes(remainingBytes)}`;
+      progressBar.appendChild(segment);
     }
   }
 
   function renderAccountCards(accounts, existingClientId, members) {
     const container = document.getElementById("accounts-cards-container");
+    const countBadge = document.getElementById("drives-count-badge");
     if (!container) return;
+
+    const activeAccounts = accounts.filter(a => a.status === "active");
+    if (countBadge) {
+      countBadge.textContent = `${activeAccounts.length} Active Drive${activeAccounts.length === 1 ? '' : 's'}`;
+    }
 
     if (accounts.length === 0) {
       container.innerHTML = `
-        <div class="famdoc-alert warning" style="margin-bottom: 1.5rem;">
-          <i class="fas fa-info-circle"></i>
-          <div>No Google Drive accounts connected yet. Use the form below to link your first account.</div>
+        <div style="text-align: center; padding: 2rem 1.5rem; background-color: var(--surface-paper-tint); border: 1px dashed var(--border-paper-dark); border-radius: var(--radius-md);">
+          <div style="width: 44px; height: 44px; border-radius: 50%; background-color: rgba(66, 133, 244, 0.1); display: inline-flex; align-items: center; justify-content: center; margin-bottom: 0.75rem;">
+            <i class="fab fa-google" style="color: #4285F4; font-size: 1.25rem;"></i>
+          </div>
+          <div style="font-weight: 600; font-size: 0.95rem; color: var(--text-ink);">No Google Drives Connected</div>
+          <p style="font-size: 0.8rem; color: var(--text-ink-muted); margin: 0.35rem 0 1rem 0;">
+            Link your Google Drive account to expand your vault capacity with pooled cloud storage.
+          </p>
+          <button class="btn btn-primary btn-sm btn-action-trigger-connect">
+            <i class="fab fa-google"></i> Connect First Drive
+          </button>
         </div>
       `;
+
+      container.querySelector(".btn-action-trigger-connect")?.addEventListener("click", () => {
+        handleInitiateConnect();
+      });
       return;
     }
 
@@ -389,24 +406,24 @@
       if (acct.status === "error") {
         statusBadge = `<span class="status-badge-error"><i class="fas fa-exclamation-circle"></i> Re-auth Required</span>`;
         alertBanner = `
-          <div class="famdoc-alert warning" style="margin-top: 0.75rem; padding: 0.5rem 1rem; font-size: 0.82rem;">
+          <div class="famdoc-alert warning" style="margin-top: 0.6rem; padding: 0.4rem 0.75rem; font-size: 0.78rem;">
             <i class="fas fa-exclamation-triangle"></i>
-            <div>Google OAuth token expired or revoked. Click Re-authenticate to reconnect this account.</div>
+            <div>OAuth token revoked or expired. Click Re-authenticate to reconnect.</div>
           </div>
         `;
       } else if (acct.status === "disconnecting") {
         statusBadge = `<span class="status-badge-disconnecting"><i class="fas fa-spinner fa-spin"></i> Disconnecting...</span>`;
         alertBanner = `
-          <div class="famdoc-alert warning" style="margin-top: 0.75rem; padding: 0.5rem 1rem; font-size: 0.82rem;">
+          <div class="famdoc-alert warning" style="margin-top: 0.6rem; padding: 0.4rem 0.75rem; font-size: 0.78rem;">
             <i class="fas fa-sync fa-spin"></i>
-            <div>Files stored on this account are being migrated to other storage backends in the background.</div>
+            <div>Files on this account are being migrated in the background.</div>
           </div>
         `;
       } else if (acct.status === "disconnected") {
         statusBadge = `<span class="badge badge-secondary">Disconnected</span>`;
       }
 
-      let quotaText = "Quota details pending refresh";
+      let quotaText = "Quota pending refresh";
       let percentUsed = 0;
       if (acct.cached_quota_total) {
         const used = acct.cached_quota_used || 0;
@@ -439,7 +456,7 @@
       } else {
         memberChip = `
           <div class="member-unassigned-chip" title="Click 'Assign Member' to link this drive to a specific member">
-            <i class="fas fa-user-tag"></i> <span>Unassigned Member</span>
+            <i class="fas fa-user-tag"></i> <span>Unassigned</span>
           </div>
         `;
       }
@@ -448,13 +465,13 @@
         <div class="account-card fd-fade-in" data-account-id="${acct.id}">
           <div class="account-card-header">
             <div class="account-title-group">
-              <i class="fab fa-google" style="color: #4285F4; font-size: 1.3rem;"></i>
+              <i class="fab fa-google" style="color: #4285F4; font-size: 1.25rem;"></i>
               <div>
-                <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-                  <span class="account-email">${FamDocAPI.utils.escapeHtml(acct.email || acct.label || 'Google Account')}</span>
-                  <span class="account-label-tag">${FamDocAPI.utils.escapeHtml(acct.label || 'Account #' + acct.id)}</span>
+                <div style="display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;">
+                  <span class="account-email">${FamDocAPI.utils.escapeHtml(acct.email || acct.label || 'Google Drive')}</span>
+                  <span class="account-label-tag">${FamDocAPI.utils.escapeHtml(acct.label || 'Drive #' + acct.id)}</span>
                 </div>
-                <div style="margin-top: 0.35rem;">
+                <div style="margin-top: 0.25rem;">
                   ${memberChip}
                 </div>
               </div>
@@ -462,7 +479,7 @@
             <div>${statusBadge}</div>
           </div>
 
-          <div style="font-size: 0.82rem; color: var(--text-ink-muted); margin-top: 0.5rem;">
+          <div style="font-size: 0.78rem; color: var(--text-ink-muted); margin-top: 0.4rem;">
             ${quotaText}
           </div>
           <div class="account-quota-bar-container">
@@ -471,26 +488,26 @@
 
           ${alertBanner}
 
-          <div class="account-card-actions" style="margin-top: 1rem;">
-            <button class="btn btn-secondary btn-sm btn-edit-account" data-id="${acct.id}" data-label="${FamDocAPI.utils.escapeHtml(acct.label || '')}">
-              <i class="fas fa-edit"></i> Edit Label
+          <div class="account-card-actions">
+            <button class="btn btn-secondary btn-sm btn-edit-account" data-id="${acct.id}" data-label="${FamDocAPI.utils.escapeHtml(acct.label || '')}" style="font-size: 0.74rem; padding: 0.25rem 0.55rem;">
+              <i class="fas fa-edit"></i> Rename
             </button>
-            <button class="btn btn-secondary btn-sm btn-assign-member" data-id="${acct.id}" data-current-user-id="${acct.user_id || ''}">
-              <i class="fas fa-user-tag"></i> Assign Member
+            <button class="btn btn-secondary btn-sm btn-assign-member" data-id="${acct.id}" data-current-user-id="${acct.user_id || ''}" style="font-size: 0.74rem; padding: 0.25rem 0.55rem;">
+              <i class="fas fa-user-tag"></i> Assign
             </button>
             ${acct.status === "error" ? `
-              <button class="btn btn-primary btn-sm btn-reauth-account" data-id="${acct.id}">
-                <i class="fas fa-redo"></i> Re-authenticate
+              <button class="btn btn-primary btn-sm btn-reauth-account" data-id="${acct.id}" style="font-size: 0.74rem; padding: 0.25rem 0.55rem;">
+                <i class="fas fa-redo"></i> Re-auth
               </button>
             ` : ''}
             ${acct.status === "active" ? `
-              <button class="btn btn-danger btn-sm btn-disconnect-account" data-id="${acct.id}" data-email="${FamDocAPI.utils.escapeHtml(acct.email || '')}">
+              <button class="btn btn-danger btn-sm btn-disconnect-account" data-id="${acct.id}" data-email="${FamDocAPI.utils.escapeHtml(acct.email || '')}" style="font-size: 0.74rem; padding: 0.25rem 0.55rem;">
                 <i class="fas fa-unlink"></i> Disconnect
               </button>
             ` : ''}
             ${acct.status === "disconnected" ? `
-              <button class="btn btn-danger btn-sm btn-delete-account" data-id="${acct.id}">
-                <i class="fas fa-trash"></i> Remove Account
+              <button class="btn btn-danger btn-sm btn-delete-account" data-id="${acct.id}" style="font-size: 0.74rem; padding: 0.25rem 0.55rem;">
+                <i class="fas fa-trash"></i> Remove
               </button>
             ` : ''}
           </div>
@@ -498,12 +515,12 @@
       `;
     }).join("");
 
-    // Add action handlers to dynamically rendered account cards
+    // Attach card event listeners
     container.querySelectorAll(".btn-edit-account").forEach(btn => {
       btn.addEventListener("click", async () => {
         const id = btn.dataset.id;
         const currentLabel = btn.dataset.label;
-        const newLabel = prompt("Enter a nickname for this account (e.g., Dad's Drive):", currentLabel);
+        const newLabel = prompt("Enter a nickname for this drive (e.g., Akshay's Drive):", currentLabel);
         if (newLabel !== null && newLabel.trim() !== "") {
           try {
             await FamDocAPI.storage.updateAccount(id, { label: newLabel.trim() });
@@ -519,8 +536,6 @@
     container.querySelectorAll(".btn-assign-member").forEach(btn => {
       btn.addEventListener("click", async () => {
         const acctId = btn.dataset.id;
-        const currentUid = parseInt(btn.dataset.currentUserId) || 0;
-        
         if (!familyMembersList || familyMembersList.length === 0) {
           FamDocAPI.utils.showToast("No family members found to assign.", "info");
           return;
@@ -540,7 +555,7 @@
             const targetUserId = num === 0 ? 0 : familyMembersList[num - 1].user_id;
             try {
               await FamDocAPI.storage.updateAccount(acctId, { user_id: targetUserId });
-              FamDocAPI.utils.showToast("Google Drive assigned to family member successfully!", "success");
+              FamDocAPI.utils.showToast("Storage drive assigned to family member successfully!", "success");
               await loadStorageConfig();
             } catch (err) {
               FamDocAPI.utils.showToast(err.message || "Failed to assign member", "error");
@@ -557,18 +572,18 @@
         const id = btn.dataset.id;
         const email = btn.dataset.email;
         const confirmed = await FamDocAPI.utils.confirm({
-          title: "Disconnect Account",
-          message: `Are you sure you want to disconnect ${email}? Files currently stored on this account will be automatically migrated to other available backends in the background.`,
-          confirmText: "Disconnect Account",
+          title: "Disconnect Storage Drive",
+          message: `Are you sure you want to disconnect ${email}? Files on this drive will be safely migrated to other connected drives in the background.`,
+          confirmText: "Disconnect Drive",
           type: "danger"
         });
         if (confirmed) {
           try {
             await FamDocAPI.storage.disconnectAccount(id);
-            FamDocAPI.utils.showToast("Account disconnect & background migration started.", "info");
+            FamDocAPI.utils.showToast("Drive disconnect started. Migration in progress.", "info");
             await loadStorageConfig();
           } catch (err) {
-            FamDocAPI.utils.showToast(err.message || "Failed to disconnect account", "error");
+            FamDocAPI.utils.showToast(err.message || "Failed to disconnect drive", "error");
           }
         }
       });
@@ -589,148 +604,172 @@
 
     container.querySelectorAll(".btn-reauth-account").forEach(btn => {
       btn.addEventListener("click", async () => {
-        const clientIdInput = document.getElementById("google-client-id");
-        const clientId = clientIdInput ? clientIdInput.value.trim() : null;
-        try {
-          const result = await FamDocAPI.storage.getGoogleAuthUrl(clientId, null, "add");
-          if (result && result.url) {
-            window.location.href = result.url;
-          }
-        } catch (err) {
-          FamDocAPI.utils.showToast(err.message || "Failed to initiate re-authentication", "error");
-        }
+        handleInitiateConnect();
       });
     });
+  }
+
+  function renderContributorsRoster(members, accounts) {
+    const container = document.getElementById("contributors-roster-container");
+    const countBadge = document.getElementById("contributors-count-badge");
+    if (!container) return;
+
+    if (!members || members.length === 0) {
+      container.innerHTML = `<div style="font-size: 0.82rem; color: var(--text-ink-muted); font-style: italic;">No family members found.</div>`;
+      return;
+    }
+
+    const activeAccounts = (accounts || []).filter(a => a.status === "active");
+    
+    // Map accounts to user_id
+    const memberAccountsMap = {};
+    activeAccounts.forEach(acct => {
+      let uid = acct.user_id;
+      if (!uid && acct.email) {
+        const found = members.find(m => m.email && m.email.toLowerCase() === acct.email.toLowerCase());
+        if (found) uid = found.user_id;
+      }
+      if (uid) {
+        if (!memberAccountsMap[uid]) memberAccountsMap[uid] = [];
+        memberAccountsMap[uid].push(acct);
+      }
+    });
+
+    let connectedCount = 0;
+    container.innerHTML = members.map(m => {
+      const userAccts = memberAccountsMap[m.user_id] || [];
+      const isConnected = userAccts.length > 0;
+      if (isConnected) connectedCount++;
+
+      let totalCap = 0;
+      userAccts.forEach(a => {
+        totalCap += (a.cached_quota_total || 15 * 1024 * 1024 * 1024);
+      });
+
+      const initial = (m.username || 'U').charAt(0).toUpperCase();
+      const roleIcon = m.role === 'admin' ? '<i class="fas fa-crown" style="color: #f59e0b; font-size: 0.7rem; margin-left: 0.25rem;" title="Admin"></i>' : '';
+
+      const statusBadge = isConnected
+        ? `<span class="contributor-status-badge connected"><i class="fab fa-google"></i> ${FamDocAPI.utils.formatBytes(totalCap)}</span>`
+        : `<span class="contributor-status-badge shared">Shared Pool</span>`;
+
+      return `
+        <div class="contributor-list-item ${isConnected ? 'active' : 'shared'} fd-fade-in">
+          <div class="contributor-user-group">
+            <div class="contributor-avatar-large">${initial}</div>
+            <div>
+              <div class="contributor-name">
+                ${FamDocAPI.utils.escapeHtml(m.username || 'Member')}
+                ${roleIcon}
+              </div>
+              <div class="contributor-email">${FamDocAPI.utils.escapeHtml(m.email || '—')}</div>
+            </div>
+          </div>
+          <div>${statusBadge}</div>
+        </div>
+      `;
+    }).join("");
+
+    if (countBadge) {
+      countBadge.textContent = `${connectedCount} of ${members.length} Contributing`;
+    }
+  }
+
+  function handleInitiateConnect() {
+    const clientIdInput = document.getElementById("google-client-id");
+    const clientSecretInput = document.getElementById("google-client-secret");
+    
+    let clientId = clientIdInput ? clientIdInput.value.trim() : "";
+    let clientSecret = clientSecretInput ? clientSecretInput.value.trim() : "";
+
+    // If client ID is known from current storage config, use it
+    if (!clientId && currentStorageConfig && currentStorageConfig.client_id) {
+      clientId = currentStorageConfig.client_id;
+    }
+
+    if (!clientId) {
+      // Open credentials drawer to ask user for keys
+      const drawer = document.getElementById("oauth-config-drawer");
+      if (drawer) {
+        drawer.classList.add("open");
+        clientIdInput?.focus();
+        FamDocAPI.utils.showToast("Please enter your Google Client ID and Secret to connect.", "info");
+      }
+      return;
+    }
+
+    startGoogleAuth(clientId, clientSecret);
+  }
+
+  async function startGoogleAuth(clientId, clientSecret) {
+    try {
+      FamDocAPI.utils.showToast("Redirecting to Google Account Chooser...", "info");
+      const result = await FamDocAPI.storage.getGoogleAuthUrl(clientId, clientSecret, "add");
+      if (result && result.url) {
+        window.location.href = result.url;
+      } else {
+        throw new Error("Failed to generate Google OAuth authorization URL");
+      }
+    } catch (err) {
+      FamDocAPI.utils.showToast(err.message || "Failed to start Google OAuth process.", "error");
+    }
   }
 
   function setupEvents() {
-    const googleForm = document.getElementById("google-storage-form");
-    if (googleForm) {
-      googleForm.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        const clientIdInput = document.getElementById("google-client-id");
-        const clientSecretInput = document.getElementById("google-client-secret");
-        const submitBtn = document.getElementById("btn-save-google-storage");
-        
-        const clientId = clientIdInput.value.trim();
-        const clientSecret = clientSecretInput.value.trim();
-        
-        try {
-          submitBtn.disabled = true;
-          submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Redirecting...';
-          
-          const result = await FamDocAPI.storage.getGoogleAuthUrl(clientId, clientSecret, "add");
-          if (result && result.url) {
-            window.location.href = result.url;
-          } else {
-            throw new Error("Failed to get authorization URL");
-          }
-        } catch (err) {
-          FamDocAPI.utils.showToast(err.message || "Failed to start Google OAuth process.", "error");
-        } finally {
-          submitBtn.disabled = false;
-          submitBtn.innerHTML = '<i class="fab fa-google"></i> Connect New Google Drive Account';
-        }
-      });
-    }
+    // Drawer Toggle Buttons
+    const btnToggleDrawer = document.getElementById("btn-toggle-oauth-config");
+    const btnCloseDrawer = document.getElementById("btn-close-oauth-drawer");
+    const drawer = document.getElementById("oauth-config-drawer");
 
-    // Handle Storage Mode Form Submit
-    const modeForm = document.getElementById("storage-mode-form");
-    if (modeForm) {
-      modeForm.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        const submitBtn = document.getElementById("btn-save-storage-mode");
-        
-        const checkedProvider = document.querySelector('input[name="storage_provider"]:checked');
-        const selectedProvider = checkedProvider ? checkedProvider.value : "local";
-        
-        try {
-          submitBtn.disabled = true;
-          submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
-          
-          await FamDocAPI.storage.updateMode(selectedProvider);
-          FamDocAPI.utils.showToast("Storage provider updated successfully!", "success");
-          await loadStorageConfig();
-        } catch (err) {
-          FamDocAPI.utils.showToast(err.message || "Failed to update storage provider.", "error");
-        } finally {
-          submitBtn.disabled = false;
-          submitBtn.innerHTML = '<i class="fas fa-save"></i> Apply Storage Mode Settings';
-        }
-      });
-    }
-  }
-
-  function renderStorageBreakdown(stats) {
-    const panel = document.getElementById("storage-breakdown-panel");
-    if (!panel) return;
-    
-    panel.style.display = "block";
-    
-    const usedBytes = stats.total_size_bytes || 0;
-    const quotaBytes = stats.storage_quota_bytes || 524288000;
-    
-    document.getElementById("storage-used-text").textContent = FamDocAPI.utils.formatBytes(usedBytes);
-    document.getElementById("storage-total-text").textContent = FamDocAPI.utils.formatBytes(quotaBytes);
-    
-    const percent = Math.min(100, Math.round((usedBytes / quotaBytes) * 100));
-    document.getElementById("storage-percent-text").textContent = `${percent}%`;
-    
-    const progressBar = document.getElementById("storage-progress-bar");
-    const legend = document.getElementById("storage-legend");
-    if (!progressBar || !legend) return;
-    
-    progressBar.innerHTML = "";
-    legend.innerHTML = "";
-    
-    const breakdown = stats.storage_breakdown || {};
-    
-    const categories = [
-      { key: "image", name: "Images", colorClass: "storage-segment-image", legendColor: "var(--image-color)" },
-      { key: "pdf", name: "PDFs", colorClass: "storage-segment-pdf", legendColor: "var(--pdf-color)" },
-      { key: "document", name: "Word Docs", colorClass: "storage-segment-document", legendColor: "var(--doc-color)" },
-      { key: "sheet", name: "Spreadsheets", colorClass: "storage-segment-sheet", legendColor: "var(--sheet-color)" },
-      { key: "text", name: "Text Files", colorClass: "storage-segment-text", legendColor: "var(--text-color)" },
-      { key: "other", name: "Other Files", colorClass: "storage-segment-other", legendColor: "var(--generic-color)" }
-    ];
-    
-    let totalAssignedPercent = 0;
-    
-    categories.forEach(cat => {
-      const data = breakdown[cat.key] || { size: 0, count: 0 };
-      if (data.size > 0) {
-        let segPercent = (data.size / quotaBytes) * 100;
-        if (segPercent > 0 && segPercent < 1) segPercent = 1;
-        totalAssignedPercent += segPercent;
-        
-        const segment = document.createElement("div");
-        segment.className = `storage-progress-segment ${cat.colorClass}`;
-        segment.style.width = `${segPercent}%`;
-        segment.title = `${cat.name}: ${FamDocAPI.utils.formatBytes(data.size)} (${data.count} items)`;
-        progressBar.appendChild(segment);
-      }
-      
-      const legendItem = document.createElement("div");
-      legendItem.className = "storage-legend-item fd-fade-in";
-      legendItem.innerHTML = `
-        <div class="storage-legend-color" style="background-color: ${cat.legendColor};"></div>
-        <div class="storage-legend-info">
-          <span class="storage-legend-name">${cat.name}</span>
-          <span class="storage-legend-size">${FamDocAPI.utils.formatBytes(data.size)} (${data.count})</span>
-        </div>
-      `;
-      legend.appendChild(legendItem);
+    btnToggleDrawer?.addEventListener("click", () => {
+      if (drawer) drawer.classList.toggle("open");
     });
-    
-    const remainingBytes = Math.max(0, quotaBytes - usedBytes);
-    if (remainingBytes > 0 && totalAssignedPercent < 100) {
-      const remainingPercent = 100 - totalAssignedPercent;
-      const segment = document.createElement("div");
-      segment.className = "storage-progress-segment";
-      segment.style.width = `${remainingPercent}%`;
-      segment.style.backgroundColor = "transparent";
-      segment.title = `Free Space: ${FamDocAPI.utils.formatBytes(remainingBytes)}`;
-      progressBar.appendChild(segment);
-    }
+
+    btnCloseDrawer?.addEventListener("click", () => {
+      if (drawer) drawer.classList.remove("open");
+    });
+
+    // Quick Connect Drive Button
+    const btnQuickConnect = document.getElementById("btn-quick-connect-drive");
+    btnQuickConnect?.addEventListener("click", () => {
+      handleInitiateConnect();
+    });
+
+    // Credentials Form Submit
+    const credsForm = document.getElementById("google-credentials-form");
+    credsForm?.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const clientIdInput = document.getElementById("google-client-id");
+      const clientSecretInput = document.getElementById("google-client-secret");
+      const clientId = clientIdInput ? clientIdInput.value.trim() : "";
+      const clientSecret = clientSecretInput ? clientSecretInput.value.trim() : "";
+      startGoogleAuth(clientId, clientSecret);
+    });
+
+    // Mode Switch Buttons
+    const btnGoogle = document.getElementById("mode-btn-google");
+    const btnLocal = document.getElementById("mode-btn-local");
+
+    btnGoogle?.addEventListener("click", async () => {
+      if (btnGoogle.classList.contains("active")) return;
+      try {
+        await FamDocAPI.storage.updateMode("google");
+        FamDocAPI.utils.showToast("Storage mode switched to Google Drive Pool!", "success");
+        await loadStorageConfig();
+      } catch (err) {
+        FamDocAPI.utils.showToast(err.message || "Failed to switch mode to Google Drive", "error");
+      }
+    });
+
+    btnLocal?.addEventListener("click", async () => {
+      if (btnLocal.classList.contains("active")) return;
+      try {
+        await FamDocAPI.storage.updateMode("local");
+        FamDocAPI.utils.showToast("Storage mode switched to Local Storage!", "info");
+        await loadStorageConfig();
+      } catch (err) {
+        FamDocAPI.utils.showToast(err.message || "Failed to switch mode to Local Storage", "error");
+      }
+    });
   }
 })();

@@ -1,76 +1,115 @@
 /* ==========================================================================
-   FamDoc Design System - Storage Settings Page View Layouts
+   FamDoc Design System - Modern Minimalist Cloud Storage Dashboard
    ========================================================================== */
 
-/* Storage Grid Systems */
-.storage-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 2rem;
-  align-items: stretch !important;
-}
-
-@media (max-width: 768px) {
-  .storage-grid {
-    grid-template-columns: 1fr;
-    gap: 1.5rem;
-  }
-}
-
-/* Cloud Storage Config Symmetrization */
-.storage-config-card {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
-
-.storage-config-card form {
-  display: flex;
-  flex-direction: column;
-  flex-grow: 1;
-}
-
-.storage-config-card form button[type="submit"] {
-  margin-top: auto !important;
-}
-
-/* Storage breakdown card and Progress Bar Component */
-.storage-breakdown-card {
-  margin-bottom: 2rem;
-  padding: 1.5rem 2rem;
-}
-
-.storage-usage-summary {
+/* Page Header & Quick Actions */
+.storage-header-container {
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
-  margin-bottom: 0.85rem;
-  font-size: 0.92rem;
-  color: var(--text-ink-muted);
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
 }
 
-.storage-usage-values {
-  font-family: var(--font-sans);
-  font-size: 0.9rem;
+.storage-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
 }
 
-.storage-usage-percent {
-  font-family: var(--font-mono);
+/* ==========================================================================
+   1. HERO STORAGE POOL SUMMARY CARD
+   ========================================================================== */
+.storage-hero-card {
+  background: var(--surface-card, #ffffff);
+  border: 1px solid var(--border-paper-dark, #e2e8f0);
+  border-radius: var(--radius-lg, 12px);
+  padding: 1.5rem 1.75rem;
+  margin-bottom: 1.75rem;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+  position: relative;
+  overflow: hidden;
+}
+
+.storage-hero-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #4285F4, #34A853, #FBBC05, #EA4335);
+}
+
+.storage-hero-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.storage-hero-title-group {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.storage-hero-title {
+  font-family: var(--font-serif);
+  font-size: 1.25rem;
   font-weight: 700;
-  color: var(--accent-brand);
-  font-size: 1.15rem;
+  color: var(--text-ink);
+  margin: 0;
 }
 
-.storage-progress-bar-container {
-  background-color: var(--surface-paper-tint);
-  border: 1px solid var(--border-paper);
-  border-radius: var(--radius-md);
-  height: 16px;
+.storage-hero-metrics {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.hero-metric-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.hero-metric-label {
+  font-size: 0.75rem;
+  color: var(--text-ink-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+}
+
+.hero-metric-value {
+  font-family: var(--font-mono);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-ink);
+}
+
+.hero-metric-value.accent {
+  color: var(--accent-brand);
+}
+
+/* Hero Progress Bar */
+.hero-progress-wrapper {
+  margin-bottom: 1.25rem;
+}
+
+.hero-progress-bar-container {
+  background-color: var(--surface-paper-tint, #f1f5f9);
+  border: 1px solid var(--border-paper, #e2e8f0);
+  border-radius: 9999px;
+  height: 12px;
   width: 100%;
   overflow: hidden;
   display: flex;
-  margin-bottom: 1.25rem;
-  box-shadow: inset 0 1px 3px rgba(0,0,0,0.03);
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.04);
 }
 
 .storage-progress-segment {
@@ -79,127 +118,229 @@
 }
 
 /* Category Colors */
-.storage-segment-image { background-color: var(--image-color); }
-.storage-segment-pdf { background-color: var(--pdf-color); }
-.storage-segment-document { background-color: var(--doc-color); }
-.storage-segment-sheet { background-color: var(--sheet-color); }
-.storage-segment-text { background-color: var(--text-color); }
-.storage-segment-other { background-color: var(--generic-color); }
+.storage-segment-image { background-color: #3b82f6; }
+.storage-segment-pdf { background-color: #ef4444; }
+.storage-segment-document { background-color: #8b5cf6; }
+.storage-segment-sheet { background-color: #10b981; }
+.storage-segment-text { background-color: #f59e0b; }
+.storage-segment-other { background-color: #6b7280; }
 
-.storage-legend-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-  gap: 1rem;
-  padding-top: 0.5rem;
-}
-
-.storage-legend-item {
+.hero-legend-row {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  font-size: 0.82rem;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+  margin-top: 0.65rem;
 }
 
-.storage-legend-color {
-  width: 12px;
-  height: 12px;
-  border-radius: 3px;
+.hero-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.76rem;
+  color: var(--text-ink-muted);
+}
+
+.hero-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
   flex-shrink: 0;
 }
 
-.storage-legend-info {
+/* Hero Mode Switcher Footer */
+.storage-hero-footer {
   display: flex;
-  flex-direction: column;
-}
-
-.storage-legend-name {
-  font-weight: 600;
-  color: var(--text-ink);
-}
-
-.storage-legend-size {
-  font-family: var(--font-mono);
-  color: var(--text-ink-muted);
-  font-size: 0.72rem;
-}
-
-/* Alignment fixes for radio selection layout wrapping on mobile */
-.storage-mode-option {
-  display: flex;
-  align-items: flex-start !important;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
   gap: 1rem;
-  padding: 1rem;
-  border: 1px solid var(--border-paper-dark);
-  border-radius: var(--radius-md);
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-paper-dark, #e2e8f0);
+}
+
+.mode-segmented-control {
+  display: inline-flex;
+  background-color: var(--surface-paper-tint, #f1f5f9);
+  border: 1px solid var(--border-paper, #e2e8f0);
+  border-radius: 8px;
+  padding: 3px;
+  gap: 4px;
+}
+
+.mode-segment-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.4rem 0.85rem;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-ink-muted);
   cursor: pointer;
-  transition: var(--transition-smooth);
+  border: none;
+  background: transparent;
+  transition: all 0.2s ease;
 }
 
-.storage-mode-option input[type="radio"] {
-  margin-top: 0.25rem;
+.mode-segment-btn.active {
+  background-color: var(--surface-card, #ffffff);
+  color: var(--text-ink);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
 }
 
-#dual-options-container label {
-  align-items: flex-start !important;
+.mode-segment-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
-#dual-options-container input[type="radio"] {
-  margin-top: 0.15rem;
+/* ==========================================================================
+   2. TWO-COLUMN DASHBOARD GRID
+   ========================================================================== */
+.storage-dashboard-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr);
+  gap: 1.5rem;
+  align-items: start;
 }
 
-/* Multi-Account Cards Layout */
+@media (max-width: 960px) {
+  .storage-dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Cards & Panels */
+.storage-panel-card {
+  background: var(--surface-card, #ffffff);
+  border: 1px solid var(--border-paper-dark, #e2e8f0);
+  border-radius: var(--radius-lg, 12px);
+  padding: 1.5rem;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.02);
+}
+
+.storage-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.storage-panel-title {
+  font-family: var(--font-serif);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-ink);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+}
+
+/* ==========================================================================
+   3. CONNECTED GOOGLE DRIVE CARDS
+   ========================================================================== */
 .account-cards-list {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
-  margin-bottom: 1.5rem;
+  gap: 1rem;
 }
 
 .account-card {
-  background-color: var(--surface-card, #ffffff);
+  background-color: var(--surface-paper-tint, #f8fafc);
   border: 1px solid var(--border-paper-dark, #e2e8f0);
   border-radius: var(--radius-md, 8px);
-  padding: 1.25rem 1.5rem;
-  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+  padding: 1.15rem 1.25rem;
+  transition: all 0.2s ease;
+  position: relative;
 }
 
 .account-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  background-color: var(--surface-card, #ffffff);
+  border-color: var(--accent-brand, #3b82f6);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
 }
 
 .account-card-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.75rem;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-bottom: 0.6rem;
 }
 
 .account-title-group {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.65rem;
 }
 
 .account-email {
   font-weight: 600;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   color: var(--text-ink, #1e293b);
 }
 
 .account-label-tag {
-  font-size: 0.78rem;
-  padding: 0.15rem 0.5rem;
-  background-color: var(--surface-paper-tint, #f1f5f9);
+  font-size: 0.74rem;
+  padding: 0.15rem 0.45rem;
+  background-color: rgba(66, 133, 244, 0.08);
+  border: 1px solid rgba(66, 133, 244, 0.2);
   border-radius: 4px;
-  color: var(--text-ink-muted, #64748b);
+  color: #1d4ed8;
+  font-weight: 600;
 }
 
+/* Member Attribution Chip */
+.member-attribution-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: linear-gradient(135deg, rgba(66, 133, 244, 0.08), rgba(99, 102, 241, 0.1));
+  border: 1px solid rgba(66, 133, 244, 0.2);
+  border-radius: 9999px;
+  padding: 0.2rem 0.55rem 0.2rem 0.25rem;
+  font-size: 0.76rem;
+  color: var(--text-ink);
+  font-weight: 500;
+}
+
+.member-avatar-circle {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4285F4, #6366F1);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.member-unassigned-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background-color: var(--surface-paper-tint);
+  border: 1px dashed var(--border-paper-dark);
+  border-radius: 9999px;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.74rem;
+  color: var(--text-ink-muted);
+}
+
+/* Status Badges */
 .status-badge-active {
   background-color: #dcfce7;
   color: #166534;
-  padding: 0.2rem 0.6rem;
+  padding: 0.18rem 0.55rem;
   border-radius: 9999px;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 600;
   display: inline-flex;
   align-items: center;
@@ -209,9 +350,9 @@
 .status-badge-error {
   background-color: #fee2e2;
   color: #991b1b;
-  padding: 0.2rem 0.6rem;
+  padding: 0.18rem 0.55rem;
   border-radius: 9999px;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 600;
   display: inline-flex;
   align-items: center;
@@ -221,9 +362,9 @@
 .status-badge-disconnecting {
   background-color: #fef3c7;
   color: #92400e;
-  padding: 0.2rem 0.6rem;
+  padding: 0.18rem 0.55rem;
   border-radius: 9999px;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 600;
   display: inline-flex;
   align-items: center;
@@ -231,152 +372,98 @@
 }
 
 .account-quota-bar-container {
-  height: 8px;
-  background-color: var(--surface-paper-tint, #e2e8f0);
-  border-radius: 4px;
+  height: 6px;
+  background-color: var(--border-paper, #e2e8f0);
+  border-radius: 3px;
   overflow: hidden;
-  margin: 0.5rem 0;
+  margin: 0.4rem 0;
 }
 
 .account-quota-fill {
   height: 100%;
-  background-color: var(--accent-brand, #3b82f6);
+  background-color: #4285F4;
   transition: width 0.3s ease;
 }
 
 .account-card-actions {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.45rem;
   align-items: center;
   flex-wrap: wrap;
+  margin-top: 0.75rem;
 }
 
-/* Member Attribution Chip & Badges */
-.member-attribution-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  background: linear-gradient(135deg, rgba(66, 133, 244, 0.08), rgba(99, 102, 241, 0.12));
-  border: 1px solid rgba(66, 133, 244, 0.2);
-  border-radius: 9999px;
-  padding: 0.25rem 0.65rem 0.25rem 0.35rem;
-  font-size: 0.8rem;
-  color: var(--text-ink);
-  font-weight: 500;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.member-attribution-chip:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
-}
-
-.member-avatar-circle {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #4285F4, #6366F1);
-  color: #ffffff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.68rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  flex-shrink: 0;
-}
-
-.member-unassigned-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  background-color: var(--surface-paper-tint);
-  border: 1px dashed var(--border-paper-dark);
-  border-radius: 9999px;
-  padding: 0.25rem 0.65rem;
-  font-size: 0.78rem;
-  color: var(--text-ink-muted);
-  font-weight: 500;
-}
-
-/* Contributors Grid Widget */
-.contributors-overview-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 1rem;
-  margin-top: 1rem;
-}
-
-.contributor-card {
-  background: var(--surface-card, #ffffff);
-  border: 1px solid var(--border-paper-dark, #e2e8f0);
-  border-radius: var(--radius-md, 8px);
-  padding: 1.1rem 1.25rem;
+/* ==========================================================================
+   4. FAMILY CONTRIBUTORS ROSTER (RIGHT PANEL)
+   ========================================================================== */
+.contributors-roster-list {
   display: flex;
   flex-direction: column;
-  gap: 0.65rem;
-  position: relative;
-  overflow: hidden;
-  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  gap: 0.75rem;
 }
 
-.contributor-card:hover {
-  transform: translateY(-2px);
-  border-color: var(--accent-brand);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
-}
-
-.contributor-card.active-contributor {
-  border-left: 4px solid #10b981;
-}
-
-.contributor-card.inactive-contributor {
-  border-left: 4px solid var(--border-paper-dark);
-  opacity: 0.85;
-}
-
-.contributor-card-header {
+.contributor-list-item {
+  background-color: var(--surface-paper-tint, #f8fafc);
+  border: 1px solid var(--border-paper-dark, #e2e8f0);
+  border-radius: var(--radius-md, 8px);
+  padding: 0.85rem 1rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 0.75rem;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.contributor-list-item:hover {
+  transform: translateX(2px);
+  border-color: var(--accent-brand);
+}
+
+.contributor-list-item.active {
+  border-left: 3px solid #10b981;
+}
+
+.contributor-list-item.shared {
+  border-left: 3px solid var(--border-paper-dark);
 }
 
 .contributor-user-group {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.65rem;
 }
 
 .contributor-avatar-large {
-  width: 34px;
-  height: 34px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   background: linear-gradient(135deg, #3b82f6, #8b5cf6);
   color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   font-weight: 700;
   flex-shrink: 0;
 }
 
 .contributor-name {
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   color: var(--text-ink);
 }
 
 .contributor-email {
-  font-size: 0.76rem;
+  font-size: 0.74rem;
   color: var(--text-ink-muted);
 }
 
 .contributor-status-badge {
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   padding: 0.15rem 0.5rem;
   border-radius: 9999px;
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .contributor-status-badge.connected {
@@ -389,6 +476,23 @@
   background-color: var(--surface-paper-tint);
   color: var(--text-ink-muted);
   border: 1px solid var(--border-paper);
+}
+
+/* ==========================================================================
+   5. OAUTH CONFIGURATION COLLAPSIBLE / DRAWER
+   ========================================================================== */
+.oauth-config-drawer {
+  display: none;
+  background-color: var(--surface-card, #ffffff);
+  border: 1px solid var(--border-paper-dark, #e2e8f0);
+  border-radius: var(--radius-lg, 12px);
+  padding: 1.5rem;
+  margin-bottom: 1.75rem;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04);
+}
+
+.oauth-config-drawer.open {
+  display: block;
 }
 
 /* Cloud Storage Table Badge on Family Page */
