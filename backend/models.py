@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, JSON, Boolean, UniqueConstraint, Index
+from sqlalchemy import Column, Integer, BigInteger, String, DateTime, ForeignKey, JSON, Boolean, UniqueConstraint, Index
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import Base
@@ -48,7 +48,7 @@ class Family(Base):
     storage_provider = Column(String(50), nullable=True) # "google"
     _storage_config = Column("storage_config", String(2048), nullable=True) # Config details (tokens or login)
     vault_folder_id = Column(String(255), nullable=True) # Root folder ID in Google Drive
-    storage_quota_bytes = Column(Integer, nullable=False, default=524288000) # Default 500MB
+    storage_quota_bytes = Column(BigInteger, nullable=False, default=524288000) # Default 500MB
 
     @property
     def storage_config(self) -> Optional[dict]:
@@ -138,7 +138,7 @@ class File(Base):
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     filename = Column(String(255), nullable=False)
     file_type = Column(String(100), nullable=False) # MIME type or category
-    size_bytes = Column(Integer, nullable=False)
+    size_bytes = Column(BigInteger, nullable=False)
     uploader_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
     folder_id = Column(Integer, ForeignKey("folders.id", ondelete="CASCADE"), nullable=True, index=True)
     family_id = Column(String(36), ForeignKey("families.id", ondelete="CASCADE"), nullable=False, index=True)
@@ -196,8 +196,8 @@ class StorageAccount(Base):
     _config = Column("config", String(4096), nullable=True)
     status = Column(String(20), default="active", nullable=False) # active | error | disconnecting | disconnected
     priority = Column(Integer, default=0, nullable=False)
-    cached_quota_total = Column(Integer, nullable=True)
-    cached_quota_used = Column(Integer, nullable=True)
+    cached_quota_total = Column(BigInteger, nullable=True)
+    cached_quota_used = Column(BigInteger, nullable=True)
     quota_checked_at = Column(DateTime(timezone=True), nullable=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

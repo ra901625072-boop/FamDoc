@@ -359,7 +359,23 @@ def run_migrations():
             except Exception as e:
                 logger.error(f"Migration error (storage_accounts user_id): {str(e)}")
 
-    # 7. One-time auto-backfill of existing single Google account into storage_accounts table
+    # 7. Convert integer byte/quota columns to BIGINT in PostgreSQL to avoid numeric overflow
+    if dialect_name == "postgresql":
+        bigint_migrations = [
+            ("storage_accounts", "ALTER TABLE storage_accounts ALTER COLUMN cached_quota_total TYPE BIGINT"),
+            ("storage_accounts", "ALTER TABLE storage_accounts ALTER COLUMN cached_quota_used TYPE BIGINT"),
+            ("families", "ALTER TABLE families ALTER COLUMN storage_quota_bytes TYPE BIGINT"),
+            ("files", "ALTER TABLE files ALTER COLUMN size_bytes TYPE BIGINT"),
+        ]
+        for tbl, sql in bigint_migrations:
+            if tbl in table_names:
+                try:
+                    execute_migration_statement(sql)
+                    logger.info(f"Migration: Ensured BIGINT on {tbl} ({sql})")
+                except Exception as e:
+                    logger.warning(f"BIGINT migration note for {tbl}: {e}")
+
+    # 8. One-time auto-backfill of existing single Google account into storage_accounts table
     if "families" in table_names and "storage_accounts" in table_names:
         try:
             from models import Family, StorageAccount, File
