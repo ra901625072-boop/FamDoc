@@ -1,5 +1,7 @@
 package com.famdoc.app.ui.components
 
+import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -9,11 +11,13 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.famdoc.app.data.models.FolderItem
+import com.famdoc.app.ui.animation.MotionTokens
 import com.famdoc.app.ui.animation.bounceClick
 
 @Composable
@@ -24,9 +28,16 @@ fun BreadcrumbBar(
 ) {
     val scrollState = rememberScrollState()
 
+    LaunchedEffect(breadcrumbs.size) {
+        if (breadcrumbs.isNotEmpty()) {
+            scrollState.animateScrollTo(scrollState.maxValue)
+        }
+    }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .animateContentSize(animationSpec = tween(MotionTokens.DurationStandard, easing = MotionTokens.EmphasizedEasing))
             .horizontalScroll(scrollState)
             .padding(horizontal = 16.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -46,33 +57,41 @@ fun BreadcrumbBar(
         )
 
         breadcrumbs.forEachIndexed { index, folder ->
-            Icon(
-                imageVector = Icons.Default.ChevronRight,
-                contentDescription = "Separator",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                modifier = Modifier.size(18.dp)
-            )
+            AnimatedVisibility(
+                visible = true,
+                enter = fadeIn(tween(MotionTokens.DurationQuick)) + slideInHorizontally(tween(MotionTokens.DurationStandard)) { it / 2 },
+                exit = fadeOut(tween(MotionTokens.DurationQuick)) + slideOutHorizontally(tween(MotionTokens.DurationQuick)) { it / 2 }
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.ChevronRight,
+                        contentDescription = "Separator",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                        modifier = Modifier.size(18.dp)
+                    )
 
-            val isLast = index == breadcrumbs.size - 1
-            AssistChip(
-                onClick = { if (!isLast) onFolderClick(folder) },
-                shape = RoundedCornerShape(10.dp),
-                label = {
-                    Text(
-                        text = folder.name,
-                        fontWeight = if (isLast) FontWeight.Bold else FontWeight.Medium
+                    val isLast = index == breadcrumbs.size - 1
+                    AssistChip(
+                        onClick = { if (!isLast) onFolderClick(folder) },
+                        shape = RoundedCornerShape(10.dp),
+                        label = {
+                            Text(
+                                text = folder.name,
+                                fontWeight = if (isLast) FontWeight.Bold else FontWeight.Medium
+                            )
+                        },
+                        colors = if (isLast) {
+                            AssistChipDefaults.assistChipColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f),
+                                labelColor = MaterialTheme.colorScheme.primary
+                            )
+                        } else {
+                            AssistChipDefaults.assistChipColors()
+                        },
+                        modifier = if (!isLast) Modifier.bounceClick(scaleDown = 0.95f) { onFolderClick(folder) } else Modifier
                     )
-                },
-                colors = if (isLast) {
-                    AssistChipDefaults.assistChipColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f),
-                        labelColor = MaterialTheme.colorScheme.primary
-                    )
-                } else {
-                    AssistChipDefaults.assistChipColors()
-                },
-                modifier = if (!isLast) Modifier.bounceClick(scaleDown = 0.95f) { onFolderClick(folder) } else Modifier
-            )
+                }
+            }
         }
     }
 }

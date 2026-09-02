@@ -29,6 +29,7 @@ import com.famdoc.app.core.utils.FileUtils
 import com.famdoc.app.data.models.DashboardStats
 import com.famdoc.app.data.models.User
 import com.famdoc.app.ui.animation.bounceClick
+import com.famdoc.app.ui.animation.rotatingRefresh
 import com.famdoc.app.ui.animation.staggeredEntrance
 import com.famdoc.app.ui.components.*
 import com.famdoc.app.ui.theme.*
@@ -66,7 +67,12 @@ fun DashboardScreen(
                         onClick = { dashboardViewModel.loadStats() },
                         modifier = Modifier.bounceClick(scaleDown = 0.9f) { dashboardViewModel.loadStats() }
                     ) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Refresh", tint = MaterialTheme.colorScheme.onPrimary)
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = "Refresh",
+                            tint = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier.rotatingRefresh(isRotating = statsState is Resource.Loading)
+                        )
                     }
                 }
             )

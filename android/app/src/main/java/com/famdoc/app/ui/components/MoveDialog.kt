@@ -1,5 +1,8 @@
 package com.famdoc.app.ui.components
 
+import androidx.compose.animation.*
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -16,7 +19,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.famdoc.app.data.models.FolderItem
+import com.famdoc.app.ui.animation.bounceClick
 import com.famdoc.app.ui.theme.BrandPrimary
+import com.famdoc.app.ui.theme.Dimens
 
 @Composable
 fun MoveDialog(
@@ -83,11 +88,13 @@ fun MoveDialog(
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(max = 320.dp),
-                shape = RoundedCornerShape(8.dp),
+                shape = RoundedCornerShape(Dimens.RadiusMedium),
                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
             ) {
                 LazyColumn(
-                    modifier = Modifier.fillMaxWidth().padding(4.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(4.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     // Root Destination
@@ -119,13 +126,18 @@ fun MoveDialog(
         confirmButton = {
             Button(
                 onClick = { onConfirmMove(selectedTargetId) },
-                colors = ButtonDefaults.buttonColors(containerColor = BrandPrimary)
+                shape = RoundedCornerShape(Dimens.RadiusMedium),
+                colors = ButtonDefaults.buttonColors(containerColor = BrandPrimary),
+                modifier = Modifier.bounceClick(scaleDown = 0.95f) { onConfirmMove(selectedTargetId) }
             ) {
-                Text("Move Here")
+                Text("Move Here", fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.bounceClick(scaleDown = 0.95f, onClick = onDismiss)
+            ) {
                 Text("Cancel")
             }
         }
@@ -141,9 +153,14 @@ private fun DestinationRow(
     isCurrent: Boolean,
     onClick: () -> Unit
 ) {
+    val containerColor by animateColorAsState(
+        targetValue = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
+        label = "destRowBg"
+    )
+
     Surface(
-        shape = RoundedCornerShape(8.dp),
-        color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(Dimens.RadiusMedium),
+        color = containerColor,
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
@@ -173,7 +190,11 @@ private fun DestinationRow(
                     )
                 }
             }
-            if (isSelected) {
+            AnimatedVisibility(
+                visible = isSelected,
+                enter = scaleIn(spring(dampingRatio = Spring.DampingRatioMediumBouncy)) + fadeIn(),
+                exit = scaleOut() + fadeOut()
+            ) {
                 Icon(
                     imageVector = Icons.Default.Check,
                     contentDescription = "Selected",

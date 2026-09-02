@@ -2,6 +2,7 @@ package com.famdoc.app.ui.components
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -20,15 +21,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.famdoc.app.core.config.AppThemeMode
-import com.famdoc.app.ui.animation.bounceClick
-import com.famdoc.app.ui.theme.BrandAccent
 import com.famdoc.app.ui.theme.Dimens
 
 /**
@@ -99,6 +101,8 @@ private fun MinimalThemeOption(
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
+    val haptic = LocalHapticFeedback.current
+
     val bgColor by animateColorAsState(
         targetValue = if (isSelected) MaterialTheme.colorScheme.surface else Color.Transparent,
         animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
@@ -108,6 +112,12 @@ private fun MinimalThemeOption(
     val contentColor by animateColorAsState(
         targetValue = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
         label = "tabContent"
+    )
+
+    val iconScale by animateFloatAsState(
+        targetValue = if (isSelected) 1.12f else 1.0f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+        label = "tabIconScale"
     )
 
     Box(
@@ -127,7 +137,12 @@ private fun MinimalThemeOption(
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
-                onClick = onClick
+                onClick = {
+                    try {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    } catch (_: Exception) {}
+                    onClick()
+                }
             ),
         contentAlignment = Alignment.Center
     ) {
@@ -140,7 +155,9 @@ private fun MinimalThemeOption(
                 imageVector = icon,
                 contentDescription = title,
                 tint = contentColor,
-                modifier = Modifier.size(15.dp)
+                modifier = Modifier
+                    .size(15.dp)
+                    .scale(iconScale)
             )
             Spacer(modifier = Modifier.width(5.dp))
             Text(

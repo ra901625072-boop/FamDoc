@@ -1,5 +1,6 @@
 package com.famdoc.app.ui.components
 
+import androidx.compose.animation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -16,6 +17,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.famdoc.app.data.models.FileItem
 import com.famdoc.app.data.models.ShareLink
+import com.famdoc.app.ui.animation.bounceClick
+import com.famdoc.app.ui.theme.Dimens
 
 @Composable
 fun ShareModal(
@@ -32,11 +35,17 @@ fun ShareModal(
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(Dimens.RadiusLarge),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            modifier = Modifier.fillMaxWidth().padding(8.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(8.dp)
         ) {
-            Column(modifier = Modifier.padding(20.dp)) {
+            Column(
+                modifier = Modifier
+                    .padding(20.dp)
+                    .animateContentSize()
+            ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector = Icons.Default.Share,
@@ -95,13 +104,20 @@ fun ShareModal(
                     Text("Password Protected", style = MaterialTheme.typography.bodyMedium)
                 }
 
-                if (hasPassword) {
+                AnimatedVisibility(
+                    visible = hasPassword,
+                    enter = expandVertically() + fadeIn(),
+                    exit = shrinkVertically() + fadeOut()
+                ) {
                     OutlinedTextField(
                         value = password,
                         onValueChange = { password = it },
                         label = { Text("Password") },
-                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
-                        singleLine = true
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 8.dp),
+                        singleLine = true,
+                        shape = RoundedCornerShape(Dimens.RadiusMedium)
                     )
                 }
 
@@ -109,8 +125,11 @@ fun ShareModal(
                     value = maxDownloadsStr,
                     onValueChange = { if (it.all { char -> char.isDigit() }) maxDownloadsStr = it },
                     label = { Text("Max Downloads (Optional)") },
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
-                    singleLine = true
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 12.dp),
+                    singleLine = true,
+                    shape = RoundedCornerShape(Dimens.RadiusMedium)
                 )
 
                 Button(
@@ -119,9 +138,16 @@ fun ShareModal(
                         val pwd = if (hasPassword && password.isNotBlank()) password else null
                         onCreateLink(pwd, null, maxDl)
                     },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .bounceClick(scaleDown = 0.96f) {
+                            val maxDl = maxDownloadsStr.toIntOrNull()
+                            val pwd = if (hasPassword && password.isNotBlank()) password else null
+                            onCreateLink(pwd, null, maxDl)
+                        },
+                    shape = RoundedCornerShape(Dimens.RadiusMedium)
                 ) {
-                    Text("Create Link")
+                    Text("Create Link", fontWeight = FontWeight.Bold)
                 }
 
                 if (existingLinks.isNotEmpty()) {
@@ -132,7 +158,10 @@ fun ShareModal(
                     )
                     existingLinks.forEach { link ->
                         Card(
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            shape = RoundedCornerShape(Dimens.RadiusMedium),
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                         ) {
                             Row(
@@ -151,10 +180,17 @@ fun ShareModal(
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
-                                IconButton(onClick = {
-                                    clipboardManager.setText(AnnotatedString(link.shareLink))
-                                }) {
-                                    Icon(Icons.Default.ContentCopy, contentDescription = "Copy Link", modifier = Modifier.size(18.dp))
+                                IconButton(
+                                    onClick = { clipboardManager.setText(AnnotatedString(link.shareLink)) },
+                                    modifier = Modifier.bounceClick(scaleDown = 0.88f) {
+                                        clipboardManager.setText(AnnotatedString(link.shareLink))
+                                    }
+                                ) {
+                                    Icon(
+                                        Icons.Default.ContentCopy,
+                                        contentDescription = "Copy Link",
+                                        modifier = Modifier.size(18.dp)
+                                    )
                                 }
                             }
                         }
@@ -164,7 +200,9 @@ fun ShareModal(
                 Spacer(modifier = Modifier.height(12.dp))
                 TextButton(
                     onClick = onDismiss,
-                    modifier = Modifier.align(Alignment.End)
+                    modifier = Modifier
+                        .align(Alignment.End)
+                        .bounceClick(scaleDown = 0.95f, onClick = onDismiss)
                 ) {
                     Text("Close")
                 }

@@ -1,8 +1,8 @@
 package com.famdoc.app.ui.components
 
 import androidx.compose.animation.*
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
@@ -14,10 +14,9 @@ import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -40,6 +39,25 @@ fun FileItemRow(
     onLongClick: () -> Unit,
     onMoreClick: () -> Unit
 ) {
+    val borderColor by animateColorAsState(
+        targetValue = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.4f),
+        label = "fileRowBorderColor"
+    )
+
+    val borderWidth by animateDpAsState(
+        targetValue = if (isSelected) Dimens.BorderFocused else Dimens.BorderThin,
+        label = "fileRowBorderWidth"
+    )
+
+    val containerColor by animateColorAsState(
+        targetValue = if (isSelected) {
+            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
+        } else {
+            MaterialTheme.colorScheme.surface
+        },
+        label = "fileRowContainerColor"
+    )
+
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -49,18 +67,12 @@ fun FileItemRow(
                 onLongClick = onLongClick
             )
             .border(
-                width = if (isSelected) Dimens.BorderFocused else Dimens.BorderThin,
-                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.4f),
+                width = borderWidth,
+                color = borderColor,
                 shape = RoundedCornerShape(Dimens.RadiusLarge)
             ),
         shape = RoundedCornerShape(Dimens.RadiusLarge),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) {
-                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
-            } else {
-                MaterialTheme.colorScheme.surface
-            }
-        ),
+        colors = CardDefaults.cardColors(containerColor = containerColor),
         elevation = CardDefaults.cardElevation(defaultElevation = if (isSelected) 3.dp else Dimens.CardElevation)
     ) {
         Row(

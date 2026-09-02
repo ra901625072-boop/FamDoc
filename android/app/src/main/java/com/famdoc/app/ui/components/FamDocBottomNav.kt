@@ -91,11 +91,7 @@ fun FamDocBottomNav(
                     )
                 },
                 selected = isSelected,
-                onClick = {
-                    if (currentRoute != item.route) {
-                        onNavigate(item.route)
-                    }
-                },
+                onClick = { onNavigate(item.route) },
                 colors = NavigationBarItemDefaults.colors(
                     selectedIconColor = MaterialTheme.colorScheme.primary,
                     selectedTextColor = MaterialTheme.colorScheme.primary,

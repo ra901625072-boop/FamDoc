@@ -9,6 +9,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.*
@@ -17,6 +18,7 @@ import com.famdoc.app.FamDocApplication
 import com.famdoc.app.core.network.ServerStatus
 import com.famdoc.app.data.models.User
 import com.famdoc.app.data.repository.*
+import com.famdoc.app.ui.animation.swipeableTabNavigation
 import com.famdoc.app.ui.components.FamDocBottomNav
 import com.famdoc.app.ui.components.FamDocDrawer
 import com.famdoc.app.ui.screens.auth.*
@@ -81,6 +83,26 @@ fun FamDocNavGraph(
         Screen.Storage.route
     )
 
+    val bottomNavOrder = remember {
+        listOf(
+            Screen.Dashboard.route,
+            Screen.Vault.route,
+            Screen.Family.route,
+            Screen.Trash.route,
+            Screen.Profile.route
+        )
+    }
+
+    val handleTabNavigation: (String) -> Unit = { route ->
+        navController.navigate(route) {
+            popUpTo(navController.graph.findStartDestination().id) {
+                saveState = true
+            }
+            launchSingleTop = true
+            restoreState = true
+        }
+    }
+
     ModalNavigationDrawer(
         drawerState = drawerState,
         gesturesEnabled = showBottomNav,
@@ -88,13 +110,7 @@ fun FamDocNavGraph(
             FamDocDrawer(
                 currentUser = currentUser,
                 currentRoute = currentRoute,
-                onNavigate = { route ->
-                    navController.navigate(route) {
-                        popUpTo(Screen.Dashboard.route) { saveState = true }
-                        launchSingleTop = true
-                        restoreState = true
-                    }
-                },
+                onNavigate = handleTabNavigation,
                 onLogout = {
                     authViewModel.logout()
                     navController.navigate(Screen.Login.route) {
@@ -110,13 +126,7 @@ fun FamDocNavGraph(
                 if (showBottomNav) {
                     FamDocBottomNav(
                         currentRoute = currentRoute,
-                        onNavigate = { route ->
-                            navController.navigate(route) {
-                                popUpTo(Screen.Dashboard.route) { saveState = true }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        }
+                        onNavigate = handleTabNavigation
                     )
                 }
             }
@@ -125,33 +135,130 @@ fun FamDocNavGraph(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(bottom = if (showBottomNav) innerPadding.calculateBottomPadding() else 0.dp)
+                    .swipeableTabNavigation(
+                        currentRoute = currentRoute,
+                        enabled = showBottomNav,
+                        tabOrder = bottomNavOrder,
+                        onNavigate = handleTabNavigation,
+                        onOpenDrawer = { scope.launch { drawerState.open() } }
+                    )
             ) {
                 NavHost(
                     navController = navController,
                     startDestination = Screen.Splash.route,
                     enterTransition = {
-                        fadeIn(animationSpec = tween(280, easing = androidx.compose.animation.core.FastOutSlowInEasing)) + slideIntoContainer(
-                            AnimatedContentTransitionScope.SlideDirection.Start,
-                            animationSpec = tween(300, easing = androidx.compose.animation.core.FastOutSlowInEasing)
+                        val isDetailScreen = targetState.destination.route?.startsWith("preview/") == true ||
+                                targetState.destination.route?.startsWith("share/") == true
+                        val isAuthSubScreen = targetState.destination.route in listOf(
+                            Screen.Register.route,
+                            Screen.JoinFamily.route,
+                            Screen.ForgotPassword.route
                         )
+                        val fromIndex = bottomNavOrder.indexOf(initialState.destination.route)
+                        val toIndex = bottomNavOrder.indexOf(targetState.destination.route)
+
+                        if (isDetailScreen || isAuthSubScreen) {
+                            slideIntoContainer(
+                                AnimatedContentTransitionScope.SlideDirection.Start,
+                                animationSpec = tween(300, easing = com.famdoc.app.ui.animation.MotionTokens.EmphasizedEasing)
+                            ) + fadeIn(animationSpec = tween(250, easing = com.famdoc.app.ui.animation.MotionTokens.EmphasizedEasing))
+                        } else if (fromIndex != -1 && toIndex != -1 && fromIndex != toIndex) {
+                            val slideDir = if (toIndex > fromIndex) {
+                                AnimatedContentTransitionScope.SlideDirection.Start
+                            } else {
+                                AnimatedContentTransitionScope.SlideDirection.End
+                            }
+                            slideIntoContainer(
+                                slideDir,
+                                animationSpec = tween(280, easing = com.famdoc.app.ui.animation.MotionTokens.EmphasizedEasing)
+                            ) + fadeIn(animationSpec = tween(220, easing = com.famdoc.app.ui.animation.MotionTokens.EmphasizedEasing))
+                        } else {
+                            fadeIn(animationSpec = tween(250, easing = com.famdoc.app.ui.animation.MotionTokens.EmphasizedEasing)) +
+                                    scaleIn(initialScale = 0.98f, animationSpec = tween(250, easing = com.famdoc.app.ui.animation.MotionTokens.EmphasizedEasing))
+                        }
                     },
                     exitTransition = {
-                        fadeOut(animationSpec = tween(280, easing = androidx.compose.animation.core.FastOutSlowInEasing)) + slideOutOfContainer(
-                            AnimatedContentTransitionScope.SlideDirection.Start,
-                            animationSpec = tween(300, easing = androidx.compose.animation.core.FastOutSlowInEasing)
-                        )
+                        val isDetailScreen = targetState.destination.route?.startsWith("preview/") == true
+                        val fromIndex = bottomNavOrder.indexOf(initialState.destination.route)
+                        val toIndex = bottomNavOrder.indexOf(targetState.destination.route)
+
+                        if (isDetailScreen) {
+                            fadeOut(animationSpec = tween(200, easing = com.famdoc.app.ui.animation.MotionTokens.AccelerateEasing)) +
+                                    scaleOut(targetScale = 0.96f, animationSpec = tween(200, easing = com.famdoc.app.ui.animation.MotionTokens.AccelerateEasing))
+                        } else if (fromIndex != -1 && toIndex != -1 && fromIndex != toIndex) {
+                            val slideDir = if (toIndex > fromIndex) {
+                                AnimatedContentTransitionScope.SlideDirection.Start
+                            } else {
+                                AnimatedContentTransitionScope.SlideDirection.End
+                            }
+                            slideOutOfContainer(
+                                slideDir,
+                                animationSpec = tween(280, easing = com.famdoc.app.ui.animation.MotionTokens.AccelerateEasing)
+                            ) + fadeOut(animationSpec = tween(180, easing = com.famdoc.app.ui.animation.MotionTokens.AccelerateEasing))
+                        } else {
+                            fadeOut(animationSpec = tween(200, easing = com.famdoc.app.ui.animation.MotionTokens.AccelerateEasing))
+                        }
                     },
                     popEnterTransition = {
-                        fadeIn(animationSpec = tween(280, easing = androidx.compose.animation.core.FastOutSlowInEasing)) + slideIntoContainer(
-                            AnimatedContentTransitionScope.SlideDirection.End,
-                            animationSpec = tween(300, easing = androidx.compose.animation.core.FastOutSlowInEasing)
+                        val isDetailScreen = initialState.destination.route?.startsWith("preview/") == true ||
+                                initialState.destination.route?.startsWith("share/") == true
+                        val isAuthSubScreen = initialState.destination.route in listOf(
+                            Screen.Register.route,
+                            Screen.JoinFamily.route,
+                            Screen.ForgotPassword.route
                         )
+                        val fromIndex = bottomNavOrder.indexOf(initialState.destination.route)
+                        val toIndex = bottomNavOrder.indexOf(targetState.destination.route)
+
+                        if (isDetailScreen || isAuthSubScreen) {
+                            slideIntoContainer(
+                                AnimatedContentTransitionScope.SlideDirection.End,
+                                animationSpec = tween(300, easing = com.famdoc.app.ui.animation.MotionTokens.EmphasizedEasing)
+                            ) + fadeIn(animationSpec = tween(250, easing = com.famdoc.app.ui.animation.MotionTokens.EmphasizedEasing))
+                        } else if (fromIndex != -1 && toIndex != -1 && fromIndex != toIndex) {
+                            val slideDir = if (toIndex > fromIndex) {
+                                AnimatedContentTransitionScope.SlideDirection.Start
+                            } else {
+                                AnimatedContentTransitionScope.SlideDirection.End
+                            }
+                            slideIntoContainer(
+                                slideDir,
+                                animationSpec = tween(280, easing = com.famdoc.app.ui.animation.MotionTokens.EmphasizedEasing)
+                            ) + fadeIn(animationSpec = tween(220, easing = com.famdoc.app.ui.animation.MotionTokens.EmphasizedEasing))
+                        } else {
+                            fadeIn(animationSpec = tween(250, easing = com.famdoc.app.ui.animation.MotionTokens.EmphasizedEasing)) +
+                                    scaleIn(initialScale = 0.98f, animationSpec = tween(250, easing = com.famdoc.app.ui.animation.MotionTokens.EmphasizedEasing))
+                        }
                     },
                     popExitTransition = {
-                        fadeOut(animationSpec = tween(280, easing = androidx.compose.animation.core.FastOutSlowInEasing)) + slideOutOfContainer(
-                            AnimatedContentTransitionScope.SlideDirection.End,
-                            animationSpec = tween(300, easing = androidx.compose.animation.core.FastOutSlowInEasing)
+                        val isDetailScreen = initialState.destination.route?.startsWith("preview/") == true ||
+                                initialState.destination.route?.startsWith("share/") == true
+                        val isAuthSubScreen = initialState.destination.route in listOf(
+                            Screen.Register.route,
+                            Screen.JoinFamily.route,
+                            Screen.ForgotPassword.route
                         )
+                        val fromIndex = bottomNavOrder.indexOf(initialState.destination.route)
+                        val toIndex = bottomNavOrder.indexOf(targetState.destination.route)
+
+                        if (isDetailScreen || isAuthSubScreen) {
+                            slideOutOfContainer(
+                                AnimatedContentTransitionScope.SlideDirection.End,
+                                animationSpec = tween(280, easing = com.famdoc.app.ui.animation.MotionTokens.AccelerateEasing)
+                            ) + fadeOut(animationSpec = tween(200, easing = com.famdoc.app.ui.animation.MotionTokens.AccelerateEasing))
+                        } else if (fromIndex != -1 && toIndex != -1 && fromIndex != toIndex) {
+                            val slideDir = if (toIndex > fromIndex) {
+                                AnimatedContentTransitionScope.SlideDirection.Start
+                            } else {
+                                AnimatedContentTransitionScope.SlideDirection.End
+                            }
+                            slideOutOfContainer(
+                                slideDir,
+                                animationSpec = tween(280, easing = com.famdoc.app.ui.animation.MotionTokens.AccelerateEasing)
+                            ) + fadeOut(animationSpec = tween(180, easing = com.famdoc.app.ui.animation.MotionTokens.AccelerateEasing))
+                        } else {
+                            fadeOut(animationSpec = tween(200, easing = com.famdoc.app.ui.animation.MotionTokens.AccelerateEasing))
+                        }
                     }
                 ) {
                     composable(Screen.Splash.route) {

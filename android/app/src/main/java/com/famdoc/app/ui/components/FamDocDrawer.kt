@@ -222,6 +222,6 @@ private fun DrawerItem(
         ),
         modifier = Modifier
             .padding(horizontal = Dimens.Spacing12, vertical = Dimens.Spacing2)
-            .bounceClick(scaleDown = 0.97f, onClick = onClick)
+            .bounceClick(scaleDown = 0.97f)
     )
 }

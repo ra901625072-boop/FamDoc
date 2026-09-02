@@ -24,6 +24,7 @@ import com.famdoc.app.core.utils.DateFormatter
 import com.famdoc.app.core.utils.FileUtils
 import com.famdoc.app.data.models.User
 import com.famdoc.app.ui.animation.bounceClick
+import com.famdoc.app.ui.animation.rotatingRefresh
 import com.famdoc.app.ui.components.*
 import com.famdoc.app.ui.theme.*
 import com.famdoc.app.ui.viewmodel.RecycleBinViewModel
@@ -66,7 +67,12 @@ fun RecycleBinScreen(
                         onClick = { recycleBinViewModel.loadRecycleBin() },
                         modifier = Modifier.bounceClick(scaleDown = 0.9f) { recycleBinViewModel.loadRecycleBin() }
                     ) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Refresh", tint = MaterialTheme.colorScheme.onPrimary)
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = "Refresh",
+                            tint = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier.rotatingRefresh(isRotating = recycleBinState is Resource.Loading)
+                        )
                     }
                 }
             )

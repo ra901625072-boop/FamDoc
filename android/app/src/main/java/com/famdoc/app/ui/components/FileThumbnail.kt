@@ -191,10 +191,19 @@ fun FileThumbnail(
         }
 
         // Overlay 1: Top-Left Selection Checkmark Badge
-        if (showSelectionBadge && isSelected) {
+        androidx.compose.animation.AnimatedVisibility(
+            visible = showSelectionBadge && isSelected,
+            enter = androidx.compose.animation.scaleIn(
+                animationSpec = androidx.compose.animation.core.spring(
+                    dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
+                    stiffness = androidx.compose.animation.core.Spring.StiffnessMedium
+                )
+            ) + androidx.compose.animation.fadeIn(),
+            exit = androidx.compose.animation.scaleOut() + androidx.compose.animation.fadeOut(),
+            modifier = Modifier.align(Alignment.TopStart)
+        ) {
             Box(
                 modifier = Modifier
-                    .align(Alignment.TopStart)
                     .padding(if (variant == ThumbnailVariant.GridLarge) 6.dp else 4.dp)
                     .size(if (variant == ThumbnailVariant.GridLarge) 22.dp else 18.dp)
                     .clip(CircleShape)

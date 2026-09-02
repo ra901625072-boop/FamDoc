@@ -1,12 +1,12 @@
 package com.famdoc.app.ui.components
 
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import com.famdoc.app.ui.animation.bounceClick
+import com.famdoc.app.ui.theme.Dimens
 
 @Composable
 fun ConfirmDialog(
@@ -20,22 +20,29 @@ fun ConfirmDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
+        shape = RoundedCornerShape(Dimens.RadiusLarge),
         title = { Text(text = title, fontWeight = FontWeight.Bold) },
         text = { Text(text = message, style = MaterialTheme.typography.bodyMedium) },
         confirmButton = {
-            TextButton(
+            Button(
                 onClick = onConfirm,
                 colors = if (isDestructive) {
-                    ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                    ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                 } else {
-                    ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.primary)
-                }
+                    ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                },
+                shape = RoundedCornerShape(Dimens.RadiusMedium),
+                modifier = Modifier.bounceClick(scaleDown = 0.95f, onClick = onConfirm)
             ) {
                 Text(confirmText, fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(
+                onClick = onDismiss,
+                shape = RoundedCornerShape(Dimens.RadiusMedium),
+                modifier = Modifier.bounceClick(scaleDown = 0.95f, onClick = onDismiss)
+            ) {
                 Text(cancelText)
             }
         }

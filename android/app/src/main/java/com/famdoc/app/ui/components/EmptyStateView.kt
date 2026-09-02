@@ -13,6 +13,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -32,13 +33,23 @@ fun EmptyStateView(
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "floatingEmpty")
     val floatOffset by infiniteTransition.animateFloat(
-        initialValue = -6f,
-        targetValue = 6f,
+        initialValue = -5f,
+        targetValue = 5f,
         animationSpec = infiniteRepeatable(
-            animation = tween(1800, easing = FastOutSlowInEasing),
+            animation = tween(2200, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
         ),
         label = "floatAnim"
+    )
+
+    val iconScale by infiniteTransition.animateFloat(
+        initialValue = 0.97f,
+        targetValue = 1.03f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2200, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "scaleAnim"
     )
 
     Column(
@@ -51,6 +62,7 @@ fun EmptyStateView(
         Box(
             modifier = Modifier
                 .offset(y = floatOffset.dp)
+                .scale(iconScale)
                 .size(88.dp)
                 .clip(CircleShape)
                 .background(BrandPrimary.copy(alpha = 0.08f)),

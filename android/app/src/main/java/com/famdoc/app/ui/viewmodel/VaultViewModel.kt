@@ -112,6 +112,21 @@ class VaultViewModel(private val vaultRepository: VaultRepository) : ViewModel()
         loadFiles(null)
     }
 
+    fun navigateUp() {
+        val crumbs = _breadcrumbs.value
+        if (crumbs.size > 1) {
+            val parentFolder = crumbs[crumbs.size - 2]
+            _currentFolder.value = parentFolder
+            _breadcrumbs.value = crumbs.dropLast(1)
+            clearSelection()
+            _searchQuery.value = ""
+            _selectedCategory.value = null
+            loadFiles(parentFolder.id)
+        } else if (crumbs.isNotEmpty() || _currentFolder.value != null) {
+            navigateToRoot()
+        }
+    }
+
     fun createFolder(name: String) {
         viewModelScope.launch {
             val parentId = _currentFolder.value?.id

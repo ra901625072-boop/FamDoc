@@ -1,9 +1,11 @@
 package com.famdoc.app.ui.animation
 
+import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -12,12 +14,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -33,6 +37,11 @@ object MotionTokens {
         stiffness = Spring.StiffnessLow
     )
 
+    val SpringSnappy = spring<Float>(
+        dampingRatio = Spring.DampingRatioMediumBouncy,
+        stiffness = Spring.StiffnessMedium
+    )
+
     val SpringGentle = spring<Float>(
         dampingRatio = Spring.DampingRatioNoBouncy,
         stiffness = Spring.StiffnessMediumLow
@@ -40,17 +49,38 @@ object MotionTokens {
 
     val EmphasizedEasing = CubicBezierEasing(0.2f, 0.0f, 0.0f, 1.0f)
     val DecelerateEasing = FastOutSlowInEasing
+    val AccelerateEasing = FastOutLinearInEasing
 
     const val DurationQuick = 200
-    const val DurationStandard = 350
-    const val DurationEmphasized = 500
+    const val DurationStandard = 300
+    const val DurationEmphasized = 450
+
+    /**
+     * Standard Material 3 Emphasized Enter/Exit Transitions
+     */
+    val ScreenFadeIn = fadeIn(animationSpec = tween(DurationStandard, easing = EmphasizedEasing))
+    val ScreenFadeOut = fadeOut(animationSpec = tween(DurationQuick, easing = AccelerateEasing))
+
+    val PopEnter = scaleIn(
+        initialScale = 0.8f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMedium
+        )
+    ) + fadeIn(animationSpec = tween(DurationQuick))
+
+    val PopExit = scaleOut(
+        targetScale = 0.85f,
+        animationSpec = tween(DurationQuick, easing = AccelerateEasing)
+    ) + fadeOut(animationSpec = tween(DurationQuick))
 }
 
 /**
- * Adds a tactile spring-physics bounce effect on press with haptic feedback
+ * Adds a tactile spring-physics bounce effect on press with crisp, subtle haptic feedback.
+ * Avoids heavy long-press vibrations in favor of a responsive light tactile feel.
  */
 fun Modifier.bounceClick(
-    scaleDown: Float = 0.95f,
+    scaleDown: Float = 0.96f,
     onClick: (() -> Unit)? = null
 ): Modifier = composed {
     val interactionSource = remember { MutableInteractionSource() }
@@ -74,7 +104,9 @@ fun Modifier.bounceClick(
                     interactionSource = interactionSource,
                     indication = null,
                     onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        try {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        } catch (_: Exception) {}
                         onClick()
                     }
                 )
@@ -82,6 +114,89 @@ fun Modifier.bounceClick(
                 Modifier
             }
         )
+}
+
+/**
+ * Enables smooth horizontal gesture swiping between tabs.
+ * - Swipe Left (finger right-to-left): Navigates to next tab on the right.
+ * - Swipe Right (finger left-to-right): Navigates to previous tab on the left.
+ * - Fully preserves vertical scrolling in lists/grids.
+ */
+fun Modifier.swipeableTabNavigation(
+    currentRoute: String?,
+    enabled: Boolean = true,
+    tabOrder: List<String> = listOf("dashboard", "vault", "family", "trash", "profile"),
+    onNavigate: (String) -> Unit,
+    onOpenDrawer: (() -> Unit)? = null
+): Modifier = composed {
+    val haptic = LocalHapticFeedback.current
+
+    if (!enabled || currentRoute == null || !tabOrder.contains(currentRoute)) {
+        return@composed this
+    }
+
+    val currentIndex = tabOrder.indexOf(currentRoute)
+    var totalDragX by remember(currentRoute) { mutableFloatStateOf(0f) }
+
+    this.pointerInput(currentRoute, enabled) {
+        detectHorizontalDragGestures(
+            onDragStart = {
+                totalDragX = 0f
+            },
+            onHorizontalDrag = { change, dragAmount ->
+                totalDragX += dragAmount
+                if (kotlin.math.abs(totalDragX) > 40f) {
+                    change.consume()
+                }
+            },
+            onDragEnd = {
+                val threshold = 60.dp.toPx()
+                if (totalDragX < -threshold && currentIndex < tabOrder.size - 1) {
+                    try {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    } catch (_: Exception) {}
+                    onNavigate(tabOrder[currentIndex + 1])
+                } else if (totalDragX > threshold) {
+                    if (currentIndex > 0) {
+                        try {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        } catch (_: Exception) {}
+                        onNavigate(tabOrder[currentIndex - 1])
+                    } else if (currentIndex == 0 && onOpenDrawer != null) {
+                        try {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        } catch (_: Exception) {}
+                        onOpenDrawer()
+                    }
+                }
+                totalDragX = 0f
+            },
+            onDragCancel = {
+                totalDragX = 0f
+            }
+        )
+    }
+}
+
+/**
+ * Continuous rotating animation for active refresh indicators and spinning icons.
+ */
+fun Modifier.rotatingRefresh(
+    isRotating: Boolean = true,
+    durationMillis: Int = 1000
+): Modifier = composed {
+    val infiniteTransition = rememberInfiniteTransition(label = "rotatingRefresh")
+    val angle by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = if (isRotating) 360f else 0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = durationMillis, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "refreshAngle"
+    )
+
+    this.rotate(if (isRotating) angle else 0f)
 }
 
 /**
@@ -136,7 +251,7 @@ fun Modifier.pulsingAura(
         initialValue = 0f,
         targetValue = 1f,
         animationSpec = infiniteRepeatable(
-            animation = tween(1800, easing = FastOutSlowInEasing),
+            animation = tween(2200, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Restart
         ),
         label = "auraProgress"
@@ -144,7 +259,7 @@ fun Modifier.pulsingAura(
 
     this.drawBehind {
         val radius = size.minDimension / 2 + (maxRadiusDp.toPx() * pulseProgress)
-        val alpha = (1f - pulseProgress) * 0.35f
+        val alpha = (1f - pulseProgress) * 0.30f
         drawCircle(
             color = auraColor.copy(alpha = alpha),
             radius = radius,
@@ -154,30 +269,32 @@ fun Modifier.pulsingAura(
 }
 
 /**
- * Staggered cascade entrance animation (fade + slide-up) for list items & dashboard widgets
+ * Staggered cascade entrance animation (fade + slide-up) for initial screen content.
+ * Safely bounded so scrolling through lists never introduces unwanted delay or jitter.
  */
 fun Modifier.staggeredEntrance(
     index: Int = 0,
-    baseDelayMs: Long = 60L
+    baseDelayMs: Long = 45L
 ): Modifier = composed {
     var visible by remember { mutableStateOf(false) }
+    val boundedIndex = index.coerceIn(0, 5)
 
     LaunchedEffect(Unit) {
-        delay(index * baseDelayMs)
+        delay(boundedIndex * baseDelayMs)
         visible = true
     }
 
     val alpha by animateFloatAsState(
         targetValue = if (visible) 1f else 0f,
-        animationSpec = tween(350, easing = FastOutSlowInEasing),
+        animationSpec = tween(280, easing = FastOutSlowInEasing),
         label = "staggerAlpha"
     )
 
     val translateY by animateFloatAsState(
-        targetValue = if (visible) 0f else 32f,
+        targetValue = if (visible) 0f else 20f,
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioLowBouncy,
-            stiffness = Spring.StiffnessLow
+            stiffness = Spring.StiffnessMediumLow
         ),
         label = "staggerTranslate"
     )

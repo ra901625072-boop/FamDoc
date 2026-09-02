@@ -37,6 +37,7 @@ import com.famdoc.app.core.network.ServerStatus
 import com.famdoc.app.core.utils.FileUtils
 import com.famdoc.app.data.models.*
 import com.famdoc.app.ui.animation.bounceClick
+import com.famdoc.app.ui.animation.rotatingRefresh
 import com.famdoc.app.ui.animation.staggeredEntrance
 import com.famdoc.app.ui.components.*
 import com.famdoc.app.ui.theme.*
@@ -149,11 +150,17 @@ fun StorageConfigScreen(
                         }
                     }
 
+                    val isStorageLoading = storageConfigState is Resource.Loading || accountsState is Resource.Loading
                     IconButton(
                         onClick = { storageViewModel.loadStorageData() },
                         modifier = Modifier.bounceClick(scaleDown = 0.9f) { storageViewModel.loadStorageData() }
                     ) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Refresh", tint = MaterialTheme.colorScheme.onPrimary)
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = "Refresh",
+                            tint = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier.rotatingRefresh(isRotating = isStorageLoading)
+                        )
                     }
                 }
             )

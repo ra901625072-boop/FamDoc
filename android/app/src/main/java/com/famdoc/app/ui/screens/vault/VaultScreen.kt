@@ -1,9 +1,11 @@
 package com.famdoc.app.ui.screens.vault
 
 import android.net.Uri
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -15,6 +17,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.DriveFileMove
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -104,10 +107,34 @@ fun VaultScreen(
 
     val allFoldersList = (foldersState as? Resource.Success)?.data ?: emptyList()
 
+    BackHandler(enabled = currentFolder != null || isSelectionMode || isSearchActive) {
+        when {
+            isSelectionMode -> {
+                vaultViewModel.clearSelection()
+            }
+            isSearchActive -> {
+                isSearchActive = false
+                searchQuery = ""
+                vaultViewModel.loadVaultContent()
+            }
+            currentFolder != null -> {
+                vaultViewModel.navigateUp()
+            }
+        }
+    }
+
     Scaffold(
         topBar = {
             AnimatedContent(
                 targetState = Triple(isSelectionMode, isSearchActive, currentFolder?.name),
+                transitionSpec = {
+                    (fadeIn(animationSpec = tween(220, easing = com.famdoc.app.ui.animation.MotionTokens.EmphasizedEasing)) +
+                            slideInVertically(animationSpec = tween(250, easing = com.famdoc.app.ui.animation.MotionTokens.EmphasizedEasing)) { -it / 3 })
+                        .togetherWith(
+                            fadeOut(animationSpec = tween(180, easing = com.famdoc.app.ui.animation.MotionTokens.AccelerateEasing)) +
+                                    slideOutVertically(animationSpec = tween(180, easing = com.famdoc.app.ui.animation.MotionTokens.AccelerateEasing)) { -it / 3 }
+                        )
+                },
                 label = "vaultTopBar"
             ) { (selectionMode, searchActive, folderName) ->
                 when {
@@ -187,8 +214,14 @@ fun VaultScreen(
                         FamDocAppBar(
                             title = folderName ?: "Shared Vault",
                             subtitle = if (currentFolder == null) "Root Archive" else "Folder",
-                            navigationIcon = Icons.Default.Menu,
-                            onNavigationClick = onOpenDrawer,
+                            navigationIcon = if (currentFolder == null) Icons.Default.Menu else Icons.AutoMirrored.Filled.ArrowBack,
+                            onNavigationClick = {
+                                if (currentFolder != null) {
+                                    vaultViewModel.navigateUp()
+                                } else {
+                                    onOpenDrawer()
+                                }
+                            },
                             actions = {
                                 // Search Action
                                 IconButton(
@@ -296,6 +329,14 @@ fun VaultScreen(
                 // Dual View Mode Content: 1. List View vs 2. Box (Grid) View
                 AnimatedContent(
                     targetState = viewMode,
+                    transitionSpec = {
+                        (fadeIn(animationSpec = tween(220, easing = com.famdoc.app.ui.animation.MotionTokens.EmphasizedEasing)) +
+                                scaleIn(initialScale = 0.96f, animationSpec = tween(220, easing = com.famdoc.app.ui.animation.MotionTokens.EmphasizedEasing)))
+                            .togetherWith(
+                                fadeOut(animationSpec = tween(180, easing = com.famdoc.app.ui.animation.MotionTokens.AccelerateEasing)) +
+                                        scaleOut(targetScale = 0.96f, animationSpec = tween(180, easing = com.famdoc.app.ui.animation.MotionTokens.AccelerateEasing))
+                            )
+                    },
                     label = "vaultViewModeTransition"
                 ) { currentMode ->
                     when (currentMode) {
