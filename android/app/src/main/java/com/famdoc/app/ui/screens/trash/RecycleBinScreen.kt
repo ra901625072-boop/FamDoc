@@ -210,19 +210,15 @@ fun RecycleBinScreen(
                                                 .padding(Dimens.Spacing14),
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(42.dp)
-                                                    .clip(CircleShape)
-                                                    .background(MintSecondary.copy(alpha = 0.15f)),
-                                                contentAlignment = Alignment.Center
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.AutoMirrored.Filled.InsertDriveFile,
-                                                    contentDescription = null,
-                                                    tint = MintSecondary
-                                                )
-                                            }
+                                            // Muted visual thumbnail / icon
+                                            FileThumbnail(
+                                                file = file,
+                                                variant = ThumbnailVariant.RecycleMuted,
+                                                isSelected = false,
+                                                showExtensionBadge = false,
+                                                showSelectionBadge = false,
+                                                showSharedBadge = false
+                                            )
                                             Spacer(modifier = Modifier.width(Dimens.Spacing14))
                                             Column(modifier = Modifier.weight(1f)) {
                                                 Text(

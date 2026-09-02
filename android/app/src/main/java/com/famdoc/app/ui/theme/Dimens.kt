@@ -42,6 +42,7 @@ object Dimens {
     val RadiusLarge = 16.dp
     val RadiusExtraLarge = 20.dp
     val RadiusPill = 28.dp
+    val RadiusFull = 999.dp
 
     // Borders & Elevations
     val BorderThin = 1.dp

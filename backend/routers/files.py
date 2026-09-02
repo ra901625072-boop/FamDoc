@@ -402,18 +402,34 @@ def preview_file(
         try:
             content = manager.read_file(file, family_config, db=db)
             
-            # Optimize image thumbnails to half-scale quality 60 on-the-fly
+            # Optimize image thumbnails to maximum 320x320 bounding box with Lanczos filtering & quality 72
             if file_type and file_type.lower().startswith("image/"):
                 try:
-                    from PIL import Image
+                    from PIL import Image, ImageOps
                     img = Image.open(io.BytesIO(content))
-                    width, height = img.size
-                    new_width = max(100, int(width / 2))
-                    new_height = max(100, int(height / 2))
-                    img = img.resize((new_width, new_height), Image.Resampling.LANCZOS if hasattr(Image, "Resampling") else Image.LANCZOS)
+                    
+                    # Auto-orient based on EXIF tag if present
+                    try:
+                        img = ImageOps.exif_transpose(img)
+                    except Exception:
+                        pass
+
+                    # Convert RGBA/Palette/LA to RGB for clean JPEG compression
+                    if img.mode in ("RGBA", "LA", "P"):
+                        background = Image.new("RGB", img.size, (255, 255, 255))
+                        if img.mode == "P":
+                            img = img.convert("RGBA")
+                        background.paste(img, mask=img.split()[-1] if img.mode in ("RGBA", "LA") else None)
+                        img = background
+                    elif img.mode != "RGB":
+                        img = img.convert("RGB")
+
+                    # Downsample preserving aspect ratio within 320x320 bounding box
+                    resample_filter = getattr(Image, "Resampling", Image).LANCZOS
+                    img.thumbnail((320, 320), resample_filter)
                     
                     out = io.BytesIO()
-                    img.save(out, format="JPEG", quality=60)
+                    img.save(out, format="JPEG", quality=72, optimize=True)
                     content = out.getvalue()
                     file_type = "image/jpeg"
                 except Exception:
@@ -429,13 +445,15 @@ def preview_file(
         finally:
             db.close()
 
+        etag = f'"thumb-{file.id}-{len(content)}"'
         response_headers = {
-            "Content-Disposition": f'inline; filename="{filename}"',
-            "Cache-Control": "public, max-age=604800"
+            "Content-Disposition": f'inline; filename="thumb_{filename}.jpg"',
+            "Cache-Control": "public, max-age=2592000, immutable",
+            "ETag": etag
         }
         return StreamingResponse(
             io.BytesIO(content),
-            media_type=file_type or "application/octet-stream",
+            media_type=file_type or "image/jpeg",
             headers=response_headers
         )
     else:

@@ -1,16 +1,26 @@
 package com.famdoc.app.ui.screens.vault
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.pdf.PdfRenderer
 import android.os.ParcelFileDescriptor
 import android.widget.Toast
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.rememberTransformableState
+import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -23,20 +33,28 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImage
+import coil.compose.SubcomposeAsyncImage
+import coil.compose.SubcomposeAsyncImageContent
 import coil.request.ImageRequest
 import com.famdoc.app.FamDocApplication
 import com.famdoc.app.core.network.Resource
 import com.famdoc.app.core.utils.FileUtils
 import com.famdoc.app.data.models.FileItem
 import com.famdoc.app.ui.animation.bounceClick
+import com.famdoc.app.ui.animation.pulsingAura
+import com.famdoc.app.ui.animation.staggeredEntrance
+import com.famdoc.app.ui.components.PreviewLoadingAnimation
 import com.famdoc.app.ui.theme.*
 import com.famdoc.app.ui.viewmodel.VaultViewModel
 import kotlinx.coroutines.Dispatchers
@@ -74,6 +92,19 @@ fun FilePreviewScreen(
     var isContentLoading by remember { mutableStateOf(isText || isPdf) }
     var loadError by remember { mutableStateOf<String?>(null) }
 
+    // Image Zoom & Pan State
+    var zoomScale by remember { mutableFloatStateOf(1f) }
+    var zoomOffset by remember { mutableStateOf(Offset.Zero) }
+
+    val transformableState = rememberTransformableState { zoomChange, offsetChange, _ ->
+        zoomScale = (zoomScale * zoomChange).coerceIn(1f, 5f)
+        if (zoomScale > 1f) {
+            zoomOffset += offsetChange
+        } else {
+            zoomOffset = Offset.Zero
+        }
+    }
+
     DisposableEffect(Unit) {
         onDispose {
             pdfBitmaps.forEach { bitmap ->
@@ -84,7 +115,7 @@ fun FilePreviewScreen(
         }
     }
 
-    // Load PDF or Text in the background
+    // Load PDF or Text in background (non-blocking, immediate stream decode)
     LaunchedEffect(fileId) {
         if (isText || isPdf) {
             isContentLoading = true
@@ -111,7 +142,7 @@ fun FilePreviewScreen(
                                 val pfd = ParcelFileDescriptor.open(tempFile, ParcelFileDescriptor.MODE_READ_ONLY)
                                 val renderer = PdfRenderer(pfd)
                                 val pages = mutableListOf<Bitmap>()
-                                val pageCount = minOf(renderer.pageCount, 10)
+                                val pageCount = minOf(renderer.pageCount, 15)
 
                                 val maxPageWidth = (context.resources.displayMetrics.widthPixels).coerceAtLeast(720)
 
@@ -198,6 +229,20 @@ fun FilePreviewScreen(
                     }
                 },
                 actions = {
+                    if (isImage && zoomScale > 1.05f) {
+                        IconButton(
+                            onClick = {
+                                zoomScale = 1f
+                                zoomOffset = Offset.Zero
+                            },
+                            modifier = Modifier.bounceClick(scaleDown = 0.9f) {
+                                zoomScale = 1f
+                                zoomOffset = Offset.Zero
+                            }
+                        ) {
+                            Icon(Icons.Default.ZoomOutMap, contentDescription = "Reset Zoom")
+                        }
+                    }
                     IconButton(
                         onClick = {
                             val fileItem = FileItem(
@@ -232,18 +277,11 @@ fun FilePreviewScreen(
         ) {
             when {
                 isContentLoading -> {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        CircularProgressIndicator(
-                            color = MintPrimary,
-                            strokeWidth = 3.dp
-                        )
-                        Spacer(modifier = Modifier.height(Dimens.Spacing14))
-                        Text(
-                            text = "Loading document preview...",
-                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    // Zero-delay dynamic preview loading skeleton
+                    PreviewLoadingAnimation(
+                        filename = filename,
+                        fileType = fileType
+                    )
                 }
 
                 isImage -> {
@@ -268,7 +306,7 @@ fun FilePreviewScreen(
                             Text(
                                 text = "The server reported that this file's physical content is missing from the temporary disk. Link Google Drive under Storage Settings to ensure all uploads are saved permanently in cloud storage.",
                                 style = MaterialTheme.typography.bodyMedium,
-                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                textAlign = TextAlign.Center,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Spacer(modifier = Modifier.height(Dimens.Spacing20))
@@ -289,20 +327,103 @@ fun FilePreviewScreen(
                             }
                         }
                     } else {
-                        AsyncImage(
-                            model = ImageRequest.Builder(context)
+                        val token = remember { FamDocApplication.instance.secureTokenManager.getToken() }
+                        val imageRequest = remember(previewUrl, token) {
+                            ImageRequest.Builder(context)
                                 .data(previewUrl)
-                                .crossfade(true)
-                                .listener(
-                                    onError = { _, _ ->
-                                        imageLoadFailed = true
+                                .apply {
+                                    if (!token.isNullOrBlank()) {
+                                        addHeader("Authorization", "Bearer $token")
                                     }
+                                }
+                                .crossfade(250)
+                                .listener(
+                                    onError = { _, _ -> imageLoadFailed = true }
                                 )
-                                .build(),
-                            contentDescription = filename,
-                            contentScale = ContentScale.Fit,
-                            modifier = Modifier.fillMaxSize()
-                        )
+                                .build()
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .pointerInput(Unit) {
+                                    detectTapGestures(
+                                        onDoubleTap = {
+                                            if (zoomScale > 1f) {
+                                                zoomScale = 1f
+                                                zoomOffset = Offset.Zero
+                                            } else {
+                                                zoomScale = 2.5f
+                                            }
+                                        }
+                                    )
+                                }
+                                .transformable(state = transformableState),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            SubcomposeAsyncImage(
+                                model = imageRequest,
+                                contentDescription = filename,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .graphicsLayer {
+                                        scaleX = zoomScale
+                                        scaleY = zoomScale
+                                        translationX = zoomOffset.x
+                                        translationY = zoomOffset.y
+                                    },
+                                loading = {
+                                    // Zero-delay preview loading animation
+                                    PreviewLoadingAnimation(
+                                        filename = filename,
+                                        fileType = fileType
+                                    )
+                                },
+                                success = {
+                                    SubcomposeAsyncImageContent(
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentScale = ContentScale.Fit
+                                    )
+                                }
+                            )
+
+                            // Floating zoom hint pill when zoomed
+                            AnimatedVisibility(
+                                visible = zoomScale > 1.05f,
+                                enter = fadeIn(),
+                                exit = fadeOut(),
+                                modifier = Modifier
+                                    .align(Alignment.BottomCenter)
+                                    .padding(bottom = Dimens.Spacing24)
+                            ) {
+                                Surface(
+                                    shape = RoundedCornerShape(Dimens.RadiusFull),
+                                    color = Color.Black.copy(alpha = 0.7f),
+                                    modifier = Modifier.bounceClick {
+                                        zoomScale = 1f
+                                        zoomOffset = Offset.Zero
+                                    }
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Default.ZoomOutMap,
+                                            contentDescription = null,
+                                            tint = Color.White,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            text = "${(zoomScale * 100).toInt()}% • Tap to Reset",
+                                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                            color = Color.White
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -322,7 +443,7 @@ fun FilePreviewScreen(
                                 elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .animateItem()
+                                    .staggeredEntrance(index = index, baseDelayMs = 40L)
                                     .border(
                                         Dimens.BorderThin,
                                         MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
@@ -398,12 +519,41 @@ fun FilePreviewScreen(
                                 .fillMaxWidth()
                                 .padding(bottom = Dimens.Spacing16)
                         ) {
-                            Text(
-                                text = previewTextContent ?: "Empty file",
-                                fontFamily = FontFamily.Monospace,
-                                style = MaterialTheme.typography.bodyMedium,
-                                modifier = Modifier.padding(Dimens.Spacing16)
-                            )
+                            Column(modifier = Modifier.padding(Dimens.Spacing16)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "${previewTextContent?.lines()?.size ?: 0} lines",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    IconButton(
+                                        onClick = {
+                                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                            val clip = ClipData.newPlainText(filename, previewTextContent ?: "")
+                                            clipboard.setPrimaryClip(clip)
+                                            Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
+                                        },
+                                        modifier = Modifier.size(28.dp).bounceClick(scaleDown = 0.85f)
+                                    ) {
+                                        Icon(
+                                            Icons.Default.ContentCopy,
+                                            contentDescription = "Copy text",
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(Dimens.Spacing8))
+                                Text(
+                                    text = previewTextContent ?: "Empty file",
+                                    fontFamily = FontFamily.Monospace,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
                         }
                     }
                 }
@@ -415,34 +565,44 @@ fun FilePreviewScreen(
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(80.dp)
-                                .clip(RoundedCornerShape(Dimens.RadiusExtraLarge))
-                                .background(MintSecondary.copy(alpha = 0.12f)),
+                                .size(88.dp)
+                                .pulsingAura(auraColor = MintSecondary, maxRadiusDp = 16.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(
-                                imageVector = when {
-                                    isPdf -> Icons.Default.PictureAsPdf
-                                    extension in listOf("doc", "docx") -> Icons.Default.Description
-                                    extension in listOf("xls", "xlsx") -> Icons.Default.TableChart
-                                    else -> Icons.AutoMirrored.Filled.InsertDriveFile
-                                },
-                                contentDescription = null,
-                                tint = MintSecondary,
-                                modifier = Modifier.size(44.dp)
-                            )
+                            Box(
+                                modifier = Modifier
+                                    .size(76.dp)
+                                    .clip(RoundedCornerShape(Dimens.RadiusExtraLarge))
+                                    .background(MintSecondary.copy(alpha = 0.15f))
+                                    .border(1.dp, MintSecondary.copy(alpha = 0.35f), RoundedCornerShape(Dimens.RadiusExtraLarge)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = when {
+                                        isPdf -> Icons.Default.PictureAsPdf
+                                        extension in listOf("doc", "docx") -> Icons.Default.Description
+                                        extension in listOf("xls", "xlsx") -> Icons.Default.TableChart
+                                        else -> Icons.AutoMirrored.Filled.InsertDriveFile
+                                    },
+                                    contentDescription = null,
+                                    tint = MintSecondary,
+                                    modifier = Modifier.size(40.dp)
+                                )
+                            }
                         }
                         Spacer(modifier = Modifier.height(Dimens.Spacing20))
                         Text(
                             text = filename,
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            textAlign = TextAlign.Center
                         )
                         if (loadError != null) {
                             Spacer(modifier = Modifier.height(Dimens.Spacing8))
                             Text(
                                 text = loadError!!,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.error
+                                color = MaterialTheme.colorScheme.error,
+                                textAlign = TextAlign.Center
                             )
                         }
                         Spacer(modifier = Modifier.height(Dimens.Spacing12))
@@ -450,7 +610,7 @@ fun FilePreviewScreen(
                             text = "Tap below to download and view this document in your device's native app.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            textAlign = TextAlign.Center
                         )
                         Spacer(modifier = Modifier.height(Dimens.Spacing24))
                         Button(
@@ -516,3 +676,4 @@ fun FilePreviewScreen(
         }
     }
 }
+

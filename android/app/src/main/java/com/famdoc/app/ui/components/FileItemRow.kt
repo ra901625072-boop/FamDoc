@@ -40,8 +40,6 @@ fun FileItemRow(
     onLongClick: () -> Unit,
     onMoreClick: () -> Unit
 ) {
-    val (icon, iconColor, gradientColors) = getFileIconAndGradients(file)
-
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -71,35 +69,15 @@ fun FileItemRow(
                 .padding(Dimens.Spacing12),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Selection Checkbox or File Type Icon
-            Box(
-                modifier = Modifier
-                    .size(44.dp)
-                    .clip(RoundedCornerShape(Dimens.RadiusMedium))
-                    .background(Brush.linearGradient(colors = gradientColors)),
-                contentAlignment = Alignment.Center
-            ) {
-                AnimatedContent(
-                    targetState = isSelected,
-                    label = "fileCheck"
-                ) { selected ->
-                    if (selected) {
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = "Selected",
-                            tint = Color.White,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    } else {
-                        Icon(
-                            imageVector = icon,
-                            contentDescription = file.fileType,
-                            tint = Color.White,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-                }
-            }
+            // Visual File Thumbnail / Category Icon
+            FileThumbnail(
+                file = file,
+                variant = ThumbnailVariant.ListCompact,
+                isSelected = isSelected,
+                showExtensionBadge = false,
+                showSelectionBadge = true,
+                showSharedBadge = false
+            )
 
             Spacer(modifier = Modifier.width(Dimens.Spacing14))
 

@@ -24,7 +24,7 @@ data class FileItem(
 
     val isImage: Boolean
         get() = fileType.contains("image", ignoreCase = true) ||
-                listOf("jpg", "jpeg", "png", "webp", "gif", "svg").contains(extension)
+                listOf("jpg", "jpeg", "png", "webp", "gif", "svg", "bmp", "ico", "heic", "heif", "tiff", "jfif").contains(extension)
 
     val isPdf: Boolean
         get() = fileType.contains("pdf", ignoreCase = true) || extension == "pdf"

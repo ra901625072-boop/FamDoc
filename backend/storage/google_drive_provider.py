@@ -442,7 +442,14 @@ class GoogleDriveProvider(StorageProvider):
             return file_meta.get('thumbnailLink')
         
         try:
-            return self._execute_with_retry(_get_thumb, config, db)
+            link = self._execute_with_retry(_get_thumb, config, db)
+            if link:
+                import re
+                if "=s" in link:
+                    link = re.sub(r'=s\d+', '=s320', link)
+                else:
+                    link = f"{link}=s320"
+            return link
         except Exception as e:
             logger.warning(f"Failed to get thumbnailLink from Google Drive: {e}")
             return None

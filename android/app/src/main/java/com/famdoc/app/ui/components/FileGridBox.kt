@@ -38,18 +38,6 @@ fun FileGridBox(
     onLongClick: () -> Unit,
     onMoreClick: () -> Unit
 ) {
-    val (icon, _, gradientColors) = getFileIconAndGradients(file)
-    val extension = file.extension.uppercase().ifEmpty {
-        when {
-            file.isPdf -> "PDF"
-            file.isImage -> "IMG"
-            file.isWord -> "DOC"
-            file.isExcel -> "SHEET"
-            file.isText -> "TXT"
-            else -> "FILE"
-        }
-    }
-
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -77,84 +65,15 @@ fun FileGridBox(
                 .fillMaxWidth()
                 .padding(Dimens.Spacing10)
         ) {
-            // Visual Preview Box with Icon, Ext Badge, Selection Badge & More Menu
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(84.dp)
-                    .clip(RoundedCornerShape(Dimens.RadiusMedium))
-                    .background(Brush.linearGradient(gradientColors)),
-                contentAlignment = Alignment.Center
-            ) {
-                // Central File Type Icon
-                Icon(
-                    imageVector = icon,
-                    contentDescription = file.fileType,
-                    tint = Color.White.copy(alpha = 0.9f),
-                    modifier = Modifier.size(38.dp)
-                )
-
-                // Top-Left: Selection Checkmark
-                if (isSelected) {
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.TopStart)
-                            .padding(6.dp)
-                            .size(22.dp)
-                            .clip(CircleShape)
-                            .background(Color.White),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = "Selected",
-                            tint = Color.Black,
-                            modifier = Modifier.size(15.dp)
-                        )
-                    }
-                }
-
-                // Top-Right: File Extension Pill
-                Surface(
-                    shape = RoundedCornerShape(4.dp),
-                    color = Color.Black.copy(alpha = 0.35f),
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(6.dp)
-                ) {
-                    Text(
-                        text = extension.take(4),
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            fontWeight = FontWeight.ExtraBold,
-                            fontSize = 9.sp,
-                            letterSpacing = 0.5.sp
-                        ),
-                        color = Color.White,
-                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
-                    )
-                }
-
-                // Bottom-Right: Shared Badge (if shared)
-                if (file.isShared) {
-                    Surface(
-                        shape = RoundedCornerShape(4.dp),
-                        color = BrandSecondary,
-                        modifier = Modifier
-                            .align(Alignment.BottomEnd)
-                            .padding(6.dp)
-                    ) {
-                        Text(
-                            text = "Shared",
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 9.sp
-                            ),
-                            color = Color.White,
-                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
-                        )
-                    }
-                }
-            }
+            // Visual Media Thumbnail Preview Box (Image Thumbnail / Cloud Stream / Vibrant Fallback)
+            FileThumbnail(
+                file = file,
+                variant = ThumbnailVariant.GridLarge,
+                isSelected = isSelected,
+                showExtensionBadge = true,
+                showSelectionBadge = true,
+                showSharedBadge = true
+            )
 
             Spacer(modifier = Modifier.height(Dimens.Spacing8))
 

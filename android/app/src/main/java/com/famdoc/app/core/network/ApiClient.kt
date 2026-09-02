@@ -109,4 +109,13 @@ class ApiClient(
             "$base/api/files/$fileId/preview"
         }
     }
+
+    fun getThumbnailUrl(fileId: Int, previewToken: String? = null): String {
+        val base = appConfig.getApiBaseUrl()
+        return if (!previewToken.isNullOrBlank()) {
+            "$base/api/files/$fileId/preview?token=$previewToken&thumbnail=true"
+        } else {
+            "$base/api/files/$fileId/preview?thumbnail=true"
+        }
+    }
 }

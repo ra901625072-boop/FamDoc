@@ -24,7 +24,10 @@ class AuthInterceptor(
             builder.addHeader("Authorization", "Bearer $token")
         }
 
-        builder.addHeader("Accept", "application/json")
+        val path = originalRequest.url.encodedPath
+        if (originalRequest.header("Accept") == null && !path.contains("/preview") && !path.contains("/download")) {
+            builder.addHeader("Accept", "application/json")
+        }
 
         val response = chain.proceed(builder.build())
 

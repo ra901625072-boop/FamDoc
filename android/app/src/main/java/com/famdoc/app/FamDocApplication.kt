@@ -28,6 +28,9 @@ class FamDocApplication : Application(), ImageLoaderFactory {
         secureTokenManager = SecureTokenManager(this)
         appConfig = AppConfig(this, secureTokenManager)
         apiClient = ApiClient(this, appConfig, secureTokenManager)
+
+        // Explicitly set the global Coil ImageLoader to ensure authenticated OkHttpClient is used everywhere
+        coil.Coil.setImageLoader(this)
     }
 
     override fun newImageLoader(): ImageLoader {
@@ -36,16 +39,17 @@ class FamDocApplication : Application(), ImageLoaderFactory {
             .memoryCache {
                 MemoryCache.Builder(this)
                     .maxSizePercent(0.25)
+                    .strongReferencesEnabled(true)
                     .build()
             }
             .diskCache {
                 DiskCache.Builder()
-                    .directory(cacheDir.resolve("image_cache"))
-                    .maxSizePercent(0.05)
+                    .directory(cacheDir.resolve("famdoc_thumbnails_disk_cache"))
+                    .maxSizeBytes(150L * 1024L * 1024L) // 150 MB Dedicated Persistent Disk Cache
                     .build()
             }
             .respectCacheHeaders(false)
-            .crossfade(250)
+            .crossfade(200)
             .build()
     }
 

@@ -50,14 +50,38 @@ fun ShareModal(
                     )
                 }
 
-                Text(
-                    text = file.filename,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(vertical = 6.dp)
-                )
+                Spacer(modifier = Modifier.height(12.dp))
 
-                Divider(modifier = Modifier.padding(vertical = 8.dp))
+                // File Preview Row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    FileThumbnail(
+                        file = file,
+                        variant = ThumbnailVariant.ListCompact,
+                        isSelected = false,
+                        showExtensionBadge = false,
+                        showSelectionBadge = false,
+                        showSharedBadge = false
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = file.filename,
+                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                            maxLines = 1,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = file.categoryLabel,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
 
                 // Create new share link section
                 Text(
