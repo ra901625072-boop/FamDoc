@@ -1,5 +1,5 @@
 /* ==========================================================================
-   FamDoc Design System - Reusable Core Components
+   FamDoc Design System - Reusable Core Components (Android Material 3)
    ========================================================================== */
 
 .btn {
@@ -7,16 +7,17 @@
   align-items: center;
   justify-content: center;
   gap: 0.6rem;
-  padding: 0 1.4rem;
-  height: 42px;
+  padding: 0 1.5rem;
+  height: var(--btn-height-secondary, 44px);
   font-family: var(--font-sans);
-  font-size: 0.9rem;
+  font-size: 0.92rem;
   font-weight: 600;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-md, 12px);
   border: 1px solid transparent;
   cursor: pointer;
-  transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease, transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
   outline: none;
+  text-decoration: none;
 }
 
 .btn:hover:not(:disabled) {
@@ -34,11 +35,14 @@
   cursor: not-allowed;
 }
 
+/* Primary Button (Matches Android MintPrimary / DarkPrimary) */
 .btn-primary {
+  height: var(--btn-height-primary, 52px);
   background: var(--accent-gradient);
-  color: #ffffff;
+  color: #FFFFFF;
   box-shadow: var(--accent-shadow);
   border: none;
+  font-weight: 700;
 }
 
 .btn-primary:hover:not(:disabled) {
@@ -46,8 +50,19 @@
   box-shadow: 0 6px 20px rgba(var(--accent-brand-rgb), 0.4);
 }
 
+[data-theme="dark"] .btn-primary {
+  background: var(--color-primary);
+  color: #000000;
+  font-weight: 800;
+}
+
+[data-theme="dark"] .btn-primary:hover:not(:disabled) {
+  background: var(--color-primary-light);
+  color: #000000;
+}
+
 .btn-secondary {
-  background-color: var(--surface-paper-tint);
+  background-color: var(--surface-card);
   border-color: var(--border-paper);
   color: var(--text-ink);
 }
@@ -61,14 +76,19 @@
 .btn-danger {
   background-color: var(--warning-red);
   color: #ffffff;
-  box-shadow: 0 4px 12px rgba(224, 116, 106, 0.2);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25);
 }
 
 .btn-danger:hover:not(:disabled) {
   background-color: var(--warning-red-hover);
-  box-shadow: 0 6px 16px rgba(224, 116, 106, 0.35);
+  box-shadow: 0 6px 16px rgba(239, 68, 68, 0.4);
 }
 
+.btn-compact {
+  height: var(--btn-height-compact, 38px);
+  padding: 0 1.1rem;
+  font-size: 0.85rem;
+}
 
 .btn-text {
   background: transparent;
@@ -78,8 +98,8 @@
 }
 
 .btn-text:hover:not(:disabled) {
-  color: var(--accent-brand);
-  background-color: var(--accent-brand-light);
+  color: var(--color-primary);
+  background-color: var(--color-primary-container);
 }
 
 /* Forms & Controls */
@@ -100,15 +120,16 @@
 .form-control {
   width: 100%;
   padding: 0 1.1rem;
-  height: 42px;
+  height: 46px;
   font-family: var(--font-sans);
   font-size: 0.95rem;
   border: 1px solid var(--border-paper);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-md, 12px);
   background-color: var(--surface-paper-tint);
   color: var(--text-ink);
   transition: background-color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
   outline: none;
+  box-sizing: border-box;
 }
 
 textarea.form-control {
@@ -117,9 +138,9 @@ textarea.form-control {
 }
 
 .form-control:focus {
-  border-color: var(--accent-brand);
+  border-color: var(--color-primary);
   background-color: var(--surface-card);
-  box-shadow: 0 0 0 4px rgba(var(--accent-brand-rgb), 0.15);
+  box-shadow: 0 0 0 3.5px rgba(var(--accent-brand-rgb), 0.18);
 }
 
 /* Badges / Tags */
@@ -129,22 +150,26 @@ textarea.form-control {
   padding: 0.25rem 0.7rem;
   font-size: 0.72rem;
   font-weight: 700;
-  border-radius: 50px;
+  border-radius: var(--radius-pill, 28px);
   font-family: var(--font-mono);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
 .badge-primary {
-  background-color: var(--accent-brand-light);
-  color: var(--accent-brand);
-  border: 1px solid rgba(var(--accent-brand-rgb), 0.12);
+  background-color: var(--color-primary-container);
+  color: var(--color-primary);
+  border: 1px solid rgba(var(--accent-brand-rgb), 0.18);
 }
 
 .badge-success {
-  background-color: var(--success-sage-light);
-  color: var(--success-sage);
-  border: 1px solid var(--success-sage-border);
+  background-color: rgba(16, 185, 129, 0.15);
+  color: #047857;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+[data-theme="dark"] .badge-success {
+  color: #34D399;
 }
 
 .badge-danger {
@@ -162,20 +187,21 @@ textarea.form-control {
 .icon-chip {
   width: 38px;
   height: 38px;
-  border-radius: var(--radius-md);
-  background-color: var(--accent-brand-light);
-  color: var(--accent-brand);
+  border-radius: var(--radius-md, 12px);
+  background-color: var(--color-primary-container);
+  color: var(--color-primary);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   font-size: 1.05rem;
-  border: 1px solid rgba(var(--accent-brand-rgb), 0.1);
+  border: 1px solid rgba(var(--accent-brand-rgb), 0.15);
   flex-shrink: 0;
 }
 
 .icon-chip.lg {
   width: 48px;
   height: 48px;
+  border-radius: var(--radius-lg, 16px);
   font-size: 1.25rem;
 }
 
@@ -212,16 +238,16 @@ textarea.form-control {
   flex-shrink: 0;
 }
 
-/* Loading Skeletons (Smooth Shimmer Wave) */
+/* Loading Skeletons (Smooth Shimmer Wave matching Android rememberShimmerBrush) */
 .fd-skel {
   background: linear-gradient(
     90deg,
-    var(--surface-paper-tint) 25%,
-    var(--surface-card) 50%,
-    var(--surface-paper-tint) 75%
+    var(--shimmer-base) 25%,
+    var(--shimmer-highlight) 50%,
+    var(--shimmer-base) 75%
   );
   background-size: 200% 100%;
-  animation: fdShimmer 1.4s infinite linear;
+  animation: fdShimmer 1.3s infinite linear;
   display: inline-block;
 }
 
@@ -459,16 +485,50 @@ textarea.form-control {
   }
 }
 
-/* FamDoc Standardized Card Component */
+/* FamDoc Standardized Card Component (Matches Android CardElevation & Glow) */
 .famdoc-card {
   background-color: var(--surface-card);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--border-paper);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-lg, 16px);
   padding: 1.75rem;
   box-shadow: var(--shadow-sm);
   transition: var(--transition-smooth);
+}
+
+.famdoc-card:hover {
+  border-color: var(--card-glow-border);
+}
+
+/* Floating Action Button (Matches Android FloatingActionButton in VaultScreen.kt) */
+.famdoc-fab {
+  position: fixed;
+  bottom: calc(var(--bottom-nav-height, 68px) + 16px);
+  right: 20px;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-xl, 20px);
+  background: var(--color-primary);
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.35rem;
+  box-shadow: var(--shadow-fab);
+  border: none;
+  cursor: pointer;
+  z-index: 999;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.2s ease;
+  text-decoration: none;
+}
+
+.famdoc-fab:hover {
+  transform: scale(1.08) translateY(-2px);
+}
+
+.famdoc-fab:active {
+  transform: scale(0.92) translateY(0);
 }
 
 @media (max-width: 576px) {

@@ -66,41 +66,61 @@
       const layoutWrapper = document.createElement("div");
       layoutWrapper.className = "layout-wrapper";
 
-      // 2. Build Mobile Header
+      // 2. Build Mobile Header (Matches FamDocAppBar.kt)
       const mobileHeader = document.createElement("div");
       mobileHeader.className = "mobile-header";
       mobileHeader.innerHTML = `
-        <a href="#/dashboard" class="sidebar-logo" style="margin-bottom: 0; font-size: 1.25rem;">
-          <img src="/img/logo.svg" alt="FamDoc Logo" class="famdoc-logo-img">
-          <span class="brand-text">Fam<span class="highlight">Doc</span></span>
-        </a>
-        <div style="display: flex; align-items: center; gap: 0.5rem;">
-          <button class="theme-toggle-btn" id="mobileThemeToggle" aria-label="Toggle dark mode">
-            <i class="fas fa-moon"></i>
-          </button>
+        <div style="display: flex; align-items: center; gap: 0.65rem;">
           <button class="hamburger" id="hamburgerToggle" aria-label="Toggle navigation menu">
             <i class="fas fa-bars"></i>
+          </button>
+          <a href="#/dashboard" class="mobile-brand-title" style="display: flex; align-items: center; gap: 0.5rem; text-decoration: none;">
+            <img src="/img/logo.svg" alt="FamDoc Logo" class="famdoc-logo-img" style="height: 28px; width: 28px;">
+            <div style="display: flex; flex-direction: column;">
+              <span class="brand-text" style="color: #FFFFFF; font-size: 1.15rem; line-height: 1.1; font-weight: 800;">Fam<span style="color: #6EE7B7;">Doc</span></span>
+              <span style="font-size: 0.68rem; color: rgba(255, 255, 255, 0.8); font-weight: 400;">Keepsake Vault</span>
+            </div>
+          </a>
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <button class="theme-toggle-btn" id="mobileThemeToggle" aria-label="Toggle theme">
+            <i class="fas fa-moon"></i>
           </button>
         </div>
       `;
 
-      // 3. Build Sidebar Drawer
+      // 3. Build Sidebar Drawer (Matches FamDocDrawer.kt)
       const sidebar = document.createElement("nav");
       sidebar.className = "sidebar fd-fade-in";
       sidebar.id = "sidebarMenu";
+      
+      const userInitials = user.username ? user.username.substring(0, 2).toUpperCase() : "U";
+      const isAdmin = user.role === "admin";
+      const roleTitle = isAdmin ? "Vault Administrator" : "Family Member";
+
       sidebar.innerHTML = `
-        <a href="#/dashboard" class="sidebar-logo">
-          <img src="/img/logo.svg" alt="FamDoc Logo" class="famdoc-logo-img">
-          <span class="brand-text">Fam<span class="highlight">Doc</span></span>
-        </a>
+        <!-- Drawer Header Banner with Ambient Gradient & Pulsing Avatar -->
+        <div class="drawer-header-banner" id="sidebar-profile-badge" role="button" tabindex="0" title="View Profile">
+          <div class="drawer-avatar-wrapper">
+            <div class="user-avatar drawer-avatar pulsing-aura">
+              ${userInitials}
+            </div>
+          </div>
+          <div class="drawer-user-meta">
+            <div class="drawer-user-name">${user.username || 'FamDoc User'}</div>
+            <div class="drawer-role-badge">${roleTitle}</div>
+            <div class="drawer-user-email">${user.email || ''}</div>
+          </div>
+        </div>
         
+        <!-- Navigation Items List -->
         <div class="sidebar-nav">
           <a href="#/dashboard" class="nav-item" data-route="/dashboard">
             <i class="fas fa-th-large"></i>
             <span>Dashboard</span>
           </a>
           <a href="#/vault" class="nav-item" data-route="/vault">
-            <i class="fas fa-archive"></i>
+            <i class="fas fa-folder"></i>
             <span>Shared Vault</span>
           </a>
           <a href="#/family" class="nav-item" data-route="/family">
@@ -108,30 +128,29 @@
             <span>Family Group</span>
           </a>
           <a href="#/storage" class="nav-item" data-route="/storage" id="sidebar-storage-link">
-            <i class="fas fa-hdd"></i>
-            <span>Cloud Storage</span>
+            <i class="fas fa-cloud"></i>
+            <span>Cloud Storage & Quotas</span>
           </a>
           <a href="#/trash" class="nav-item" data-route="/trash">
             <i class="fas fa-trash-alt"></i>
             <span>Recycle Bin</span>
           </a>
+          <a href="#/profile" class="nav-item" data-route="/profile">
+            <i class="fas fa-user-shield"></i>
+            <span>Profile & Security</span>
+          </a>
         </div>
 
+        <!-- Sidebar Footer with Appearance Segmented Control & Sign Out -->
         <div class="sidebar-footer">
-          <div class="theme-toggle-row" style="margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between;">
-            <span style="font-size: 0.85rem; font-weight: 500; color: var(--text-ink-muted);">Appearance</span>
-            <button id="desktopThemeToggle" class="theme-toggle-btn" aria-label="Toggle dark mode">
-              <i class="fas fa-moon"></i>
-            </button>
+          <div class="drawer-section-label">APPEARANCE</div>
+          <div class="theme-selector-container">
+            ${window.FamDocTheme ? window.FamDocTheme.renderSegmentedSelectorHTML('sidebar') : ''}
           </div>
-          <div class="user-profile-badge" style="cursor: pointer;" id="sidebar-profile-badge">
-            <div class="user-avatar">${user.username ? user.username.substring(0, 2).toUpperCase() : "U"}</div>
-            <div class="user-info">
-              <span class="user-name">${user.username || 'User'}</span>
-              <span class="user-role">${user.role || 'Member'}</span>
-            </div>
-          </div>
-          <button id="logoutBtn" class="btn btn-secondary" style="width: 100%; justify-content: center; gap: 0.5rem;">
+          
+          <div class="sidebar-footer-divider"></div>
+
+          <button id="logoutBtn" class="btn btn-logout" style="width: 100%; justify-content: center; gap: 0.6rem;">
             <i class="fas fa-sign-out-alt"></i>
             <span>Sign Out</span>
           </button>
@@ -143,25 +162,25 @@
       backdrop.className = "drawer-backdrop";
       backdrop.id = "drawerBackdrop";
 
-      // 5. Mobile Bottom Navigation
+      // 5. Mobile Bottom Navigation (Floating Pill Bar matching FamDocBottomNav.kt)
       const bottomNav = document.createElement("nav");
       bottomNav.className = "bottom-nav";
       bottomNav.innerHTML = `
         <a href="#/dashboard" class="nav-btn" data-route="/dashboard">
           <i class="fas fa-th-large"></i>
-          <span>Home</span>
+          <span>Dashboard</span>
         </a>
         <a href="#/vault" class="nav-btn" data-route="/vault">
-          <i class="fas fa-archive"></i>
+          <i class="fas fa-folder"></i>
           <span>Vault</span>
         </a>
         <a href="#/family" class="nav-btn" data-route="/family">
           <i class="fas fa-users"></i>
           <span>Family</span>
         </a>
-        <a href="#" class="nav-btn" id="bottomNavMore">
-          <i class="fas fa-ellipsis-h"></i>
-          <span>More</span>
+        <a href="#/trash" class="nav-btn" data-route="/trash">
+          <i class="fas fa-trash-alt"></i>
+          <span>Trash</span>
         </a>
         <a href="#/profile" class="nav-btn" data-route="/profile">
           <i class="fas fa-user"></i>
@@ -298,11 +317,14 @@
       const avatar = existingBadge.querySelector(".user-avatar");
       if (avatar) avatar.textContent = user.username ? user.username.substring(0, 2).toUpperCase() : "U";
 
-      const name = existingBadge.querySelector(".user-name");
-      if (name) name.textContent = user.username || 'User';
+      const name = existingBadge.querySelector(".drawer-user-name, .user-name");
+      if (name) name.textContent = user.username || 'FamDoc User';
 
-      const role = existingBadge.querySelector(".user-role");
-      if (role) role.textContent = user.role || 'Member';
+      const email = existingBadge.querySelector(".drawer-user-email");
+      if (email) email.textContent = user.email || '';
+
+      const role = existingBadge.querySelector(".drawer-role-badge, .user-role");
+      if (role) role.textContent = user.role === "admin" ? "Vault Administrator" : (user.role || 'Family Member');
 
       // Ensure active nav link state is updated
       this.updateActiveNavLinks();

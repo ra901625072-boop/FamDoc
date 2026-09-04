@@ -19,10 +19,10 @@
           </button>
           <div id="auth-card" class="famdoc-card auth-card fd-pop-in">
             <div class="auth-header">
-              <a href="#/" class="auth-logo">
-                <img src="/img/logo.svg" alt="FamDoc Logo" class="famdoc-logo-img">
-                <span class="brand-text">Fam<span class="highlight">Doc</span></span>
+              <a href="#/" class="auth-crest-container" title="Back to home">
+                <img src="/img/logo.svg" alt="FamDoc Crest" class="auth-crest-img">
               </a>
+              <h1 class="auth-title">Welcome Back</h1>
               <p class="auth-subtitle">Enter your family keepsake vault</p>
             </div>
 
@@ -140,11 +140,11 @@
           </button>
           <div id="auth-card" class="famdoc-card auth-card fd-pop-in">
             <div class="auth-header">
-              <a href="#/" class="auth-logo">
-                <img src="/img/logo.svg" alt="FamDoc Logo" class="famdoc-logo-img">
-                <span class="brand-text">Fam<span class="highlight">Doc</span></span>
+              <a href="#/" class="auth-crest-container" title="Back to home">
+                <img src="/img/logo.svg" alt="FamDoc Crest" class="auth-crest-img">
               </a>
-              <p class="auth-subtitle">Create a new family keepsake vault</p>
+              <h1 class="auth-title">Create Family Vault</h1>
+              <p class="auth-subtitle">Setup a private sanctuary for your family's records</p>
             </div>
 
             <div id="error-alert" class="famdoc-alert warning" style="display: none;">
@@ -283,11 +283,11 @@
           </button>
           <div id="auth-card" class="famdoc-card auth-card fd-pop-in">
             <div class="auth-header">
-              <a href="#/" class="auth-logo">
-                <img src="/img/logo.svg" alt="FamDoc Logo" class="famdoc-logo-img">
-                <span class="brand-text">Fam<span class="highlight">Doc</span></span>
+              <a href="#/" class="auth-crest-container" title="Back to home">
+                <img src="/img/logo.svg" alt="FamDoc Crest" class="auth-crest-img">
               </a>
-              <p class="auth-subtitle">Join an existing family vault</p>
+              <h1 class="auth-title">Join Family Vault</h1>
+              <p class="auth-subtitle">Enter your family code to access shared documents</p>
             </div>
 
             <div id="error-alert" class="famdoc-alert warning" style="display: none;">
@@ -445,11 +445,11 @@
           </button>
           <div id="auth-card" class="famdoc-card auth-card fd-pop-in">
             <div class="auth-header">
-              <a href="#/" class="auth-logo">
-                <img src="/img/logo.svg" alt="FamDoc Logo" class="famdoc-logo-img">
-                <span class="brand-text">Fam<span class="highlight">Doc</span></span>
+              <a href="#/" class="auth-crest-container" title="Back to home">
+                <img src="/img/logo.svg" alt="FamDoc Crest" class="auth-crest-img">
               </a>
-              <p class="auth-subtitle">Reset your keepsake vault password</p>
+              <h1 class="auth-title">Reset Vault Password</h1>
+              <p class="auth-subtitle">Enter your registered email to receive reset instructions</p>
             </div>
 
             <div id="error-alert" class="famdoc-alert warning" style="display: none;">

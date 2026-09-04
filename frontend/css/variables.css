@@ -1,133 +1,213 @@
 /* ==========================================================================
-   FamDoc Design System - Minimalist Zinc/Slate Theme Variables
+   FamDoc Design System - Android Compose Design Tokens (Variables)
+   Strictly aligned with Android Material 3 Mint & AMOLED Dark Themes
    ========================================================================== */
 
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 :root {
-  /* HSL Tailored Colors - Light Theme (Cool Slate & Minimalist Zinc) */
-  --bg-linen: hsl(210, 20%, 98%);
-  --text-ink: hsl(220, 15%, 12%);
-  --text-ink-muted: hsl(215, 12%, 46%);
-  
-  --accent-brand: hsl(221.2, 83.2%, 53.3%); /* Premium Radix/Inter Blue */
-  --accent-brand-hover: hsl(221.2, 83.2%, 46%);
-  --accent-brand-light: hsl(220, 90%, 96%);
-  --accent-gradient: linear-gradient(135deg, hsl(221.2, 83.2%, 53.3%) 0%, hsl(200, 90%, 55%) 100%);
-  --accent-gradient-hover: linear-gradient(135deg, hsl(221.2, 83.2%, 46%) 0%, hsl(200, 90%, 48%) 100%);
-  --accent-shadow: 0 4px 14px rgba(37, 99, 235, 0.15);
+  /* ------------------------------------------------------------------------
+     LIGHT THEME: Refreshing Emerald Forest & Mint Green Palette
+     (Directly mapped from Color.kt: MintPrimary, MintBackground, etc.)
+     ------------------------------------------------------------------------ */
+  --color-primary: #047857;          /* MintPrimary: Deep Emerald Forest */
+  --color-primary-light: #10B981;    /* MintPrimaryLight: Bright Mint */
+  --color-primary-dark: #064E3B;     /* MintPrimaryDark: Deep Spruce */
+  --color-secondary: #0D9488;        /* MintSecondary: Sage Teal */
+  --color-primary-container: #D1FAE5;/* MintSecondaryContainer: Mint Highlight */
+  --color-on-primary-container: #064E3B;
 
-  --success-sage: hsl(142, 60%, 35%);
-  --success-sage-light: hsl(142, 60%, 96%);
-  --success-sage-border: hsl(142, 35%, 85%);
-  --success-sage-dark: hsl(142, 60%, 15%);
-  
-  --warning-red: hsl(350, 75%, 50%);
-  --warning-red-hover: hsl(350, 75%, 42%);
-  --warning-red-light: hsl(350, 80%, 97%);
-  --warning-red-border: hsl(350, 40%, 88%);
-  --warning-red-dark: hsl(350, 70%, 20%);
+  /* Canvas & Surfaces */
+  --bg-linen: #F2FBF6;               /* MintBackground: Mint-tinted crisp canvas */
+  --surface-card: #FFFFFF;           /* MintSurface: Pure crisp white cards */
+  --surface-paper-tint: #E8F7EE;     /* MintSurfaceVariant: Soft mint surface */
+  --surface-paper-hover: #F0FAF4;    /* Light interactive card hover */
+  --surface-alert-info: #E6F4EA;
+  --surface-nav-glass: rgba(255, 255, 255, 0.92);
+  --overlay-bg: rgba(6, 78, 59, 0.45);
 
-  --border-paper: rgba(226, 232, 240, 0.85); /* Slate-200 */
-  --border-paper-dark: rgba(203, 213, 225, 0.9); /* Slate-300 */
-  
-  --surface-card: rgba(255, 255, 255, 0.85);
-  --surface-paper-tint: rgba(248, 250, 252, 0.7); /* Slate-50 */
-  --surface-paper-hover: rgba(241, 245, 249, 0.95); /* Slate-100 */
-  --surface-alert-info: hsl(210, 30%, 95%);
-  --surface-nav-glass: rgba(255, 255, 255, 0.85);
-  --overlay-bg: rgba(9, 9, 11, 0.35);
+  /* Typography */
+  --text-ink: #0B291D;               /* MintTextPrimary: Deep Emerald Black */
+  --text-ink-muted: #436B59;         /* MintTextSecondary: Balanced Sage Slate */
 
-  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.05), 0 1px 2px rgba(15, 23, 42, 0.03);
-  --shadow-md: 0 8px 20px -3px rgba(15, 23, 42, 0.06), 0 3px 8px -2px rgba(15, 23, 42, 0.02);
-  --shadow-lg: 0 20px 32px -8px rgba(15, 23, 42, 0.09), 0 4px 12px -3px rgba(15, 23, 42, 0.04);
-  --shadow-fab: 0 6px 16px rgba(37, 99, 235, 0.25);
+  /* Borders & Glows */
+  --border-paper: #CBEAD7;           /* MintBorder: Delicate jade border */
+  --border-paper-dark: #B5DEC4;
+  --card-glow-border: rgba(16, 185, 129, 0.22); /* MintCardBorder: 20% alpha glow */
 
-  --folder-color: hsl(215, 90%, 60%); /* Sleek modern blue folder */
-  --pdf-color: hsl(350, 75%, 55%);
-  --image-color: hsl(175, 75%, 45%);
-  --doc-color: hsl(210, 80%, 55%);
-  --sheet-color: hsl(145, 65%, 45%);
-  --text-color: hsl(240, 5%, 60%);
-  --generic-color: hsl(240, 5%, 70%);
-  
-  --syncing-bg: hsl(210, 80%, 96%);
-  --syncing-text: hsl(210, 80%, 40%);
-  --syncing-border: hsl(210, 60%, 85%);
+  /* Legacy & Bridge Variables */
+  --accent-brand: var(--color-primary);
+  --accent-brand-hover: var(--color-primary-dark);
+  --accent-brand-light: var(--color-primary-container);
+  --accent-gradient: linear-gradient(135deg, #047857 0%, #0D9488 100%);
+  --accent-gradient-hover: linear-gradient(135deg, #064E3B 0%, #047857 100%);
+  --accent-shadow: 0 4px 14px rgba(4, 120, 87, 0.22);
+  --accent-brand-rgb: 4, 120, 87;
 
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 16px;
-  
-  /* Increased duration, eased-out timing functions for pure smoothness */
-  --transition-smooth: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
-  --transition-spring: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-  --transition-colors: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
-  
+  /* App Bar & Drawer Gradient Banners */
+  --appbar-bg: linear-gradient(135deg, #064E3B 0%, #047857 100%);
+  --drawer-header-bg: linear-gradient(135deg, #064E3B 0%, #047857 100%);
+
+  /* Keepsake Warm Amber & Status Accents */
+  --brand-accent: #F59E0B;           /* BrandAccent: Keepsake Amber */
+  --brand-accent-light: #FBBF24;     /* BrandAccentLight: Radiant Gold */
+  --brand-accent-glow: rgba(245, 158, 11, 0.4);
+
+  --success-sage: #059669;
+  --success-sage-light: #D1FAE5;
+  --success-sage-border: #A7F3D0;
+  --success-sage-dark: #064E3B;
+
+  --warning-red: #EF4444;            /* BrandError: Crimson Alert */
+  --warning-red-hover: #DC2626;
+  --warning-red-light: #FEE2E2;
+  --warning-red-border: #FECACA;
+  --warning-red-dark: #7F1D1D;
+
+  /* Category Distribution Colors (Matching Android Storage Breakdown) */
+  --cat-images: #3B82F6;            /* Modern Blue */
+  --cat-pdfs: #EF4444;              /* Red */
+  --cat-docs: #8B5CF6;              /* Vault Violet */
+  --cat-sheets: #10B981;            /* Emerald */
+  --cat-text: #F59E0B;              /* Amber */
+  --cat-other: #6B7280;             /* Slate */
+
+  --folder-color: #047857;
+  --pdf-color: #EF4444;
+  --image-color: #3B82F6;
+  --doc-color: #8B5CF6;
+  --sheet-color: #10B981;
+  --text-color: #F59E0B;
+  --generic-color: #6B7280;
+
+  --syncing-bg: #D1FAE5;
+  --syncing-text: #047857;
+  --syncing-border: #A7F3D0;
+
+  /* Shimmer Tokens */
+  --shimmer-base: #E1EFE7;
+  --shimmer-highlight: #F5FCF8;
+
+  /* Radii Scale (Matching Android Dimens.kt) */
+  --radius-xs: 4px;
+  --radius-sm: 8px;                  /* Dimens.CornerSmall: 8dp */
+  --radius-md: 12px;                 /* Dimens.CornerMedium: 12dp */
+  --radius-lg: 16px;                 /* Dimens.CornerLarge: 16dp */
+  --radius-xl: 20px;                 /* Dimens.CornerXLarge: 20dp */
+  --radius-pill: 28px;               /* Dimens.CornerPill: 28dp */
+  --radius-full: 9999px;
+
+  /* Component Dimensions */
+  --btn-height-lg: 52px;             /* Standard Touch Target: 52dp */
+  --btn-height-md: 44px;
+  --btn-height-sm: 38px;
+  --appbar-height: 64px;             /* Android Standard TopAppBar */
+  --bottom-nav-height: 72px;         /* Android Floating BottomNav pill */
+  --sidebar-width: 260px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(4, 40, 25, 0.06), 0 1px 2px rgba(4, 40, 25, 0.04);
+  --shadow-md: 0 6px 18px -2px rgba(4, 40, 25, 0.08), 0 2px 6px -1px rgba(4, 40, 25, 0.04);
+  --shadow-lg: 0 16px 32px -6px rgba(4, 40, 25, 0.12), 0 4px 12px -2px rgba(4, 40, 25, 0.06);
+  --shadow-fab: 0 8px 24px rgba(4, 120, 87, 0.35);
+
+  /* Typography Fonts */
   --font-serif: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
 
-  /* Layout dimensions */
-  --sidebar-width: 260px;
-  --header-height: 0px;
-  --bottom-nav-height: 0px;
-  
-  --accent-brand-rgb: 37, 99, 235;
-  --shadow-base: 15, 23, 42;
+  /* Smooth Transitions & Spring curves */
+  --transition-smooth: all 0.35s cubic-bezier(0.25, 1, 0.5, 1);
+  --transition-spring: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  --transition-colors: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease;
 }
 
+/* --------------------------------------------------------------------------
+   DARK THEME: Pure AMOLED Pitch Black & Luminous Mint Accents
+   (Directly mapped from Color.kt: DarkAmoledBackground, DarkPrimary, etc.)
+   -------------------------------------------------------------------------- */
 [data-theme="dark"] {
-  /* HSL Tailored Colors - Dark Theme (Obsidian & Slate Aura) */
-  --bg-linen: hsl(240, 10%, 3.9%); /* Sleek Pitch/Obsidian Black */
-  --text-ink: hsl(0, 0%, 98%);
-  --text-ink-muted: hsl(240, 5%, 64.9%);
-  
-  --accent-brand: hsl(217.2, 91.2%, 59.8%);
-  --accent-brand-hover: hsl(217.2, 91.2%, 65%);
-  --accent-brand-light: hsl(240, 3.7%, 15.9%);
-  --accent-gradient: linear-gradient(135deg, hsl(217.2, 91.2%, 59.8%) 0%, hsl(200, 90%, 55%) 100%);
-  --accent-gradient-hover: linear-gradient(135deg, hsl(217.2, 91.2%, 65%) 0%, hsl(200, 90%, 60%) 100%);
-  --accent-shadow: 0 4px 18px rgba(59, 130, 246, 0.25);
+  --color-primary: #34D399;          /* DarkPrimary: Luminous Mint / Neon Emerald */
+  --color-primary-light: #6EE7B7;    /* DarkPrimaryLight: Soft Mint */
+  --color-primary-dark: #10B981;
+  --color-secondary: #2DD4BF;        /* DarkSecondary: Bright Teal */
+  --color-primary-container: #14291F;/* DarkPrimaryContainer: Dark Mint Pill */
+  --color-on-primary-container: #A7F3D0;
 
-  --success-sage: hsl(142.1, 70.6%, 45.3%);
-  --success-sage-light: hsl(142, 40%, 10%);
-  --success-sage-border: hsl(142, 30%, 18%);
-  --success-sage-dark: hsl(142.1, 70.6%, 85%);
-  
-  --warning-red: hsl(350, 75%, 55%);
-  --warning-red-hover: hsl(350, 75%, 62%);
-  --warning-red-light: hsl(350, 45%, 11%);
-  --warning-red-border: hsl(350, 30%, 22%);
-  --warning-red-dark: hsl(350, 60%, 85%);
+  /* Canvas & Surfaces: Pure AMOLED Pitch Black */
+  --bg-linen: #000000;               /* DarkAmoledBackground: Pure Black */
+  --surface-card: #111113;           /* DarkSurface: Elevated Obsidian */
+  --surface-paper-tint: #191A1E;     /* DarkSurfaceVariant: Deep Charcoal */
+  --surface-paper-hover: #161619;    /* Elevated card hover */
+  --surface-alert-info: #0F1F17;
+  --surface-nav-glass: rgba(17, 17, 19, 0.88);
+  --overlay-bg: rgba(0, 0, 0, 0.75);
 
-  --border-paper: rgba(39, 39, 42, 0.6); /* Zinc-800 */
-  --border-paper-dark: rgba(63, 63, 70, 0.7); /* Zinc-700 */
-  
-  --surface-card: rgba(9, 9, 11, 0.6); /* Zinc-950 Glass */
-  --surface-paper-tint: rgba(24, 24, 27, 0.4); /* Zinc-900 Glass */
-  --surface-paper-hover: rgba(39, 39, 42, 0.55); /* Zinc-800 Glass */
-  --surface-alert-info: hsl(240, 3.7%, 12%);
-  --surface-nav-glass: rgba(9, 9, 11, 0.85);
-  --overlay-bg: rgba(0, 0, 0, 0.6);
+  /* Typography */
+  --text-ink: #F4F4F5;               /* DarkTextPrimary: Pure Crisp White */
+  --text-ink-muted: #A1A1AA;         /* DarkTextSecondary: Balanced Cool Slate */
 
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.25);
-  --shadow-md: 0 8px 24px -4px rgba(0, 0, 0, 0.45);
-  --shadow-lg: 0 20px 40px -8px rgba(0, 0, 0, 0.6);
-  --shadow-fab: 0 6px 16px rgba(59, 130, 246, 0.35);
+  /* Borders & Glows */
+  --border-paper: #26262B;           /* DarkBorder: Charcoal border */
+  --border-paper-dark: #333338;
+  --card-glow-border: rgba(52, 211, 153, 0.2); /* DarkCardBorder: Mint Glow */
 
-  --folder-color: hsl(215, 90%, 65%);
-  --pdf-color: hsl(350, 75%, 60%);
-  --image-color: hsl(175, 75%, 55%);
-  --doc-color: hsl(210, 80%, 65%);
-  --sheet-color: hsl(145, 65%, 55%);
-  --text-color: hsl(240, 5%, 70%);
-  --generic-color: hsl(240, 5%, 75%);
-  
-  --syncing-bg: hsl(210, 40%, 12%);
-  --syncing-text: hsl(210, 75%, 72%);
-  --syncing-border: hsl(210, 45%, 26%);
-  
-  --accent-brand-rgb: 59, 130, 246;
-  --shadow-base: 0, 0, 0;
+  /* Legacy & Bridge Variables */
+  --accent-brand: var(--color-primary);
+  --accent-brand-hover: var(--color-primary-light);
+  --accent-brand-light: var(--color-primary-container);
+  --accent-gradient: linear-gradient(135deg, #34D399 0%, #2DD4BF 100%);
+  --accent-gradient-hover: linear-gradient(135deg, #6EE7B7 0%, #34D399 100%);
+  --accent-shadow: 0 4px 20px rgba(52, 211, 153, 0.25);
+  --accent-brand-rgb: 52, 211, 153;
+
+  /* App Bar & Drawer Gradient Banners (Dark AMOLED) */
+  --appbar-bg: linear-gradient(135deg, #000000 0%, #141416 100%);
+  --drawer-header-bg: linear-gradient(135deg, #08080a 0%, #141416 100%);
+
+  /* Keepsake Warm Amber & Status Accents */
+  --brand-accent: #F59E0B;
+  --brand-accent-light: #FBBF24;
+  --brand-accent-glow: rgba(245, 158, 11, 0.45);
+
+  --success-sage: #34D399;
+  --success-sage-light: #14291F;
+  --success-sage-border: #1B3C2D;
+  --success-sage-dark: #A7F3D0;
+
+  --warning-red: #F87171;
+  --warning-red-hover: #EF4444;
+  --warning-red-light: #2A1414;
+  --warning-red-border: #451A1A;
+  --warning-red-dark: #FECACA;
+
+  /* Category Distribution Colors */
+  --cat-images: #60A5FA;
+  --cat-pdfs: #F87171;
+  --cat-docs: #A78BFA;
+  --cat-sheets: #34D399;
+  --cat-text: #FBBF24;
+  --cat-other: #9CA3AF;
+
+  --folder-color: #34D399;
+  --pdf-color: #F87171;
+  --image-color: #60A5FA;
+  --doc-color: #A78BFA;
+  --sheet-color: #34D399;
+  --text-color: #FBBF24;
+  --generic-color: #9CA3AF;
+
+  --syncing-bg: #14291F;
+  --syncing-text: #34D399;
+  --syncing-border: #1B3C2D;
+
+  /* Shimmer Tokens (Dark AMOLED) */
+  --shimmer-base: #141417;
+  --shimmer-highlight: #24242A;
+
+  /* Shadows (Dark) */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.6);
+  --shadow-md: 0 6px 18px -2px rgba(0, 0, 0, 0.7);
+  --shadow-lg: 0 16px 32px -6px rgba(0, 0, 0, 0.85);
+  --shadow-fab: 0 8px 24px rgba(52, 211, 153, 0.35);
 }

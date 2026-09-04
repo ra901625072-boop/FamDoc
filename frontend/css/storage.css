@@ -22,14 +22,19 @@
    1. HERO STORAGE POOL SUMMARY CARD
    ========================================================================== */
 .storage-hero-card {
-  background: var(--surface-card, #ffffff);
-  border: 1px solid var(--border-paper-dark, #e2e8f0);
-  border-radius: var(--radius-lg, 12px);
+  background: var(--surface-card);
+  border: 1px solid var(--border-paper);
+  border-radius: var(--radius-lg, 16px);
   padding: 1.5rem 1.75rem;
   margin-bottom: 1.75rem;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+  box-shadow: var(--shadow-sm);
   position: relative;
   overflow: hidden;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.storage-hero-card:hover {
+  border-color: var(--card-glow-border);
 }
 
 .storage-hero-card::before {

@@ -1,41 +1,77 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
   <defs>
-    <linearGradient id="folderGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#3b82f6" />
-      <stop offset="100%" stop-color="#1d4ed8" />
+    <!-- Royal / Electric Blue Brand Gradients from BrandLogo.kt -->
+    <linearGradient id="crestBlueGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0066FF" />
+      <stop offset="100%" stop-color="#0038B8" />
     </linearGradient>
-    <linearGradient id="paperGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#ffffff" />
-      <stop offset="100%" stop-color="#e2e8f0" />
+    
+    <linearGradient id="folderBlueGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0066FF" />
+      <stop offset="100%" stop-color="#0038B8" />
     </linearGradient>
-    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#1d4ed8" flood-opacity="0.3"/>
+    
+    <!-- Soft Glow Filter -->
+    <filter id="crestGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#0052FF" flood-opacity="0.25"/>
     </filter>
   </defs>
 
-  <!-- Paper Document Sticking Out -->
-  <path d="M144 80h160c17.7 0 32 14.3 32 32v120H112V112c0-17.7 14.3-32 32-32z" fill="url(#paperGrad)" />
-  <rect x="152" y="112" width="100" height="12" rx="6" fill="#cbd5e1" />
-  <rect x="152" y="144" width="144" height="12" rx="6" fill="#cbd5e1" />
+  <g filter="url(#crestGlow)">
+    <!-- 1. House Roof & Enclosure Arch Outline -->
+    <path d="M 62 378 L 62 194 L 256 62 L 450 194 L 450 378" 
+          fill="none" 
+          stroke="url(#crestBlueGrad)" 
+          stroke-width="42" 
+          stroke-linecap="round" 
+          stroke-linejoin="round" />
 
-  <!-- Folder/Document Base Shape -->
-  <path d="M80 160C80 124.6 108.6 96 144 96H213.3C230.2 96 246.5 102.7 258.5 114.7L290.7 147C302.7 159 319 165.7 336 165.7H368C403.4 165.7 432 194.3 432 229.7V384C432 419.4 403.4 448 368 448H144C108.6 448 80 419.4 80 384V160Z" fill="url(#folderGrad)" filter="url(#shadow)"/>
-  
-  <!-- Subtle inner gradient for 3D folder flap -->
-  <path d="M100 210C100 182.4 122.4 160 150 160H432C432 280 340 400 180 400C152.4 400 130 377.6 130 350V210Z" fill="#ffffff" opacity="0.08"/>
+    <!-- 2. Family Silhouettes Inside House -->
+    <!-- Left Parent -->
+    <circle cx="180" cy="194" r="48" fill="url(#crestBlueGrad)"/>
+    <path d="M 102 384 L 102 280 C 102 245 130 245 180 245 C 230 245 258 245 258 280 L 258 384 Z" 
+          fill="url(#crestBlueGrad)" />
 
-  <!-- Family Group Icon on the Folder -->
-  <g fill="#ffffff">
-    <!-- Parent 1 (Left) -->
-    <circle cx="190" cy="260" r="24"/>
-    <path d="M190 296c-28.7 0-52 23.3-52 52v14h104v-14c0-28.7-23.3-52-52-52z"/>
-    
-    <!-- Parent 2 (Right) -->
-    <circle cx="320" cy="260" r="24"/>
-    <path d="M320 296c-28.7 0-52 23.3-52 52v14h104v-14c0-28.7-23.3-52-52-52z"/>
-    
-    <!-- Child (Center) -->
-    <circle cx="255" cy="310" r="18"/>
-    <path d="M255 336c-20 0-36 16-36 36v18h72v-18c0-20-16-36-36-36z"/>
+    <!-- Right Parent -->
+    <circle cx="332" cy="194" r="48" fill="url(#crestBlueGrad)"/>
+    <path d="M 254 384 L 254 280 C 254 245 282 245 332 245 C 382 245 410 245 410 280 L 410 384 Z" 
+          fill="url(#crestBlueGrad)" />
+
+    <!-- Center Child -->
+    <circle cx="256" cy="250" r="35" fill="url(#crestBlueGrad)"/>
+    <path d="M 194 384 L 194 320 C 194 286 214 286 256 286 C 298 286 318 286 318 320 L 318 384 Z" 
+          fill="url(#crestBlueGrad)" />
+
+    <!-- 3. White Document Sheet inside Keepsake Folder -->
+    <rect x="246" y="262" width="174" height="86" rx="20" ry="20" fill="#FFFFFF" stroke="#0066FF" stroke-width="12" opacity="0.95"/>
+
+    <!-- 4. Main Foreground Keepsake Folder -->
+    <path d="M 72 296 
+             L 225 296 
+             L 251 316 
+             L 440 316 
+             C 458 316 462 330 458 350
+             L 435 450 
+             C 430 472 415 480 395 480 
+             L 117 480 
+             C 97 480 82 472 77 450 
+             L 54 350 
+             C 50 330 54 296 72 296 Z" 
+          fill="url(#folderBlueGrad)"/>
+
+    <!-- 5. Padlock on Folder -->
+    <!-- Shackle Arch -->
+    <path d="M 224 394 C 224 362 288 362 288 394" 
+          fill="none" 
+          stroke="#FFFFFF" 
+          stroke-width="18" 
+          stroke-linecap="round"/>
+
+    <!-- Lock Body -->
+    <rect x="207" y="394" width="98" height="76" rx="16" ry="16" fill="#FFFFFF"/>
+
+    <!-- Keyhole -->
+    <circle cx="256" cy="424" r="12" fill="#0066FF"/>
+    <path d="M 248 424 L 264 424 L 262 448 L 250 448 Z" fill="#0066FF"/>
   </g>
 </svg>
