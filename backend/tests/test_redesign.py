@@ -67,6 +67,11 @@ class TestBackendRedesign(unittest.TestCase):
         except Exception:
             pass
 
+        try:
+            _global_rate_limiter.in_memory_limiter._store.clear()
+        except Exception:
+            pass
+
         # Create a test admin user and a test member
         self.admin = models.User(
             username="admin_user",
@@ -1147,6 +1152,192 @@ class TestBackendRedesign(unittest.TestCase):
         db.refresh(user_db)
         self.assertIsNone(user_db.current_token_jti)
 
+    def test_family_login_workflow(self):
+        # 1. Admin logs in and sets up a new family
+        admin_login = self.client.post("/api/auth/login", json={"email": "admin@test.com", "password": "Password123"})
+        self.assertEqual(admin_login.status_code, 200)
+        admin_token = admin_login.json()["access_token"]
+
+        # Clean existing family created in setUp to test setup endpoint
+        self.db.query(models.FamilyMember).delete()
+        self.db.query(models.Family).delete()
+        self.db.commit()
+
+        setup_res = self.client.post(
+            "/api/family/setup",
+            json={"name": "Smith Family", "max_members": 5},
+            headers={"Authorization": f"Bearer {admin_token}"}
+        )
+        self.assertEqual(setup_res.status_code, 200)
+        formatted_code = setup_res.json()["secret_code"]
+        self.assertEqual(len(formatted_code), 9)
+        self.assertIn("-", formatted_code)
+
+        # 2. Join family using formatted code (e.g. XXXX-XXXX)
+        res_join_1 = self.client.post(
+            "/api/auth/family-login",
+            json={
+                "username": "member_one",
+                "email": "member1@test.com",
+                "password": "Password123",
+                "secret_code": formatted_code
+            }
+        )
+        self.assertEqual(res_join_1.status_code, 200)
+        self.assertIn("access_token", res_join_1.json())
+        token1 = res_join_1.json()["access_token"]
+
+        # Verify member profile
+        me_res1 = self.client.get("/api/auth/me", headers={"Authorization": f"Bearer {token1}"})
+        self.assertEqual(me_res1.status_code, 200)
+        self.assertEqual(me_res1.json()["username"], "member_one")
+        self.assertEqual(me_res1.json()["role"], "member")
+
+        # 3. Join family using raw unformatted code (8 chars without hyphen)
+        raw_code = formatted_code.replace("-", "")
+        self.assertEqual(len(raw_code), 8)
+        res_join_2 = self.client.post(
+            "/api/auth/family-login",
+            json={
+                "username": "member_two",
+                "email": "member2@test.com",
+                "password": "Password123",
+                "secret_code": raw_code
+            }
+        )
+        self.assertEqual(res_join_2.status_code, 200)
+        self.assertIn("access_token", res_join_2.json())
+
+        # 4. Verify password validation: Password must have at least 8 chars, 1 uppercase, 1 digit
+        res_weak_pw = self.client.post(
+            "/api/auth/family-login",
+            json={
+                "username": "member_three",
+                "email": "member3@test.com",
+                "password": "weakpassword",
+                "secret_code": formatted_code
+            }
+        )
+        self.assertEqual(res_weak_pw.status_code, 422)
+
+        # 5. Verify invalid secret code returns 401
+        res_invalid_code = self.client.post(
+            "/api/auth/family-login",
+            json={
+                "username": "member_four",
+                "email": "member4@test.com",
+                "password": "Password123",
+                "secret_code": "WRONG-CODE"
+            }
+        )
+        self.assertEqual(res_invalid_code.status_code, 401)
+
+    def test_complete_member_removal_and_rejoin(self):
+        # 1. Setup family and get secret code
+        admin_token = auth.create_access_token(data={"sub": self.admin.email, "id": self.admin.id, "role": "admin"})
+        headers_admin = {"Authorization": f"Bearer {admin_token}"}
+        res_setup = self.client.post(
+            "/api/family/regenerate-code",
+            headers=headers_admin,
+            json={"name": "Test Family", "max_members": 5}
+        )
+        self.assertEqual(res_setup.status_code, 200)
+        secret_code = res_setup.json()["secret_code"]
+
+        # 2. Member joins
+        res_join = self.client.post(
+            "/api/auth/family-login",
+            json={
+                "username": "charlie",
+                "email": "charlie@test.com",
+                "password": "Password123",
+                "secret_code": secret_code
+            }
+        )
+        self.assertEqual(res_join.status_code, 200)
+        member_token = res_join.json()["access_token"]
+        headers_member = {"Authorization": f"Bearer {member_token}"}
+
+        # Find member user in DB
+        member_user = self.db.query(models.User).filter(models.User.email == "charlie@test.com").first()
+        self.assertIsNotNone(member_user)
+        member_user_id = member_user.id
+
+        # 3. Add a storage account for this member
+        sa = models.StorageAccount(
+            family_id=self.family.id,
+            provider="google",
+            email="charlie.drive@gmail.com",
+            user_id=member_user_id,
+            status="active",
+            external_account_id="charlie-drive-123"
+        )
+        self.db.add(sa)
+
+        # Member uploads a file
+        f = models.File(
+            filename="charlie_doc.pdf",
+            file_type="application/pdf",
+            size_bytes=1024,
+            uploader_id=member_user_id,
+            family_id=self.family.id,
+            storage_provider="local",
+            storage_account_id=sa.id,
+            pending_sync=False
+        )
+        self.db.add(f)
+        self.db.commit()
+        sa_id = sa.id
+
+        # Verify member can request OAuth URL
+        res_oauth = self.client.post(
+            "/api/storage/oauth/url",
+            headers=headers_member,
+            json={"client_id": "test-client-id", "client_secret": "test-client-secret"}
+        )
+        self.assertEqual(res_oauth.status_code, 200)
+        self.assertIn("url", res_oauth.json())
+
+        # 4. Admin removes the member
+        res_del = self.client.delete(f"/api/family/members/{member_user_id}", headers=headers_admin)
+        self.assertEqual(res_del.status_code, 204)
+
+        # 5. Verify User and FamilyMember are completely deleted
+        deleted_user = self.db.query(models.User).filter(models.User.id == member_user_id).first()
+        self.assertIsNone(deleted_user, "User record must be completely deleted")
+
+        deleted_member = self.db.query(models.FamilyMember).filter(models.FamilyMember.user_id == member_user_id).first()
+        self.assertIsNone(deleted_member, "FamilyMember record must be deleted")
+
+        # Verify member's storage account is cleaned up
+        deleted_sa = self.db.query(models.StorageAccount).filter(models.StorageAccount.id == sa_id).first()
+        self.assertIsNone(deleted_sa, "Storage account belonging to removed member must be deleted")
+
+        # Verify file is preserved in family vault with uploader_id = NULL
+        db_file = self.db.query(models.File).filter(models.File.filename == "charlie_doc.pdf").first()
+        self.assertIsNotNone(db_file, "File must remain preserved in vault")
+        self.assertIsNone(db_file.uploader_id, "File uploader_id must be set to NULL")
+
+        # 6. Member rejoins using the SAME username and email
+        res_rejoin = self.client.post(
+            "/api/auth/family-login",
+            json={
+                "username": "charlie",
+                "email": "charlie@test.com",
+                "password": "Password123",
+                "secret_code": secret_code
+            }
+        )
+        self.assertEqual(res_rejoin.status_code, 200, f"Re-joining failed: {res_rejoin.text}")
+        self.assertIn("access_token", res_rejoin.json())
+
+        # Verify new user was created
+        new_charlie = self.db.query(models.User).filter(models.User.email == "charlie@test.com").first()
+        self.assertIsNotNone(new_charlie)
+        self.assertEqual(new_charlie.username, "charlie")
+
 if __name__ == "__main__":
     unittest.main()
+
+
 

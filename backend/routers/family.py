@@ -146,7 +146,61 @@ def remove_family_member(
     if not membership:
         raise HTTPException(status_code=404, detail="Member not found in your family.")
 
+    target_user = db.query(models.User).filter(models.User.id == user_id).first()
+
+    # 1. Clean up or unlink storage accounts belonging to this member in this family
+    storage_filters = [models.StorageAccount.user_id == user_id]
+    if target_user and target_user.email:
+        storage_filters.append(models.StorageAccount.email == target_user.email)
+
+    from sqlalchemy import or_
+    member_storage_accounts = db.query(models.StorageAccount).filter(
+        models.StorageAccount.family_id == current_user.family_id,
+        or_(*storage_filters)
+    ).all()
+
+    for sa in member_storage_accounts:
+        files_count = db.query(models.File).filter(models.File.storage_account_id == sa.id).count()
+        if files_count > 0:
+            try:
+                from storage.storage_manager import StorageManager
+                StorageManager().migrate_account_files(sa.id, db)
+            except Exception:
+                db.query(models.File).filter(models.File.storage_account_id == sa.id).update(
+                    {models.File.storage_account_id: None}
+                )
+        db.delete(sa)
+
+    # 2. Invalidate active token / session
+    if target_user and target_user.current_token_jti:
+        db.add(models.RevokedToken(jti=target_user.current_token_jti))
+
+    # 3. Clean up PasswordResetOTPs for this user
+    if target_user and target_user.email:
+        db.query(models.PasswordResetOTP).filter(models.PasswordResetOTP.email == target_user.email).delete()
+
+    # 4. Safely preserve vault files uploaded by this user by setting uploader_id = NULL
+    db.query(models.File).filter(models.File.uploader_id == user_id).update(
+        {models.File.uploader_id: None}
+    )
+
+    # 5. Set created_by = NULL on any shared links created by this user
+    db.query(models.SharedLink).filter(models.SharedLink.created_by == user_id).update(
+        {models.SharedLink.created_by: None}
+    )
+
+    # 6. Set user_id = NULL on any audit logs
+    db.query(models.AuditLog).filter(models.AuditLog.user_id == user_id).update(
+        {models.AuditLog.user_id: None}
+    )
+
+    # 7. Delete the FamilyMember record
     db.delete(membership)
+
+    # 8. Delete the User record so username, email, and credentials are completely cleared
+    if target_user:
+        db.delete(target_user)
+
     db.commit()
     return None
 

@@ -32,7 +32,7 @@ interface FilesApi {
     ): Response<FileItem>
 
     @DELETE("api/files/{file_id}")
-    suspend fun deleteFile(@Path("file_id") fileId: Int): Response<ApiResponse>
+    suspend fun deleteFile(@Path("file_id") fileId: Int): Response<Unit>
 
     @Streaming
     @GET("api/files/{file_id}/download")

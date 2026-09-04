@@ -63,7 +63,7 @@ fun RegisterScreen(
                 navigationIcon = {
                     IconButton(
                         onClick = onBack,
-                        modifier = Modifier.bounceClick(scaleDown = 0.9f) { onBack() }
+                        modifier = Modifier.bounceClick(scaleDown = 0.9f)
                     ) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
@@ -142,6 +142,7 @@ fun RegisterScreen(
                 value = username,
                 onValueChange = { username = it; validationError = null },
                 label = { Text("Admin Username") },
+                supportingText = { Text("Letters, numbers, and underscores (3-20 characters)") },
                 leadingIcon = { Icon(Icons.Default.Person, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
                 singleLine = true,
                 shape = RoundedCornerShape(Dimens.RadiusMedium),
@@ -171,6 +172,7 @@ fun RegisterScreen(
                 value = password,
                 onValueChange = { password = it; validationError = null },
                 label = { Text("Master Password") },
+                supportingText = { Text("At least 8 characters, with 1 uppercase and 1 number") },
                 leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
                 trailingIcon = {
                     IconButton(onClick = { passwordVisible = !passwordVisible }) {
@@ -210,12 +212,35 @@ fun RegisterScreen(
             val isLoading = authState is Resource.Loading
             Button(
                 onClick = {
-                    if (password != confirmPassword) {
-                        validationError = "Passwords do not match."
-                    } else if (username.isBlank() || email.isBlank() || password.isBlank()) {
-                        validationError = "All fields are required."
-                    } else {
-                        authViewModel.register(username.trim(), email.trim(), password)
+                    val trimmedUser = username.trim()
+                    val trimmedEmail = email.trim()
+
+                    when {
+                        trimmedUser.isBlank() || trimmedEmail.isBlank() || password.isBlank() || confirmPassword.isBlank() -> {
+                            validationError = "All fields are required."
+                        }
+                        trimmedUser.length < 3 || trimmedUser.length > 20 || !trimmedUser.matches(Regex("^[a-zA-Z0-9_]+$")) -> {
+                            validationError = "Username must be 3-20 characters and contain only letters, numbers, or underscores."
+                        }
+                        !trimmedEmail.contains("@") || !trimmedEmail.contains(".") -> {
+                            validationError = "Please enter a valid email address."
+                        }
+                        password != confirmPassword -> {
+                            validationError = "Passwords do not match."
+                        }
+                        password.length < 8 -> {
+                            validationError = "Password must be at least 8 characters."
+                        }
+                        !password.any { it.isUpperCase() } -> {
+                            validationError = "Password must contain at least one uppercase letter."
+                        }
+                        !password.any { it.isDigit() } -> {
+                            validationError = "Password must contain at least one number."
+                        }
+                        else -> {
+                            validationError = null
+                            authViewModel.register(trimmedUser, trimmedEmail, password)
+                        }
                     }
                 },
                 enabled = !isLoading,
@@ -223,15 +248,7 @@ fun RegisterScreen(
                     .staggeredEntrance(index = 7)
                     .fillMaxWidth()
                     .height(Dimens.PrimaryButtonHeight)
-                    .bounceClick(scaleDown = 0.96f) {
-                        if (password != confirmPassword) {
-                            validationError = "Passwords do not match."
-                        } else if (username.isBlank() || email.isBlank() || password.isBlank()) {
-                            validationError = "All fields are required."
-                        } else {
-                            authViewModel.register(username.trim(), email.trim(), password)
-                        }
-                    },
+                    .bounceClick(scaleDown = 0.96f),
                 shape = RoundedCornerShape(Dimens.RadiusMedium),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary,

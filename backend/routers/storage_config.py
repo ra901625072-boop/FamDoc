@@ -481,10 +481,12 @@ def oauth2callback(
         # Match member user in family by user_id from state or email
         matched_user = None
         if state_user_id:
-            matched_user = db.query(models.User).filter(
-                models.User.id == state_user_id,
-                models.User.family_id == family.id
+            membership = db.query(models.FamilyMember).filter(
+                models.FamilyMember.user_id == state_user_id,
+                models.FamilyMember.family_id == family.id
             ).first()
+            if membership:
+                matched_user = membership.user
 
         if not matched_user and email:
             try:

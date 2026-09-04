@@ -46,6 +46,7 @@ fun JoinFamilyScreen(
     var secretCode by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
+    var validationError by remember { mutableStateOf<String?>(null) }
 
     val authState by authViewModel.authState.collectAsState()
     val scrollState = rememberScrollState()
@@ -64,7 +65,7 @@ fun JoinFamilyScreen(
                 navigationIcon = {
                     IconButton(
                         onClick = onBack,
-                        modifier = Modifier.bounceClick(scaleDown = 0.9f) { onBack() }
+                        modifier = Modifier.bounceClick(scaleDown = 0.9f)
                     ) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
@@ -101,7 +102,7 @@ fun JoinFamilyScreen(
             Spacer(modifier = Modifier.height(Dimens.Spacing4))
 
             Text(
-                text = "Enter the 8-character invitation code from your family administrator",
+                text = "Enter the invitation code from your family administrator",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.staggeredEntrance(index = 2)
@@ -109,12 +110,13 @@ fun JoinFamilyScreen(
 
             Spacer(modifier = Modifier.height(Dimens.Spacing24))
 
+            val errorMessage = validationError ?: (authState as? Resource.Error)?.message
             AnimatedVisibility(
-                visible = authState is Resource.Error,
+                visible = errorMessage != null,
                 enter = expandVertically() + fadeIn(),
                 exit = shrinkVertically() + fadeOut()
             ) {
-                if (authState is Resource.Error) {
+                if (errorMessage != null) {
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -129,7 +131,7 @@ fun JoinFamilyScreen(
                             Icon(Icons.Default.ErrorOutline, contentDescription = null, tint = MaterialTheme.colorScheme.error)
                             Spacer(modifier = Modifier.width(Dimens.Spacing10))
                             Text(
-                                text = (authState as Resource.Error).message,
+                                text = errorMessage,
                                 style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium),
                                 color = MaterialTheme.colorScheme.onErrorContainer
                             )
@@ -140,8 +142,16 @@ fun JoinFamilyScreen(
 
             OutlinedTextField(
                 value = secretCode,
-                onValueChange = { if (it.length <= 8) secretCode = it.uppercase() },
+                onValueChange = { input ->
+                    val filtered = input.uppercase().filter { it.isLetterOrDigit() || it == '-' }
+                    if (filtered.length <= 9) {
+                        secretCode = filtered
+                        validationError = null
+                    }
+                },
                 label = { Text("Family Invitation Code") },
+                placeholder = { Text("e.g. ABCD-1234") },
+                supportingText = { Text("8 characters (e.g. ABCD-1234 or ABCD1234)") },
                 leadingIcon = { Icon(Icons.Default.ConfirmationNumber, contentDescription = null, tint = BrandAccent) },
                 singleLine = true,
                 shape = RoundedCornerShape(Dimens.RadiusMedium),
@@ -160,8 +170,9 @@ fun JoinFamilyScreen(
 
             OutlinedTextField(
                 value = username,
-                onValueChange = { username = it },
-                label = { Text("Your Display Name / Username") },
+                onValueChange = { username = it; validationError = null },
+                label = { Text("Your Username") },
+                supportingText = { Text("Letters, numbers, and underscores (3-20 characters)") },
                 leadingIcon = { Icon(Icons.Default.Person, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
                 singleLine = true,
                 shape = RoundedCornerShape(Dimens.RadiusMedium),
@@ -174,7 +185,7 @@ fun JoinFamilyScreen(
 
             OutlinedTextField(
                 value = email,
-                onValueChange = { email = it },
+                onValueChange = { email = it; validationError = null },
                 label = { Text("Email Address") },
                 leadingIcon = { Icon(Icons.Default.Email, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
                 singleLine = true,
@@ -189,14 +200,15 @@ fun JoinFamilyScreen(
 
             OutlinedTextField(
                 value = password,
-                onValueChange = { password = it },
-                label = { Text("Create Personal Password (Optional)") },
+                onValueChange = { password = it; validationError = null },
+                label = { Text("Account Password") },
+                supportingText = { Text("At least 8 characters, with 1 uppercase and 1 number") },
                 leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
                 trailingIcon = {
                     IconButton(onClick = { passwordVisible = !passwordVisible }) {
                         Icon(
                             imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                            contentDescription = null
+                            contentDescription = if (passwordVisible) "Hide password" else "Show password"
                         )
                     }
                 },
@@ -214,30 +226,46 @@ fun JoinFamilyScreen(
             val isLoading = authState is Resource.Loading
             Button(
                 onClick = {
-                    if (secretCode.isNotBlank() && username.isNotBlank() && email.isNotBlank()) {
-                        authViewModel.joinFamily(
-                            username.trim(),
-                            email.trim(),
-                            secretCode.trim(),
-                            if (password.isNotBlank()) password else null
-                        )
+                    val trimmedCode = secretCode.replace("-", "").trim()
+                    val trimmedUser = username.trim()
+                    val trimmedEmail = email.trim()
+
+                    when {
+                        trimmedCode.length != 8 -> {
+                            validationError = "Invitation code must be 8 characters (e.g. ABCD-1234 or ABCD1234)."
+                        }
+                        trimmedUser.length < 3 || trimmedUser.length > 20 || !trimmedUser.matches(Regex("^[a-zA-Z0-9_]+$")) -> {
+                            validationError = "Username must be 3-20 characters and contain only letters, numbers, or underscores."
+                        }
+                        trimmedEmail.isBlank() || !trimmedEmail.contains("@") || !trimmedEmail.contains(".") -> {
+                            validationError = "Please enter a valid email address."
+                        }
+                        password.length < 8 -> {
+                            validationError = "Password must be at least 8 characters."
+                        }
+                        !password.any { it.isUpperCase() } -> {
+                            validationError = "Password must contain at least one uppercase letter."
+                        }
+                        !password.any { it.isDigit() } -> {
+                            validationError = "Password must contain at least one number."
+                        }
+                        else -> {
+                            validationError = null
+                            authViewModel.joinFamily(
+                                trimmedUser,
+                                trimmedEmail,
+                                secretCode.trim(),
+                                password
+                            )
+                        }
                     }
                 },
-                enabled = !isLoading && secretCode.isNotBlank() && username.isNotBlank() && email.isNotBlank(),
+                enabled = !isLoading && secretCode.isNotBlank() && username.isNotBlank() && email.isNotBlank() && password.isNotBlank(),
                 modifier = Modifier
                     .staggeredEntrance(index = 7)
                     .fillMaxWidth()
                     .height(Dimens.PrimaryButtonHeight)
-                    .bounceClick(scaleDown = 0.96f) {
-                        if (secretCode.isNotBlank() && username.isNotBlank() && email.isNotBlank()) {
-                            authViewModel.joinFamily(
-                                username.trim(),
-                                email.trim(),
-                                secretCode.trim(),
-                                if (password.isNotBlank()) password else null
-                            )
-                        }
-                    },
+                    .bounceClick(scaleDown = 0.96f),
                 shape = RoundedCornerShape(Dimens.RadiusMedium),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary,
@@ -265,7 +293,10 @@ fun JoinFamilyScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text("Already a member?", style = MaterialTheme.typography.bodyMedium)
-                TextButton(onClick = onNavigateToLogin) {
+                TextButton(
+                    onClick = onNavigateToLogin,
+                    modifier = Modifier.bounceClick(scaleDown = 0.95f)
+                ) {
                     Text("Log In", fontWeight = FontWeight.Bold)
                 }
             }

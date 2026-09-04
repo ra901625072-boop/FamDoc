@@ -147,7 +147,7 @@ fun VaultScreen(
                             navigationIcon = {
                                 IconButton(
                                     onClick = { vaultViewModel.clearSelection() },
-                                    modifier = Modifier.bounceClick(scaleDown = 0.9f) { vaultViewModel.clearSelection() }
+                                    modifier = Modifier.bounceClick(scaleDown = 0.9f)
                                 ) {
                                     Icon(Icons.Default.Close, contentDescription = "Cancel Selection")
                                 }
@@ -155,13 +155,13 @@ fun VaultScreen(
                             actions = {
                                 IconButton(
                                     onClick = { showBulkMoveDialog = true },
-                                    modifier = Modifier.bounceClick(scaleDown = 0.9f) { showBulkMoveDialog = true }
+                                    modifier = Modifier.bounceClick(scaleDown = 0.9f)
                                 ) {
                                     Icon(Icons.AutoMirrored.Filled.DriveFileMove, contentDescription = "Move Selected")
                                 }
                                 IconButton(
                                     onClick = { vaultViewModel.bulkDelete() },
-                                    modifier = Modifier.bounceClick(scaleDown = 0.9f) { vaultViewModel.bulkDelete() }
+                                    modifier = Modifier.bounceClick(scaleDown = 0.9f)
                                 ) {
                                     Icon(Icons.Default.Delete, contentDescription = "Delete Selected")
                                 }
@@ -226,7 +226,7 @@ fun VaultScreen(
                                 // Search Action
                                 IconButton(
                                     onClick = { isSearchActive = true },
-                                    modifier = Modifier.bounceClick(scaleDown = 0.9f) { isSearchActive = true }
+                                    modifier = Modifier.bounceClick(scaleDown = 0.9f)
                                 ) {
                                     Icon(Icons.Default.Search, contentDescription = "Search", tint = MaterialTheme.colorScheme.onPrimary)
                                 }
@@ -234,7 +234,7 @@ fun VaultScreen(
                                 // Create Folder Action
                                 IconButton(
                                     onClick = { showCreateFolderDialog = true },
-                                    modifier = Modifier.bounceClick(scaleDown = 0.9f) { showCreateFolderDialog = true }
+                                    modifier = Modifier.bounceClick(scaleDown = 0.9f)
                                 ) {
                                     Icon(Icons.Default.CreateNewFolder, contentDescription = "New Folder", tint = MaterialTheme.colorScheme.onPrimary)
                                 }
@@ -244,9 +244,7 @@ fun VaultScreen(
                                     onClick = {
                                         viewMode = if (viewMode == ViewMode.GRID) ViewMode.LIST else ViewMode.GRID
                                     },
-                                    modifier = Modifier.bounceClick(scaleDown = 0.9f) {
-                                        viewMode = if (viewMode == ViewMode.GRID) ViewMode.LIST else ViewMode.GRID
-                                    }
+                                    modifier = Modifier.bounceClick(scaleDown = 0.9f)
                                 ) {
                                     Icon(
                                         imageVector = if (viewMode == ViewMode.GRID) Icons.Default.ViewList else Icons.Default.GridView,
@@ -273,7 +271,7 @@ fun VaultScreen(
                     shape = RoundedCornerShape(Dimens.RadiusExtraLarge),
                     modifier = Modifier
                         .pulsingAura(auraColor = BrandAccent, maxRadiusDp = 10.dp)
-                        .bounceClick(scaleDown = 0.93f) { filePickerLauncher.launch(arrayOf("*/*")) }
+                        .bounceClick(scaleDown = 0.93f)
                 ) {
                     Icon(Icons.Default.CloudUpload, contentDescription = "Upload Files")
                 }

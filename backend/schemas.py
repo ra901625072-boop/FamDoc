@@ -75,7 +75,7 @@ class FamilySetupResponse(BaseModel):
 class FamilyLogin(BaseModel):
     username: str = Field(..., min_length=3, max_length=20, pattern=r"^[a-zA-Z0-9_]+$")
     email: EmailStr
-    secret_code: str = Field(..., min_length=9, max_length=9) # e.g. "XXXX-XXXX"
+    secret_code: str = Field(..., min_length=8, max_length=12) # e.g. "XXXX-XXXX" or "XXXXXXXX"
     password: str = Field(..., min_length=8)
 
     @field_validator('password')

@@ -62,7 +62,7 @@ fun LoginScreen(
                 navigationIcon = {
                     IconButton(
                         onClick = onBack,
-                        modifier = Modifier.bounceClick(scaleDown = 0.9f) { onBack() }
+                        modifier = Modifier.bounceClick(scaleDown = 0.9f)
                     ) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
@@ -208,11 +208,7 @@ fun LoginScreen(
                     .staggeredEntrance(index = 6)
                     .fillMaxWidth()
                     .height(Dimens.PrimaryButtonHeight)
-                    .bounceClick(scaleDown = 0.96f) {
-                        if (email.isNotBlank() && password.isNotBlank()) {
-                            authViewModel.login(email.trim(), password)
-                        }
-                    },
+                    .bounceClick(scaleDown = 0.96f),
                 shape = RoundedCornerShape(Dimens.RadiusMedium),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary,

@@ -19,5 +19,5 @@ interface RecycleBinApi {
     suspend fun purgeItem(
         @Path("item_type") itemType: String,
         @Path("item_id") itemId: Int
-    ): Response<ApiResponse>
+    ): Response<Unit>
 }

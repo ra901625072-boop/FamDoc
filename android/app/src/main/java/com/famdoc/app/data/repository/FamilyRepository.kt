@@ -26,7 +26,7 @@ class FamilyRepository(private val apiClient: ApiClient) {
         try {
             val response = apiClient.familyApi.removeMember(userId)
             if (response.isSuccessful) {
-                Resource.Success(response.body()?.message ?: "Member removed successfully")
+                Resource.Success("Member removed successfully")
             } else {
                 Resource.Error(ErrorTranslator.translate(response))
             }

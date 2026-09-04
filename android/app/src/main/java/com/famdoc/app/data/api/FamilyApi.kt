@@ -13,7 +13,7 @@ interface FamilyApi {
     suspend fun getMembers(): Response<List<FamilyMember>>
 
     @DELETE("api/family/members/{user_id}")
-    suspend fun removeMember(@Path("user_id") userId: Int): Response<ApiResponse>
+    suspend fun removeMember(@Path("user_id") userId: Int): Response<Unit>
 
     @GET("api/family/details")
     suspend fun getFamilyDetails(): Response<FamilyDetailsResponse>

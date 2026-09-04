@@ -147,8 +147,8 @@ fun FamDocNavGraph(
                     navController = navController,
                     startDestination = Screen.Splash.route,
                     enterTransition = {
-                        val isDetailScreen = targetState.destination.route?.startsWith("preview/") == true ||
-                                targetState.destination.route?.startsWith("share/") == true
+                        val isDetailScreen = targetState.destination.route?.startsWith("file_preview") == true ||
+                                targetState.destination.route?.startsWith("public_share") == true
                         val isAuthSubScreen = targetState.destination.route in listOf(
                             Screen.Register.route,
                             Screen.JoinFamily.route,
@@ -178,7 +178,7 @@ fun FamDocNavGraph(
                         }
                     },
                     exitTransition = {
-                        val isDetailScreen = targetState.destination.route?.startsWith("preview/") == true
+                        val isDetailScreen = targetState.destination.route?.startsWith("file_preview") == true
                         val fromIndex = bottomNavOrder.indexOf(initialState.destination.route)
                         val toIndex = bottomNavOrder.indexOf(targetState.destination.route)
 
@@ -200,8 +200,8 @@ fun FamDocNavGraph(
                         }
                     },
                     popEnterTransition = {
-                        val isDetailScreen = initialState.destination.route?.startsWith("preview/") == true ||
-                                initialState.destination.route?.startsWith("share/") == true
+                        val isDetailScreen = initialState.destination.route?.startsWith("file_preview") == true ||
+                                initialState.destination.route?.startsWith("public_share") == true
                         val isAuthSubScreen = initialState.destination.route in listOf(
                             Screen.Register.route,
                             Screen.JoinFamily.route,
@@ -231,8 +231,8 @@ fun FamDocNavGraph(
                         }
                     },
                     popExitTransition = {
-                        val isDetailScreen = initialState.destination.route?.startsWith("preview/") == true ||
-                                initialState.destination.route?.startsWith("share/") == true
+                        val isDetailScreen = initialState.destination.route?.startsWith("file_preview") == true ||
+                                initialState.destination.route?.startsWith("public_share") == true
                         val isAuthSubScreen = initialState.destination.route in listOf(
                             Screen.Register.route,
                             Screen.JoinFamily.route,

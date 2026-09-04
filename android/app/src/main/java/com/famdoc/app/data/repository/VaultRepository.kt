@@ -75,7 +75,7 @@ class VaultRepository(
         try {
             val response = apiClient.foldersApi.deleteFolder(folderId)
             if (response.isSuccessful) {
-                Resource.Success(response.body()?.message ?: "Folder deleted successfully")
+                Resource.Success("Folder deleted successfully")
             } else {
                 Resource.Error(ErrorTranslator.translate(response))
             }
@@ -144,7 +144,7 @@ class VaultRepository(
         try {
             val response = apiClient.filesApi.deleteFile(fileId)
             if (response.isSuccessful) {
-                Resource.Success(response.body()?.message ?: "File moved to recycle bin")
+                Resource.Success("File moved to recycle bin")
             } else {
                 Resource.Error(ErrorTranslator.translate(response))
             }

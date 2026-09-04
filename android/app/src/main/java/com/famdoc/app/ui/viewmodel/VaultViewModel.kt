@@ -62,6 +62,8 @@ class VaultViewModel(private val vaultRepository: VaultRepository) : ViewModel()
                         category = category
                     )
                     _filesState.value = result
+                } else {
+                    loadFiles(_currentFolder.value?.id)
                 }
             }
         }

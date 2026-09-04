@@ -17,7 +17,7 @@ data class FamilyLoginRequest(
     @SerializedName("username") val username: String,
     @SerializedName("email") val email: String,
     @SerializedName("secret_code") val secretCode: String,
-    @SerializedName("password") val password: String? = null
+    @SerializedName("password") val password: String
 )
 
 data class UpdateProfileRequest(

@@ -39,7 +39,7 @@ class RecycleBinRepository(private val apiClient: ApiClient) {
         try {
             val response = apiClient.recycleBinApi.purgeItem(itemType, itemId)
             if (response.isSuccessful) {
-                Resource.Success(response.body()?.message ?: "Item permanently purged")
+                Resource.Success("Item permanently purged")
             } else {
                 Resource.Error(ErrorTranslator.translate(response))
             }

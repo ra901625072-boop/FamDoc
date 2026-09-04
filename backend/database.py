@@ -412,4 +412,23 @@ def run_migrations():
         except Exception as e:
             logger.error(f"Migration error (storage_accounts backfill): {str(e)}")
 
+    # 9. Clean up any legacy orphaned member users (users with role='member' that have no family memberships)
+    if "users" in table_names and "family_members" in table_names:
+        try:
+            from models import User, FamilyMember, Family
+            db_session = SessionLocal()
+            try:
+                orphaned_users = db_session.query(User).filter(
+                    User.role == "member"
+                ).all()
+                for u in orphaned_users:
+                    if not u.family_memberships and not u.families_administered:
+                        logger.info(f"Cleanup: Removing orphaned member user '{u.username}' (ID: {u.id}, email: {u.email})")
+                        db_session.delete(u)
+                db_session.commit()
+            finally:
+                db_session.close()
+        except Exception as e:
+            logger.warning(f"Note on orphaned member cleanup: {str(e)}")
+
 

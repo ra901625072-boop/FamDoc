@@ -23,17 +23,25 @@ def register(user_in: schemas.UserRegister, db: Session = Depends(get_db)):
     # Check if user already exists
     existing_user = db.query(models.User).filter(models.User.email == user_in.email).first()
     if existing_user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="A user with this email is already registered."
-        )
+        if existing_user.role == "member" and not existing_user.family_memberships and not existing_user.families_administered:
+            db.delete(existing_user)
+            db.flush()
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="A user with this email is already registered."
+            )
 
     existing_username = db.query(models.User).filter(models.User.username == user_in.username).first()
     if existing_username:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="A user with this username is already registered."
-        )
+        if existing_username.role == "member" and not existing_username.family_memberships and not existing_username.families_administered:
+            db.delete(existing_username)
+            db.flush()
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="A user with this username is already registered."
+            )
 
     # Hash the password
     hashed_pwd = auth.get_password_hash(user_in.password)
@@ -191,28 +199,52 @@ def family_login(request: Request, login_in: schemas.FamilyLogin, db: Session = 
     # 5. Check this email is not already a member of this family
     existing_user = db.query(models.User).filter(models.User.email == login_in.email).first()
     if existing_user:
-        # Verify password for the existing user
-        if not auth.verify_password(login_in.password, existing_user.password_hash):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Incorrect password for the existing account."
-            )
-            
-        # Verify they aren't already associated with any family group
-        if existing_user.family_id is not None:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="This account is already associated with a family group."
-            )
-        user = existing_user
+        is_orphaned = not existing_user.family_memberships and not existing_user.families_administered
+        if is_orphaned:
+            other_username = db.query(models.User).filter(
+                models.User.username == login_in.username,
+                models.User.id != existing_user.id
+            ).first()
+            if other_username:
+                if other_username.role == "member" and not other_username.family_memberships and not other_username.families_administered:
+                    db.delete(other_username)
+                    db.flush()
+                else:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="A user with this username is already registered. Please choose a different name."
+                    )
+            existing_user.username = login_in.username
+            existing_user.password_hash = auth.get_password_hash(login_in.password)
+            existing_user.role = "member"
+            user = existing_user
+        else:
+            # Verify password for the active existing user
+            if not auth.verify_password(login_in.password, existing_user.password_hash):
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Incorrect password for the existing account."
+                )
+                
+            # Verify they aren't already associated with any family group
+            if existing_user.family_id is not None:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="This account is already associated with a family group."
+                )
+            user = existing_user
     else:
         # Check if username is already taken by someone else
         existing_username = db.query(models.User).filter(models.User.username == login_in.username).first()
         if existing_username:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="A user with this username is already registered. Please choose a different name."
-            )
+            if existing_username.role == "member" and not existing_username.family_memberships and not existing_username.families_administered:
+                db.delete(existing_username)
+                db.flush()
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="A user with this username is already registered. Please choose a different name."
+                )
         # Create new user record
         user = models.User(
             username=login_in.username,

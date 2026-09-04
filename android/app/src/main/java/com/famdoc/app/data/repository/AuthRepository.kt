@@ -50,9 +50,15 @@ class AuthRepository(
         }
     }
 
-    suspend fun joinFamily(username: String, email: String, secretCode: String, password: String? = null): Resource<User> = withContext(Dispatchers.IO) {
+    suspend fun joinFamily(username: String, email: String, secretCode: String, password: String): Resource<User> = withContext(Dispatchers.IO) {
         try {
-            val response = apiClient.authApi.joinFamily(FamilyLoginRequest(username, email, secretCode, password))
+            val cleanCode = secretCode.replace(" ", "").trim().uppercase()
+            val formattedCode = if (cleanCode.length == 8 && !cleanCode.contains("-")) {
+                "${cleanCode.substring(0, 4)}-${cleanCode.substring(4)}"
+            } else {
+                cleanCode
+            }
+            val response = apiClient.authApi.joinFamily(FamilyLoginRequest(username.trim(), email.trim(), formattedCode, password))
             if (response.isSuccessful && response.body() != null) {
                 val token = response.body()!!.accessToken
                 tokenManager.saveToken(token)

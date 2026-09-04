@@ -45,7 +45,7 @@ class AuthViewModel(private val authRepository: AuthRepository) : ViewModel() {
         }
     }
 
-    fun joinFamily(username: String, email: String, secretCode: String, password: String? = null) {
+    fun joinFamily(username: String, email: String, secretCode: String, password: String) {
         viewModelScope.launch {
             _authState.value = Resource.Loading("Joining Family Vault...")
             val result = authRepository.joinFamily(username, email, secretCode, password)

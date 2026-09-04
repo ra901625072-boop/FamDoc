@@ -21,6 +21,9 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -75,6 +78,19 @@ fun FamilyScreen(
         familyViewModel.loadFamilyData()
     }
 
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                familyViewModel.loadFamilyData()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
     LaunchedEffect(actionMessage) {
         actionMessage?.let { msg ->
             snackbarHostState.showSnackbar(msg)
@@ -96,7 +112,7 @@ fun FamilyScreen(
                     val isFamilyLoading = membersState is Resource.Loading || familyDetailsState is Resource.Loading
                     IconButton(
                         onClick = { familyViewModel.loadFamilyData() },
-                        modifier = Modifier.bounceClick(scaleDown = 0.9f) { familyViewModel.loadFamilyData() }
+                        modifier = Modifier.bounceClick(scaleDown = 0.9f)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Refresh,
@@ -300,7 +316,7 @@ fun FamilyScreen(
                                     ) {
                                         TextButton(
                                             onClick = { showCodeWizardDialog = true },
-                                            modifier = Modifier.bounceClick(scaleDown = 0.95f) { showCodeWizardDialog = true }
+                                            modifier = Modifier.bounceClick(scaleDown = 0.95f)
                                         ) {
                                             Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(15.dp))
                                             Spacer(modifier = Modifier.width(5.dp))
@@ -316,7 +332,7 @@ fun FamilyScreen(
                                     colors = ButtonDefaults.buttonColors(containerColor = MintPrimary),
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .bounceClick(scaleDown = 0.96f) { showCodeWizardDialog = true }
+                                        .bounceClick(scaleDown = 0.96f)
                                 ) {
                                     Icon(Icons.Default.Key, contentDescription = null, modifier = Modifier.size(16.dp))
                                     Spacer(modifier = Modifier.width(6.dp))
@@ -332,6 +348,7 @@ fun FamilyScreen(
                     val contributingMembers = members.filter { it.storageConnected == true }
                     val contributingCount = contributingMembers.size
                     val totalPooledBytes = contributingMembers.sumOf { it.storageContributedBytes ?: 0L }
+                    val isSelfConnected = members.any { (it.userId == currentUser?.id) && it.storageConnected == true }
 
                     Surface(
                         modifier = Modifier
@@ -350,7 +367,7 @@ fun FamilyScreen(
                         ) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.weight(1f).padding(end = 8.dp)
                             ) {
                                 Box(
                                     modifier = Modifier
@@ -371,25 +388,35 @@ fun FamilyScreen(
                                     )
                                     Text(
                                         text = if (contributingCount > 0) {
-                                            "$contributingCount of ${members.size} contributing (${FileUtils.formatBytes(totalPooledBytes)})"
+                                            "$contributingCount of ${members.size} contributing (${FileUtils.formatBytes(totalPooledBytes)})${if (!isSelfConnected) " • Add your +15 GB" else ""}"
                                         } else {
-                                            "No Google Drives linked yet"
+                                            "Tap to connect your Google Drive (+15 GB)"
                                         },
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        color = if (!isSelfConnected) GoogleBlue else MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
                             }
 
-                            OutlinedButton(
+                            Button(
                                 onClick = onNavigateToStorage,
                                 shape = RoundedCornerShape(Dimens.RadiusSmall),
                                 contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-                                modifier = Modifier.bounceClick(scaleDown = 0.95f) { onNavigateToStorage() }
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (!isSelfConnected) GoogleBlue else MaterialTheme.colorScheme.surfaceVariant,
+                                    contentColor = if (!isSelfConnected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+                                ),
+                                modifier = Modifier.height(32.dp).bounceClick(scaleDown = 0.95f) { onNavigateToStorage() }
                             ) {
-                                Icon(Icons.Default.Settings, contentDescription = null, modifier = Modifier.size(13.dp))
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text("Storage", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                if (!isSelfConnected) {
+                                    GoogleGLogo(size = 12.dp)
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("Connect", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                } else {
+                                    Icon(Icons.Default.Settings, contentDescription = null, modifier = Modifier.size(13.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("Storage", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
                             }
                         }
                     }
@@ -454,6 +481,7 @@ fun FamilyScreen(
                             member = member,
                             isSelf = isSelf,
                             isAdmin = isAdmin,
+                            onNavigateToStorage = onNavigateToStorage,
                             onRemove = { memberToRemove = member }
                         )
                     }
@@ -506,6 +534,7 @@ private fun FamilyMemberRosterCard(
     member: FamilyMember,
     isSelf: Boolean,
     isAdmin: Boolean,
+    onNavigateToStorage: () -> Unit,
     onRemove: () -> Unit
 ) {
     val username = member.username ?: "Member"
@@ -650,11 +679,28 @@ private fun FamilyMemberRosterCard(
                 }
             }
 
-            // Remove Button (Admin only, cannot remove self)
-            if (isAdmin && !isSelf) {
+            // Action buttons on right side of card:
+            if (isSelf && !hasStorage) {
+                Button(
+                    onClick = onNavigateToStorage,
+                    shape = RoundedCornerShape(Dimens.RadiusSmall),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = GoogleBlue,
+                        contentColor = Color.White
+                    ),
+                    modifier = Modifier
+                        .height(30.dp)
+                        .bounceClick(scaleDown = 0.94f) { onNavigateToStorage() }
+                ) {
+                    GoogleGLogo(size = 11.dp)
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("+15 GB", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                }
+            } else if (isAdmin && !isSelf) {
                 IconButton(
                     onClick = onRemove,
-                    modifier = Modifier.bounceClick(scaleDown = 0.9f) { onRemove() }
+                    modifier = Modifier.bounceClick(scaleDown = 0.9f)
                 ) {
                     Icon(
                         Icons.Default.PersonRemove,

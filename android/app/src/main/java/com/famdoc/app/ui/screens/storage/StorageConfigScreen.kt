@@ -24,6 +24,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -88,6 +91,19 @@ fun StorageConfigScreen(
         storageViewModel.loadStorageData()
     }
 
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                storageViewModel.loadStorageData()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
     LaunchedEffect(actionMessage) {
         actionMessage?.let { msg ->
             snackbarHostState.showSnackbar(msg)
@@ -112,6 +128,12 @@ fun StorageConfigScreen(
     val accounts = (accountsState as? Resource.Success)?.data ?: config?.accounts ?: emptyList()
     val members = (familyMembersState as? Resource.Success)?.data ?: emptyList()
     val stats = (dashboardStatsState as? Resource.Success)?.data
+
+    val myAccount = accounts.find {
+        (it.userId != null && it.userId == currentUser?.id) ||
+        (it.email != null && currentUser?.email != null && it.email.equals(currentUser.email, ignoreCase = true))
+    }
+    val hasConnectedStorage = myAccount != null && myAccount.status == "active"
 
     Scaffold(
         topBar = {
@@ -175,35 +197,22 @@ fun StorageConfigScreen(
                 contentPadding = PaddingValues(horizontal = Dimens.ScreenPaddingHorizontal, vertical = Dimens.Spacing16),
                 verticalArrangement = Arrangement.spacedBy(Dimens.Spacing16)
             ) {
-                // Non-admin notice if user is not admin
+                // Member Self-Service Card if user is not admin
                 if (!isAdmin && currentUser != null) {
                     item {
-                        Surface(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .staggeredEntrance(index = 0),
-                            shape = RoundedCornerShape(Dimens.RadiusLarge),
-                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(Dimens.Spacing14),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    Icons.Default.Info,
-                                    contentDescription = null,
-                                    tint = MintPrimary,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Spacer(modifier = Modifier.width(Dimens.Spacing10))
-                                Text(
-                                    text = "Storage pooling & configuration are managed by family administrators. You can view current pool status and capacity below.",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                        MemberStorageSelfServiceCard(
+                            currentUser = currentUser,
+                            myAccount = myAccount,
+                            onConnectClick = {
+                                storageViewModel.getGoogleOAuthUrl(clientId = config?.clientId)
+                            },
+                            onDisconnectClick = {
+                                myAccount?.let { accountToDisconnect = it }
+                            },
+                            onReauthClick = {
+                                storageViewModel.getGoogleOAuthUrl(clientId = config?.clientId, action = "reconnect")
                             }
-                        }
+                        )
                     }
                 }
 
@@ -263,10 +272,10 @@ fun StorageConfigScreen(
                             )
                         }
 
-                        if (isAdmin) {
+                        if (isAdmin || !hasConnectedStorage) {
                             Button(
                                 onClick = {
-                                    if (config?.clientId.isNullOrBlank()) {
+                                    if (isAdmin && config?.clientId.isNullOrBlank()) {
                                         showCredentialsDrawer = true
                                     } else {
                                         storageViewModel.getGoogleOAuthUrl(clientId = config?.clientId)
@@ -279,16 +288,16 @@ fun StorageConfigScreen(
                                     contentColor = Color.White
                                 ),
                                 modifier = Modifier.bounceClick(scaleDown = 0.95f) {
-                                    if (config?.clientId.isNullOrBlank()) {
+                                    if (isAdmin && config?.clientId.isNullOrBlank()) {
                                         showCredentialsDrawer = true
                                     } else {
                                         storageViewModel.getGoogleOAuthUrl(clientId = config?.clientId)
                                     }
                                 }
                             ) {
-                                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                                GoogleGLogo(size = 14.dp)
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text("Connect Drive", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                Text(if (isAdmin) "Connect Drive" else "Connect My Drive", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                             }
                         }
                     }
@@ -319,6 +328,7 @@ fun StorageConfigScreen(
                             account = acc,
                             members = members,
                             isAdmin = isAdmin,
+                            currentUser = currentUser,
                             onRename = { accountToRename = acc },
                             onAssign = { accountToAssign = acc },
                             onReauth = {
@@ -988,12 +998,17 @@ private fun GoogleAccountCard(
     account: StorageAccount,
     members: List<FamilyMember>,
     isAdmin: Boolean,
+    currentUser: User? = null,
     onRename: () -> Unit,
     onAssign: () -> Unit,
     onReauth: () -> Unit,
     onDisconnect: () -> Unit,
     onDelete: () -> Unit
 ) {
+    val isOwner = (account.userId != null && account.userId == currentUser?.id) ||
+        (account.email != null && currentUser?.email != null && account.email.equals(currentUser.email, ignoreCase = true))
+    val canManage = isAdmin || isOwner
+
     val quotaTotal = account.cachedQuotaTotal ?: 0L
     val quotaUsed = account.cachedQuotaUsed ?: 0L
     val percentUsed = if (quotaTotal > 0L) {
@@ -1074,6 +1089,24 @@ private fun GoogleAccountCard(
                                             fontWeight = FontWeight.SemiBold
                                         ),
                                         color = GoogleBlue,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
+
+                            if (isOwner) {
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Surface(
+                                    shape = RoundedCornerShape(4.dp),
+                                    color = MintPrimary.copy(alpha = 0.15f)
+                                ) {
+                                    Text(
+                                        text = "You",
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Bold
+                                        ),
+                                        color = MintPrimary,
                                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                     )
                                 }
@@ -1312,39 +1345,41 @@ private fun GoogleAccountCard(
             }
 
             // Action Buttons Row (if admin)
-            if (isAdmin) {
+            if (canManage) {
                 Spacer(modifier = Modifier.height(Dimens.Spacing12))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Rename Button
-                    OutlinedButton(
-                        onClick = onRename,
-                        shape = RoundedCornerShape(Dimens.RadiusSmall),
-                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-                        modifier = Modifier
-                            .height(32.dp)
-                            .bounceClick(scaleDown = 0.95f) { onRename() }
-                    ) {
-                        Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(13.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Rename", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
-                    }
+                    if (isAdmin) {
+                        // Rename Button
+                        OutlinedButton(
+                            onClick = onRename,
+                            shape = RoundedCornerShape(Dimens.RadiusSmall),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                            modifier = Modifier
+                                .height(32.dp)
+                                .bounceClick(scaleDown = 0.95f) { onRename() }
+                        ) {
+                            Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(13.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Rename", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                        }
 
-                    // Assign Button
-                    OutlinedButton(
-                        onClick = onAssign,
-                        shape = RoundedCornerShape(Dimens.RadiusSmall),
-                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-                        modifier = Modifier
-                            .height(32.dp)
-                            .bounceClick(scaleDown = 0.95f) { onAssign() }
-                    ) {
-                        Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(13.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Assign", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                        // Assign Button
+                        OutlinedButton(
+                            onClick = onAssign,
+                            shape = RoundedCornerShape(Dimens.RadiusSmall),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                            modifier = Modifier
+                                .height(32.dp)
+                                .bounceClick(scaleDown = 0.95f) { onAssign() }
+                        ) {
+                            Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(13.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Assign", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                        }
                     }
 
                     Spacer(modifier = Modifier.weight(1f))
@@ -1366,7 +1401,7 @@ private fun GoogleAccountCard(
                         }
                     }
 
-                    // Disconnect Button if active
+                    // Disconnect Button if active (both admin and owner can disconnect)
                     if (account.status == "active") {
                         Button(
                             onClick = onDisconnect,
@@ -1382,12 +1417,12 @@ private fun GoogleAccountCard(
                         ) {
                             Icon(Icons.Default.LinkOff, contentDescription = null, modifier = Modifier.size(13.dp))
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("Disconnect", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            Text(if (isOwner && !isAdmin) "Disconnect My Drive" else "Disconnect", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         }
                     }
 
-                    // Remove Button if disconnected
-                    if (account.status == "disconnected") {
+                    // Remove Button if disconnected (admin only)
+                    if (isAdmin && account.status == "disconnected") {
                         Button(
                             onClick = onDelete,
                             shape = RoundedCornerShape(Dimens.RadiusSmall),
@@ -1412,6 +1447,166 @@ private fun GoogleAccountCard(
 }
 
 // Empty State Card for Google Drives
+@Composable
+private fun MemberStorageSelfServiceCard(
+    currentUser: User?,
+    myAccount: StorageAccount?,
+    onConnectClick: () -> Unit,
+    onDisconnectClick: () -> Unit,
+    onReauthClick: () -> Unit
+) {
+    val hasConnected = myAccount != null && myAccount.status == "active"
+    val isError = myAccount != null && myAccount.status == "error"
+
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .staggeredEntrance(index = 0),
+        shape = RoundedCornerShape(Dimens.RadiusLarge),
+        color = if (hasConnected) MaterialTheme.colorScheme.surface else GoogleBlue.copy(alpha = 0.08f),
+        border = BorderStroke(
+            1.dp,
+            if (hasConnected) MintPrimary.copy(alpha = 0.35f) else GoogleBlue.copy(alpha = 0.3f)
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(Dimens.Spacing16)
+        ) {
+            if (hasConnected) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f).padding(end = 8.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(GoogleGreen.copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Default.CheckCircle,
+                                contentDescription = null,
+                                tint = GoogleGreen,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(Dimens.Spacing10))
+                        Column {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = myAccount?.label ?: "Your Connected Google Drive",
+                                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Surface(
+                                    shape = RoundedCornerShape(Dimens.RadiusSmall),
+                                    color = GoogleGreen.copy(alpha = 0.15f)
+                                ) {
+                                    Text(
+                                        text = "+15 GB Active",
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 10.sp,
+                                            color = GoogleGreen
+                                        ),
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
+                            Text(
+                                text = "Account: ${myAccount?.email ?: currentUser?.email ?: "—"}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    OutlinedButton(
+                        onClick = onDisconnectClick,
+                        shape = RoundedCornerShape(Dimens.RadiusSmall),
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = BrandError),
+                        border = BorderStroke(1.dp, BrandError.copy(alpha = 0.5f)),
+                        modifier = Modifier
+                            .height(32.dp)
+                            .bounceClick(scaleDown = 0.95f) { onDisconnectClick() }
+                    ) {
+                        Icon(Icons.Default.LinkOff, contentDescription = null, modifier = Modifier.size(13.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Disconnect", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                }
+            } else if (isError) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Warning, contentDescription = null, tint = BrandError, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Connection Needs Re-auth", fontWeight = FontWeight.Bold, color = BrandError)
+                        }
+                        Text("Your Google Drive token expired. Please re-authenticate.", style = MaterialTheme.typography.bodySmall)
+                    }
+                    Button(
+                        onClick = onReauthClick,
+                        shape = RoundedCornerShape(Dimens.RadiusMedium),
+                        colors = ButtonDefaults.buttonColors(containerColor = GoogleBlue),
+                        modifier = Modifier.bounceClick(scaleDown = 0.95f) { onReauthClick() }
+                    ) {
+                        Text("Re-auth", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    }
+                }
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            GoogleGLogo(size = 18.dp)
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Boost Family Vault Storage",
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Link your personal Google Drive account on this device to pool +15 GB of cloud storage into your family vault.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    Button(
+                        onClick = onConnectClick,
+                        shape = RoundedCornerShape(Dimens.RadiusMedium),
+                        colors = ButtonDefaults.buttonColors(containerColor = GoogleBlue, contentColor = Color.White),
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+                        modifier = Modifier.bounceClick(scaleDown = 0.94f) { onConnectClick() }
+                    ) {
+                        GoogleGLogo(size = 14.dp)
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Connect Drive", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    }
+                }
+            }
+        }
+    }
+}
+
 @Composable
 private fun EmptyGoogleDrivesCard(
     isAdmin: Boolean,
@@ -1456,18 +1651,16 @@ private fun EmptyGoogleDrivesCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            if (isAdmin) {
-                Spacer(modifier = Modifier.height(Dimens.Spacing16))
-                Button(
-                    onClick = onConnectClick,
-                    shape = RoundedCornerShape(Dimens.RadiusMedium),
-                    colors = ButtonDefaults.buttonColors(containerColor = GoogleBlue, contentColor = Color.White),
-                    modifier = Modifier.bounceClick(scaleDown = 0.95f) { onConnectClick() }
-                ) {
-                    GoogleGLogo(size = 14.dp)
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("Connect First Drive", fontWeight = FontWeight.Bold)
-                }
+            Spacer(modifier = Modifier.height(Dimens.Spacing16))
+            Button(
+                onClick = onConnectClick,
+                shape = RoundedCornerShape(Dimens.RadiusMedium),
+                colors = ButtonDefaults.buttonColors(containerColor = GoogleBlue, contentColor = Color.White),
+                modifier = Modifier.bounceClick(scaleDown = 0.95f) { onConnectClick() }
+            ) {
+                GoogleGLogo(size = 14.dp)
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(if (isAdmin) "Connect First Drive" else "Connect Google Drive (+15 GB)", fontWeight = FontWeight.Bold)
             }
         }
     }

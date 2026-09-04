@@ -82,7 +82,7 @@ fun ForgotPasswordScreen(
                 navigationIcon = {
                     IconButton(
                         onClick = onNavigateBackToLogin,
-                        modifier = Modifier.bounceClick(scaleDown = 0.9f) { onNavigateBackToLogin() }
+                        modifier = Modifier.bounceClick(scaleDown = 0.9f)
                     ) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
@@ -209,11 +209,7 @@ fun ForgotPasswordScreen(
                             .staggeredEntrance(index = 4)
                             .fillMaxWidth()
                             .height(Dimens.PrimaryButtonHeight)
-                            .bounceClick(scaleDown = 0.96f) {
-                                if (email.isNotBlank()) {
-                                    authViewModel.requestPasswordReset(email.trim())
-                                }
-                            },
+                            .bounceClick(scaleDown = 0.96f),
                         shape = RoundedCornerShape(Dimens.RadiusMedium),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.primary,
@@ -261,11 +257,7 @@ fun ForgotPasswordScreen(
                             .staggeredEntrance(index = 4)
                             .fillMaxWidth()
                             .height(Dimens.PrimaryButtonHeight)
-                            .bounceClick(scaleDown = 0.96f) {
-                                if (otpCode.length == 6) {
-                                    authViewModel.verifyResetOTP(email.trim(), otpCode.trim())
-                                }
-                            },
+                            .bounceClick(scaleDown = 0.96f),
                         shape = RoundedCornerShape(Dimens.RadiusMedium),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.primary,
@@ -288,6 +280,7 @@ fun ForgotPasswordScreen(
                         value = newPassword,
                         onValueChange = { newPassword = it; localError = null },
                         label = { Text("New Password") },
+                        supportingText = { Text("At least 8 characters, with 1 uppercase and 1 number") },
                         leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
                         visualTransformation = PasswordVisualTransformation(),
                         singleLine = true,
@@ -314,12 +307,23 @@ fun ForgotPasswordScreen(
                     Spacer(modifier = Modifier.height(Dimens.Spacing24))
                     Button(
                         onClick = {
-                            if (newPassword != confirmNewPassword) {
-                                localError = "Passwords do not match."
-                            } else if (newPassword.length < 8) {
-                                localError = "Password must be at least 8 characters."
-                            } else {
-                                authViewModel.confirmPasswordReset(email.trim(), otpCode.trim(), newPassword)
+                            when {
+                                newPassword != confirmNewPassword -> {
+                                    localError = "Passwords do not match."
+                                }
+                                newPassword.length < 8 -> {
+                                    localError = "Password must be at least 8 characters."
+                                }
+                                !newPassword.any { it.isUpperCase() } -> {
+                                    localError = "Password must contain at least one uppercase letter."
+                                }
+                                !newPassword.any { it.isDigit() } -> {
+                                    localError = "Password must contain at least one number."
+                                }
+                                else -> {
+                                    localError = null
+                                    authViewModel.confirmPasswordReset(email.trim(), otpCode.trim(), newPassword)
+                                }
                             }
                         },
                         enabled = newPassword.isNotBlank() && resetState !is Resource.Loading,
@@ -327,15 +331,7 @@ fun ForgotPasswordScreen(
                             .staggeredEntrance(index = 5)
                             .fillMaxWidth()
                             .height(Dimens.PrimaryButtonHeight)
-                            .bounceClick(scaleDown = 0.96f) {
-                                if (newPassword != confirmNewPassword) {
-                                    localError = "Passwords do not match."
-                                } else if (newPassword.length < 8) {
-                                    localError = "Password must be at least 8 characters."
-                                } else {
-                                    authViewModel.confirmPasswordReset(email.trim(), otpCode.trim(), newPassword)
-                                }
-                            },
+                            .bounceClick(scaleDown = 0.96f),
                         shape = RoundedCornerShape(Dimens.RadiusMedium),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.primary,

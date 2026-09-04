@@ -25,5 +25,5 @@ interface FoldersApi {
     ): Response<FolderItem>
 
     @DELETE("api/folders/{folder_id}")
-    suspend fun deleteFolder(@Path("folder_id") folderId: Int): Response<ApiResponse>
+    suspend fun deleteFolder(@Path("folder_id") folderId: Int): Response<Unit>
 }
