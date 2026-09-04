@@ -199,6 +199,8 @@
         </a>
       `;
 
+      bottomNav.id = "bottomNav";
+
       // 6. View Mount Point
       const mainContent = document.createElement("main");
       mainContent.className = "main-content";
@@ -231,6 +233,7 @@
         cachedUser = null;
         layoutInjected = false;
         document.body.classList.remove("sidebar-collapsed");
+        document.body.classList.remove("drawer-open");
         container.innerHTML = `<div id="view-mount-point"></div>`;
         this.destroyLayoutShell();
         window.FamDocRouter.navigate('/');
@@ -259,24 +262,28 @@
         }
       };
 
-      const toggleSidebar = (e) => {
-        if (e) e.stopPropagation();
-        sidebarMenu.classList.toggle("open");
-        
-        if (sidebarMenu.classList.contains("open")) {
-          drawerBackdrop.classList.add("show");
-          if (hamburger) hamburger.querySelector("i").className = "fas fa-times";
-        } else {
-          drawerBackdrop.classList.remove("show");
-          if (hamburger) hamburger.querySelector("i").className = "fas fa-bars";
-        }
+      const openSidebar = () => {
+        sidebarMenu.classList.add("open");
+        drawerBackdrop.classList.add("show");
+        document.body.classList.add("drawer-open");
+        bottomNav.classList.add("drawer-hidden");
+        if (hamburger) hamburger.querySelector("i").className = "fas fa-times";
       };
 
       const closeSidebar = () => {
+        sidebarMenu.classList.remove("open");
+        drawerBackdrop.classList.remove("show");
+        document.body.classList.remove("drawer-open");
+        bottomNav.classList.remove("drawer-hidden");
+        if (hamburger) hamburger.querySelector("i").className = "fas fa-bars";
+      };
+
+      const toggleSidebar = (e) => {
+        if (e) e.stopPropagation();
         if (sidebarMenu.classList.contains("open")) {
-          sidebarMenu.classList.remove("open");
-          drawerBackdrop.classList.remove("show");
-          if (hamburger) hamburger.querySelector("i").className = "fas fa-bars";
+          closeSidebar();
+        } else {
+          openSidebar();
         }
       };
 
@@ -317,6 +324,22 @@
       });
       document.getElementById("sidebar-profile-badge").addEventListener("click", closeSidebar);
 
+      // Close sidebar if any bottom-nav link is tapped
+      bottomNav.querySelectorAll(".nav-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          closeSidebar();
+        });
+      });
+
+      // Handle screen resize safely between desktop and mobile modes
+      window.addEventListener("resize", () => {
+        if (!isMobile()) {
+          closeSidebar();
+        } else {
+          document.body.classList.remove("sidebar-collapsed");
+        }
+      });
+
       // Force update theme icons
       if (window.FamDocTheme) {
         window.FamDocTheme.updateToggleIcons(window.FamDocTheme.getCurrentTheme());
@@ -344,6 +367,8 @@
       if (hasWrapper) {
         container.classList.remove("ready");
         document.body.classList.remove("layout-active");
+        document.body.classList.remove("drawer-open");
+        document.body.classList.remove("sidebar-collapsed");
         container.innerHTML = `<div id="view-mount-point"></div>`;
         layoutInjected = false;
         container.classList.add("ready");

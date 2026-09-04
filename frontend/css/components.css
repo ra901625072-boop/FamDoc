@@ -531,6 +531,15 @@ textarea.form-control {
   transform: scale(0.92) translateY(0);
 }
 
+/* Hide Floating Action Button & Bulk Actions when Drawer is open */
+body.drawer-open .famdoc-fab,
+body.drawer-open .bulk-actions-bar {
+  transform: scale(0.7) translateY(160%) !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transition: transform 0.25s ease, opacity 0.2s ease !important;
+}
+
 @media (max-width: 576px) {
   .famdoc-card {
     padding: 1.25rem;
