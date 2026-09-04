@@ -768,7 +768,7 @@
           iconHtml = `
             <div class="thumbnail-wrapper">
               <i class="item-icon ${fallbackIconClass} thumbnail-fallback"></i>
-              <img class="item-icon item-thumbnail" data-file-id="${file.id}" src="${authenticatedPreviewUrl}" alt="${FamDocAPI.utils.escapeHtml(file.filename)}" onload="if (this.src.startsWith('data:image/gif;')) return; this.style.display=''; FamDocAPI.utils.cacheImageThumbnail(this, '${file.id}', ${isGooglePdf});" onerror="if (this.src.startsWith('data:image/gif;')) return; this.style.display='none';">
+              <img class="item-icon item-thumbnail" data-file-id="${file.id}" src="${authenticatedPreviewUrl}" alt="${FamDocAPI.utils.escapeHtml(file.filename)}" onload="if (this.src.startsWith('data:image/gif;')) return; this.style.display=''; FamDocAPI.utils.cacheImageThumbnail(this, '${file.id}', ${isGooglePdf});" onerror="if (this.src.startsWith('data:image/gif;')) return; this.style.display='none'; const fb = this.closest('.thumbnail-wrapper')?.querySelector('.thumbnail-fallback'); if (fb) fb.style.opacity='1';">
             </div>
           `;
         }

@@ -156,7 +156,7 @@
           
           <a href="/apk/FamDoc.apk" download class="btn-apk-download" title="Download Android APK">
             <i class="fab fa-android"></i>
-            <span>Get Android App (APK)</span>
+            <span>Get Android App</span>
           </a>
 
           <div class="sidebar-footer-divider"></div>

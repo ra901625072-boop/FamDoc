@@ -834,7 +834,12 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
 }
 
+.items-grid .item-preview-area .item-icon.item-thumbnail.loaded,
+.items-grid .thumbnail-wrapper .item-icon.item-thumbnail.loaded,
+.items-grid .item-icon.item-thumbnail.loaded,
+.items-list .item-icon.item-thumbnail.loaded,
 .item-icon.item-thumbnail.loaded {
-  opacity: 1;
+  opacity: 1 !important;
+  display: block !important;
 }
 
