@@ -290,7 +290,106 @@
 .storage-segment-document, .dot-document { background-color: var(--category-doc, #8b5cf6); }
 .storage-segment-sheet, .dot-sheet { background-color: var(--category-sheet, #10b981); }
 .storage-segment-text, .dot-text { background-color: var(--category-text, #f59e0b); }
-.storage-segment-other, .dot-other { background-color: var(--category-other, #6b7280); }
+/* ==========================================================================
+   Recent Uploads Section Styling (Matches Android File List Items)
+   ========================================================================== */
+#recent-uploads-list .vault-item {
+  display: flex !important;
+  align-items: center !important;
+  flex-direction: row !important;
+  gap: 0.85rem !important;
+  padding: 0.75rem 1rem !important;
+  border-radius: var(--radius-md, 12px) !important;
+  background-color: var(--surface-card) !important;
+  border: 1px solid var(--border-paper) !important;
+  transition: var(--transition-smooth) !important;
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+#recent-uploads-list .vault-item:hover {
+  border-color: var(--card-glow-border) !important;
+  background-color: var(--surface-paper-hover) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+
+/* Fallback icons container for non-images */
+#recent-uploads-list .vault-item i.item-icon {
+  width: 40px !important;
+  height: 40px !important;
+  min-width: 40px !important;
+  max-width: 40px !important;
+  border-radius: var(--radius-sm, 8px) !important;
+  background: var(--surface-paper-tint) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 1.15rem !important;
+  flex-shrink: 0 !important;
+  border: 1px solid var(--border-paper) !important;
+}
+
+/* Thumbnail images */
+#recent-uploads-list .vault-item img.item-thumbnail,
+#recent-uploads-list .vault-item .pdf-thumbnail-container {
+  width: 40px !important;
+  height: 40px !important;
+  min-width: 40px !important;
+  max-width: 40px !important;
+  border-radius: var(--radius-sm, 8px) !important;
+  object-fit: cover !important;
+  flex-shrink: 0 !important;
+  border: 1px solid var(--border-paper) !important;
+  position: static !important;
+  transform: none !important;
+  opacity: 1 !important;
+  display: block !important;
+}
+
+/* Item details flex layout */
+#recent-uploads-list .vault-item .item-details {
+  flex: 1 !important;
+  min-width: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 1rem !important;
+}
+
+#recent-uploads-list .vault-item .item-name {
+  font-weight: 600 !important;
+  font-size: 0.88rem !important;
+  color: var(--text-ink) !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  flex: 1 !important;
+  min-width: 0 !important;
+}
+
+#recent-uploads-list .vault-item .item-meta-group {
+  display: flex !important;
+  align-items: center !important;
+  gap: 1.25rem !important;
+  flex-shrink: 0 !important;
+}
+
+#recent-uploads-list .vault-item .item-meta-size {
+  font-size: 0.76rem !important;
+  font-family: var(--font-mono) !important;
+  color: var(--text-ink-muted) !important;
+  font-weight: 500 !important;
+  text-align: right !important;
+  min-width: 58px !important;
+}
+
+#recent-uploads-list .vault-item .item-meta-date {
+  font-size: 0.76rem !important;
+  color: var(--text-ink-muted) !important;
+  text-align: right !important;
+  min-width: 65px !important;
+}
 
 /* Dashboard Two-Column Sections */
 .dashboard-sections {
@@ -453,10 +552,10 @@
   #recent-uploads-list .vault-item .item-details,
   #recent-uploads-list .skel-row .item-details {
     display: flex !important;
-    flex-direction: row !important;
-    flex-wrap: wrap !important;
-    align-items: center !important;
-    gap: 0.15rem 0.5rem !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 0.2rem !important;
+    width: 100% !important;
   }
   
   #recent-uploads-list .vault-item .item-name,
@@ -464,6 +563,12 @@
     width: 100% !important;
     font-size: 0.85rem !important;
     margin-bottom: 0.05rem !important;
+  }
+
+  #recent-uploads-list .vault-item .item-meta-group {
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.75rem !important;
   }
   
   #recent-uploads-list .vault-item .item-meta-size,
@@ -473,5 +578,7 @@
     display: inline-block !important;
     font-size: 0.72rem !important;
     width: auto !important;
+    min-width: 0 !important;
+    text-align: left !important;
   }
 }

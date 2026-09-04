@@ -45,6 +45,10 @@
             <i class="fas fa-key"></i>
             <span>Join with Family Code</span>
           </a>
+          <a href="/apk/FamDoc.apk" download class="btn btn-secondary" id="btn-download-apk" style="gap: 0.6rem;">
+            <i class="fab fa-android" style="color: var(--color-primary); font-size: 1.15rem;"></i>
+            <span>Download Android App</span>
+          </a>
           <a href="#/login" class="btn-login-link" id="btn-login">
             <span>Already have a vault? Log In &rarr;</span>
           </a>
@@ -64,17 +68,25 @@
             <div class="feature-icon-badge badge-stub">
               <i class="fas fa-ticket-alt"></i>
             </div>
-            <h3 class="feature-title">Shared Keepsake Code</h3>
-            <p class="feature-desc">Invite members using a single physical-looking code. Admins manage rosters, families upload and search effortlessly.</p>
+            <h3 class="feature-title">Simple Family Onboarding</h3>
+            <p class="feature-desc">One-time perforated family code stubs make onboarding grandparents and parents seamless.</p>
           </div>
           
           <div class="landing-feature-card">
             <div class="feature-icon-badge badge-search">
               <i class="fas fa-search"></i>
             </div>
-            <h3 class="feature-title">Instant Document Previews</h3>
-            <p class="feature-desc">Filter by type, uploader, date, and keyword with built-in instant PDF, image, and text previews right in your browser.</p>
+            <h3 class="feature-title">Immediate Full-Text Discovery</h3>
+            <p class="feature-desc">Locate vital records, certificates, and photos instantly across all family folders.</p>
           </div>
+        </div>
+
+        <div class="landing-footer" style="margin-top: 3.5rem; text-align: center; font-size: 0.82rem; color: var(--text-ink-muted); display: flex; align-items: center; justify-content: center; gap: 0.6rem; flex-wrap: wrap;">
+          <span>FamDoc — Family Document Vault</span>
+          <span>•</span>
+          <a href="/privacy.html" style="color: var(--text-ink-muted); text-decoration: underline;">Privacy Policy</a>
+          <span>•</span>
+          <a href="/apk/FamDoc.apk" download style="color: var(--color-primary); font-weight: 600; text-decoration: none;"><i class="fab fa-android"></i> Android APK (v1.0)</a>
         </div>
       </div>
     `;

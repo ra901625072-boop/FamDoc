@@ -3,100 +3,400 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Privacy Policy - Family Document Vault (FDMS)</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css">
+  <title>Privacy Policy — FamDoc Family Document Vault</title>
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="/img/logo.svg">
+  
+  <!-- FontAwesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+  
+  <!-- Unified Design System Stylesheets -->
+  <link rel="stylesheet" href="/css/style.css">
+  
+  <!-- Critical Zero-Flash Theme Init script -->
+  <script>
+    (function() {
+      const savedMode = localStorage.getItem('famdoc-theme-mode') || localStorage.getItem('famdoc-theme');
+      if (savedMode === 'dark' || savedMode === 'light') {
+        document.documentElement.setAttribute('data-theme', savedMode);
+      } else {
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        document.documentElement.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+      }
+    })();
+  </script>
+
   <style>
-    body {
-      background-color: #f8fafc;
-      color: #1e293b;
-      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-      line-height: 1.6;
-      padding: 2rem 1rem;
-      margin: 0;
-    }
-    .policy-container {
-      max-width: 800px;
+    .privacy-page-wrapper {
+      max-width: 860px;
+      width: 100%;
       margin: 0 auto;
-      background: #ffffff;
-      border: 1px solid #e2e8f0;
-      border-radius: 12px;
-      padding: 2.5rem;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+      padding: 2rem 1rem 4rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
     }
-    h1 {
-      font-family: 'Playfair Display', serif;
-      font-size: 2rem;
-      color: #0f172a;
+
+    .privacy-top-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
       margin-bottom: 0.5rem;
     }
-    h2 {
+
+    .privacy-card {
+      background-color: var(--surface-card);
+      border: 1px solid var(--border-paper);
+      border-radius: var(--radius-lg, 16px);
+      box-shadow: var(--shadow-md);
+      padding: 2.75rem 2.5rem;
+      position: relative;
+      overflow: hidden;
+      transition: var(--transition-smooth);
+    }
+
+    .privacy-card:hover {
+      border-color: var(--card-glow-border);
+    }
+
+    .privacy-header-brand {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      margin-bottom: 2.5rem;
+      position: relative;
+    }
+
+    .privacy-crest-img {
+      width: 58px;
+      height: 58px;
+      margin-bottom: 1rem;
+      filter: drop-shadow(0 4px 12px rgba(4, 120, 87, 0.22));
+    }
+
+    .privacy-brand-title {
+      font-family: var(--font-serif);
+      font-size: 1.8rem;
+      font-weight: 800;
+      line-height: 1.1;
+      letter-spacing: -0.5px;
+    }
+
+    .privacy-brand-title .fam-part {
+      color: var(--text-ink);
+    }
+
+    .privacy-brand-title .doc-part {
+      color: #0052FF;
+    }
+
+    [data-theme="dark"] .privacy-brand-title .doc-part {
+      color: #38bdf8;
+    }
+
+    .privacy-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.35rem 0.85rem;
+      border-radius: var(--radius-pill, 28px);
+      background-color: var(--color-primary-container);
+      color: var(--color-primary);
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      margin-top: 0.75rem;
+      margin-bottom: 1rem;
+      border: 1px solid var(--border-paper);
+    }
+
+    .privacy-title {
+      font-family: var(--font-serif);
+      font-size: 2.2rem;
+      font-weight: 800;
+      color: var(--text-ink);
+      margin-bottom: 0.35rem;
+      letter-spacing: -0.5px;
+    }
+
+    .privacy-updated {
+      font-size: 0.85rem;
+      color: var(--text-ink-muted);
+      font-family: var(--font-mono);
+    }
+
+    .privacy-intro {
+      font-size: 1rem;
+      line-height: 1.7;
+      color: var(--text-ink);
+      margin-bottom: 2rem;
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border-paper);
+    }
+
+    .policy-section {
+      margin-bottom: 2.25rem;
+    }
+
+    .policy-section-title {
+      font-family: var(--font-serif);
       font-size: 1.25rem;
-      color: #1e293b;
-      margin-top: 1.75rem;
-      margin-bottom: 0.5rem;
-      border-bottom: 1px solid #f1f5f9;
-      padding-bottom: 0.35rem;
+      font-weight: 700;
+      color: var(--text-ink);
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      margin-bottom: 0.85rem;
     }
-    p, li {
+
+    .policy-section-title i {
+      color: var(--color-primary);
+      font-size: 1.1rem;
+    }
+
+    .policy-section p {
+      font-size: 0.94rem;
+      line-height: 1.65;
+      color: var(--text-ink);
+      margin-bottom: 0.75rem;
+    }
+
+    .policy-list {
+      list-style: none;
+      padding-left: 0;
+      margin: 0.85rem 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .policy-list li {
+      position: relative;
+      padding-left: 1.75rem;
       font-size: 0.92rem;
-      color: #475569;
+      line-height: 1.6;
+      color: var(--text-ink);
     }
-    .badge-scope {
-      background-color: #eff6ff;
-      color: #1d4ed8;
-      border: 1px solid #bfdbfe;
-      padding: 0.2rem 0.5rem;
-      border-radius: 4px;
-      font-family: monospace;
-      font-size: 0.82rem;
+
+    .policy-list li::before {
+      content: "\f058";
+      font-family: "Font Awesome 5 Free";
+      font-weight: 900;
+      position: absolute;
+      left: 0;
+      top: 2px;
+      color: var(--color-primary);
+      font-size: 0.9rem;
     }
-    .nav-back {
+
+    .policy-callout {
+      background-color: var(--surface-paper-tint);
+      border: 1px solid var(--border-paper);
+      border-left: 4px solid var(--color-primary);
+      border-radius: var(--radius-sm, 8px);
+      padding: 1.15rem 1.35rem;
+      margin: 1.25rem 0;
+    }
+
+    .policy-callout p {
+      margin-bottom: 0;
+      font-size: 0.9rem;
+      line-height: 1.6;
+      color: var(--text-ink);
+    }
+
+    .scope-code-pill {
       display: inline-block;
-      margin-bottom: 1.5rem;
-      color: #3b82f6;
-      text-decoration: none;
-      font-weight: 600;
-      font-size: 0.88rem;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      background-color: var(--color-primary-container);
+      color: var(--color-primary);
+      padding: 0.2rem 0.55rem;
+      border-radius: var(--radius-xs, 4px);
+      border: 1px solid var(--border-paper);
+      word-break: break-all;
     }
-    .nav-back:hover {
-      text-decoration: underline;
+
+    .privacy-footer-actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-top: 2.5rem;
+      padding-top: 1.75rem;
+      border-top: 1px solid var(--border-paper);
+    }
+
+    @media (max-width: 640px) {
+      .privacy-card {
+        padding: 1.75rem 1.25rem;
+      }
+      .privacy-title {
+        font-size: 1.75rem;
+      }
+      .privacy-footer-actions {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .privacy-footer-actions .btn {
+        width: 100%;
+        justify-content: center;
+      }
     }
   </style>
 </head>
 <body>
-  <div class="policy-container">
-    <a href="/" class="nav-back">← Back to Family Document Vault</a>
-    <h1>Privacy Policy</h1>
-    <p><em>Last updated: September 1, 2026</em></p>
 
-    <p>Family Document Management System (FDMS / "Family Document Vault") is dedicated to protecting the privacy and security of you and your family members. This Privacy Policy outlines how our application collects, uses, and safeguards information when you connect personal storage services, including Google Drive.</p>
+  <div class="privacy-page-wrapper fd-fade-up">
+    <!-- Top Navigation Bar -->
+    <div class="privacy-top-nav">
+      <a href="/" class="btn btn-secondary" style="gap: 0.55rem; padding: 0.5rem 1rem;">
+        <i class="fas fa-arrow-left"></i>
+        <span>Back to Vault</span>
+      </a>
 
-    <h2>1. Information We Collect</h2>
-    <ul>
-      <li><strong>Account Details:</strong> Basic profile information including email address and username used during family vault registration.</li>
-      <li><strong>Google Account Information:</strong> When you connect Google Drive, we collect your Google email address and public account ID solely to identify your connected drive in the family roster.</li>
-      <li><strong>Uploaded Document Metadata:</strong> File names, file sizes, document categories, and timestamps to organize family archives.</li>
-    </ul>
+      <button class="theme-toggle-btn guest-theme-toggle" aria-label="Toggle theme" title="Toggle Theme">
+        <i class="fas fa-moon"></i>
+      </button>
+    </div>
 
-    <h2>2. Google Drive API Usage & Data Isolation</h2>
-    <p>FDMS accesses Google Drive strictly through the restricted <span class="badge-scope">https://www.googleapis.com/auth/drive.file</span> scope.</p>
-    <ul>
-      <li><strong>Strict App Isolation:</strong> FDMS only accesses, creates, and modifies files and folders that were uploaded through FDMS. <strong>FDMS cannot see, read, modify, or delete your existing personal Google Drive files, photos, or emails.</strong></li>
-      <li><strong>No Data Sharing / Selling:</strong> We do not sell, rent, monetize, or transfer your personal files, Google user data, or document contents to third parties or advertising networks.</li>
-      <li><strong>Storage Pooling:</strong> The Google Drive API is used exclusively to store encrypted family documents and calculate available free storage quotas.</li>
-    </ul>
+    <!-- Main Policy Card -->
+    <div class="privacy-card">
+      <div class="privacy-header-brand">
+        <img src="/img/logo.svg" alt="FamDoc Crest" class="privacy-crest-img">
+        <div class="privacy-brand-title">
+          <span class="fam-part">Fam</span><span class="doc-part">Doc</span>
+        </div>
+        <div class="privacy-badge">
+          <i class="fas fa-shield-alt"></i>
+          <span>Official Privacy & Data Protection Policy</span>
+        </div>
+        <h1 class="privacy-title">Privacy Policy</h1>
+        <div class="privacy-updated">Last Updated: September 1, 2026 • Version 1.2</div>
+      </div>
 
-    <h2>3. Data Retention and Deletion</h2>
-    <p>You can disconnect your personal Google Drive account at any time from the Cloud Storage settings page. Upon disconnection, your OAuth access tokens are permanently deleted from our system, and family files are safely transferred to other family drives.</p>
+      <p class="privacy-intro">
+        <strong>Family Document Management System (FDMS / "FamDoc")</strong> is designed and operated to safeguard the privacy, confidentiality, and security of you and your family members. This Privacy Policy details how our application collects, uses, protects, and isolates information when you access the platform and connect storage services, including Google Drive.
+      </p>
 
-    <h2>4. Security Measures</h2>
-    <p>All authentication tokens are securely encrypted in the database. Communications between your browser, backend server, and Google Cloud APIs occur exclusively over encrypted HTTPS/TLS connections.</p>
+      <!-- Section 1 -->
+      <div class="policy-section">
+        <h2 class="policy-section-title">
+          <i class="fas fa-user-shield"></i>
+          <span>1. Information We Collect</span>
+        </h2>
+        <p>To provide private family document archival, FamDoc processes only the minimum necessary data:</p>
+        <ul class="policy-list">
+          <li><strong>Account Details:</strong> Basic profile credentials including username and email address supplied during family vault registration.</li>
+          <li><strong>Connected Storage Identifiers:</strong> When connecting Google Drive, we store your Google account email address and drive identifier strictly to display your connected storage in your family roster.</li>
+          <li><strong>Document Metadata:</strong> File names, file sizes, MIME types, document categories, and upload timestamps needed to organize your family vault.</li>
+        </ul>
+      </div>
 
-    <h2>5. Contact Information</h2>
-    <p>If you have any questions or concerns regarding this Privacy Policy, please contact your family vault administrator or developer contact email.</p>
+      <!-- Section 2 -->
+      <div class="policy-section">
+        <h2 class="policy-section-title">
+          <i class="fas fa-lock"></i>
+          <span>2. Google Drive API Usage & Strict Data Isolation</span>
+        </h2>
+        <p>
+          FamDoc connects to the Google Drive API exclusively under the restricted drive-file permission scope:
+          <br>
+          <span class="scope-code-pill">https://www.googleapis.com/auth/drive.file</span>
+        </p>
+
+        <div class="policy-callout">
+          <p>
+            <strong>Strict App Isolation Guarantee:</strong> Under the <code>drive.file</code> scope, FamDoc can <strong>only</strong> access, view, or manage files and folders created or uploaded directly through FamDoc. <strong>FamDoc has zero technical ability to see, read, modify, or delete your existing personal Google Drive files, Google Photos, Gmail, or documents uploaded by other apps.</strong>
+          </p>
+        </div>
+
+        <ul class="policy-list">
+          <li><strong>Zero Data Selling:</strong> We never sell, monetize, rent, or trade your documents, family records, or personal Google account data to third parties, advertisers, or data brokers.</li>
+          <li><strong>No Artificial Intelligence Training:</strong> Your family records and files are never used to train public machine learning or AI models.</li>
+          <li><strong>Storage Pooling Only:</strong> The Google Drive API is utilized solely to provide secure encrypted storage for family keepsakes and calculate quota utilization.</li>
+        </ul>
+      </div>
+
+      <!-- Section 3 -->
+      <div class="policy-section">
+        <h2 class="policy-section-title">
+          <i class="fas fa-trash-restore-alt"></i>
+          <span>3. Data Retention & Revocation of Access</span>
+        </h2>
+        <p>
+          You maintain full ownership and control over your family documents at all times:
+        </p>
+        <ul class="policy-list">
+          <li>You may disconnect your Google Drive at any time from the Cloud Storage management page.</li>
+          <li>Upon disconnection, OAuth access and refresh tokens are immediately and irreversibly purged from our database.</li>
+          <li>Files placed in the Recycle Bin are retained for 30 days for accidental deletion recovery and can be permanently purged at any time.</li>
+        </ul>
+      </div>
+
+      <!-- Section 4 -->
+      <div class="policy-section">
+        <h2 class="policy-section-title">
+          <i class="fas fa-shield-virus"></i>
+          <span>4. Encryption & Security Architecture</span>
+        </h2>
+        <p>
+          FamDoc enforces end-to-end security protocols across all application layers:
+        </p>
+        <ul class="policy-list">
+          <li>All network traffic between your browser, mobile app, and backend APIs is encrypted using industry-standard TLS/HTTPS.</li>
+          <li>Storage authorization credentials and tokens are encrypted at rest in the database using modern cryptographic standards.</li>
+          <li>Previews and file streaming utilize ephemeral single-use verification tokens.</li>
+        </ul>
+      </div>
+
+      <!-- Section 5 -->
+      <div class="policy-section">
+        <h2 class="policy-section-title">
+          <i class="fas fa-envelope-open-text"></i>
+          <span>5. Contact & Support</span>
+        </h2>
+        <p>
+          If you have questions regarding this Privacy Policy or your family vault data, please contact your family vault administrator or our developer support team at:
+        </p>
+        <p>
+          <a href="mailto:ra901625072@gmail.com" style="color: var(--color-primary); font-weight: 600; text-decoration: none;">
+            <i class="fas fa-envelope" style="margin-right: 0.35rem;"></i>ra901625072@gmail.com
+          </a>
+        </p>
+      </div>
+
+      <!-- Footer Actions -->
+      <div class="privacy-footer-actions">
+        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+          <a href="/#/" class="btn btn-secondary" style="font-size: 0.85rem;">
+            <i class="fas fa-home"></i>
+            <span>Home</span>
+          </a>
+          <a href="/apk/FamDoc.apk" download class="btn btn-secondary" style="font-size: 0.85rem; gap: 0.5rem;">
+            <i class="fab fa-android" style="color: var(--color-primary);"></i>
+            <span>Download Android App</span>
+          </a>
+        </div>
+
+        <a href="/#/register" class="btn btn-primary" style="font-size: 0.88rem;">
+          <i class="fas fa-shield-alt"></i>
+          <span>Create Family Vault</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- Page Copyright Footer -->
+    <div style="text-align: center; font-size: 0.8rem; color: var(--text-ink-muted); margin-top: 1rem;">
+      FamDoc — Shared Family Keepsake Vault • Built with privacy and care for your family.
+    </div>
   </div>
+
+  <!-- Theme Manager Engine -->
+  <script src="/js/theme.js"></script>
 </body>
 </html>

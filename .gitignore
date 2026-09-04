@@ -70,6 +70,7 @@ captures/
 .externalNativeBuild
 .cxx/
 *.apk
+!frontend/apk/*.apk
 *.ap_
 *.aab
 *.dex

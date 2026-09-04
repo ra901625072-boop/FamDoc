@@ -100,17 +100,23 @@
 
       sidebar.innerHTML = `
         <!-- Drawer Header Banner with Ambient Gradient & Pulsing Avatar -->
-        <div class="drawer-header-banner" id="sidebar-profile-badge" role="button" tabindex="0" title="View Profile">
-          <div class="drawer-avatar-wrapper">
-            <div class="user-avatar drawer-avatar pulsing-aura">
-              ${userInitials}
+        <div class="drawer-header-banner">
+          <div class="drawer-profile-info" id="sidebar-profile-badge" role="button" tabindex="0" title="View Profile">
+            <div class="drawer-avatar-wrapper">
+              <div class="user-avatar drawer-avatar pulsing-aura">
+                ${userInitials}
+              </div>
+            </div>
+            <div class="drawer-user-meta">
+              <div class="drawer-user-name">${user.username || 'FamDoc User'}</div>
+              <div class="drawer-role-badge">${roleTitle}</div>
+              <div class="drawer-user-email">${user.email || ''}</div>
             </div>
           </div>
-          <div class="drawer-user-meta">
-            <div class="drawer-user-name">${user.username || 'FamDoc User'}</div>
-            <div class="drawer-role-badge">${roleTitle}</div>
-            <div class="drawer-user-email">${user.email || ''}</div>
-          </div>
+          <button class="sidebar-toggle-btn" id="sidebarCollapseBtn" type="button" aria-label="Close or collapse menu" title="Close or collapse menu">
+            <i class="fas fa-chevron-left desktop-only"></i>
+            <i class="fas fa-times mobile-only"></i>
+          </button>
         </div>
         
         <!-- Navigation Items List -->
@@ -148,6 +154,11 @@
             ${window.FamDocTheme ? window.FamDocTheme.renderSegmentedSelectorHTML('sidebar') : ''}
           </div>
           
+          <a href="/apk/FamDoc.apk" download class="btn-apk-download" title="Download Android APK">
+            <i class="fab fa-android"></i>
+            <span>Get Android App (APK)</span>
+          </a>
+
           <div class="sidebar-footer-divider"></div>
 
           <button id="logoutBtn" class="btn btn-logout" style="width: 100%; justify-content: center; gap: 0.6rem;">
@@ -194,7 +205,16 @@
       mainContent.id = "mainContent";
       mainContent.innerHTML = `<div id="view-mount-point"></div>`;
 
+      // Floating Desktop Menu Toggle Button
+      const desktopMenuToggle = document.createElement("button");
+      desktopMenuToggle.className = "desktop-menu-toggle";
+      desktopMenuToggle.id = "desktopMenuToggle";
+      desktopMenuToggle.setAttribute("aria-label", "Open navigation menu");
+      desktopMenuToggle.setAttribute("title", "Open navigation menu");
+      desktopMenuToggle.innerHTML = `<i class="fas fa-bars"></i><span>Menu</span>`;
+
       // Assemble Shell
+      layoutWrapper.appendChild(desktopMenuToggle);
       layoutWrapper.appendChild(mobileHeader);
       layoutWrapper.appendChild(sidebar);
       layoutWrapper.appendChild(backdrop);
@@ -210,6 +230,7 @@
         FamDocAPI.auth.logout();
         cachedUser = null;
         layoutInjected = false;
+        document.body.classList.remove("sidebar-collapsed");
         container.innerHTML = `<div id="view-mount-point"></div>`;
         this.destroyLayoutShell();
         window.FamDocRouter.navigate('/');
@@ -224,6 +245,19 @@
       const sidebarMenu = document.getElementById("sidebarMenu");
       const drawerBackdrop = document.getElementById("drawerBackdrop");
       const bottomNavMore = document.getElementById("bottomNavMore");
+      const collapseBtn = document.getElementById("sidebarCollapseBtn");
+
+      const isMobile = () => window.innerWidth <= 768;
+
+      const setSidebarCollapsed = (collapsed) => {
+        if (collapsed) {
+          document.body.classList.add("sidebar-collapsed");
+          localStorage.setItem("famdoc-sidebar-collapsed", "true");
+        } else {
+          document.body.classList.remove("sidebar-collapsed");
+          localStorage.setItem("famdoc-sidebar-collapsed", "false");
+        }
+      };
 
       const toggleSidebar = (e) => {
         if (e) e.stopPropagation();
@@ -245,6 +279,27 @@
           if (hamburger) hamburger.querySelector("i").className = "fas fa-bars";
         }
       };
+
+      if (collapseBtn) {
+        collapseBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          if (isMobile()) {
+            closeSidebar();
+          } else {
+            setSidebarCollapsed(true);
+          }
+        });
+      }
+
+      desktopMenuToggle.addEventListener("click", (e) => {
+        e.stopPropagation();
+        setSidebarCollapsed(false);
+      });
+
+      // Restore collapsed state on desktop
+      if (!isMobile() && localStorage.getItem("famdoc-sidebar-collapsed") === "true") {
+        setSidebarCollapsed(true);
+      }
 
       if (hamburger) hamburger.addEventListener("click", toggleSidebar);
       if (bottomNavMore) {

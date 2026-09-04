@@ -403,10 +403,12 @@
 
         fileCard.innerHTML = `
           ${iconHtml}
-          <div class="item-details" style="grid-template-columns: 2fr 1fr 1.2fr; width: 100%; display: grid; align-items: center;">
-            <div class="item-name" style="font-size: 0.85rem;" title="${FamDocAPI.utils.escapeHtml(file.filename)}">${FamDocAPI.utils.escapeHtml(file.filename)}</div>
-            <div class="item-meta-size" style="font-size: 0.75rem;">${formattedSize}</div>
-            <div class="item-meta-date" style="font-size: 0.75rem;">${formattedDate.split(',')[0]}</div>
+          <div class="item-details">
+            <div class="item-name" title="${FamDocAPI.utils.escapeHtml(file.filename)}">${FamDocAPI.utils.escapeHtml(file.filename)}</div>
+            <div class="item-meta-group">
+              <div class="item-meta-size">${formattedSize}</div>
+              <div class="item-meta-date">${formattedDate.split(',')[0]}</div>
+            </div>
           </div>
         `;
         recentList.appendChild(fileCard);

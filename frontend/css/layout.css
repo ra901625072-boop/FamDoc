@@ -330,17 +330,61 @@ body::after {
 /* Drawer Header Profile Banner */
 .drawer-header-banner {
   background: var(--appbar-bg);
-  padding: 1.75rem 1.25rem 1.5rem;
+  padding: 1.4rem 1.15rem 1.25rem;
   color: #FFFFFF;
   display: flex;
   align-items: center;
-  gap: 1rem;
-  cursor: pointer;
-  transition: opacity 0.2s ease;
+  justify-content: space-between;
+  gap: 0.75rem;
+  position: relative;
 }
 
-.drawer-header-banner:hover {
+.drawer-profile-info {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.drawer-profile-info:hover {
   opacity: 0.95;
+}
+
+.sidebar-toggle-btn {
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #FFFFFF;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  border-radius: var(--radius-sm, 8px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  flex-shrink: 0;
+}
+
+.sidebar-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.08);
+}
+
+.sidebar-toggle-btn:active {
+  transform: scale(0.92);
+}
+
+.desktop-only { display: inline-block; }
+.mobile-only { display: none; }
+
+@media (max-width: 768px) {
+  .desktop-only { display: none !important; }
+  .mobile-only { display: inline-block !important; }
 }
 
 .drawer-avatar-wrapper {
@@ -889,6 +933,110 @@ body::after {
 /* Fix Modal Stacking Context to cover sidebar and bottom-nav */
 body.modal-open .main-content {
   z-index: 2001; /* Elevate above sidebar (100) and bottom-nav (101) */
+}
+
+/* ==========================================================================
+   Desktop Collapsed Sidebar State & Floating Toggle
+   ========================================================================== */
+@media (min-width: 769px) {
+  body.sidebar-collapsed {
+    --sidebar-width: 0px !important;
+  }
+
+  body.sidebar-collapsed .sidebar {
+    transform: translateX(-100%) !important;
+    box-shadow: none !important;
+    pointer-events: none !important;
+  }
+
+  body.sidebar-collapsed .main-content {
+    margin-left: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding-left: 3.5rem !important;
+  }
+
+  /* Floating button to restore/open sidebar on desktop */
+  .desktop-menu-toggle {
+    display: none;
+    position: fixed;
+    top: 18px;
+    left: 18px;
+    z-index: 99;
+    background: var(--surface-card);
+    color: var(--text-ink);
+    border: 1px solid var(--border-paper);
+    border-radius: var(--radius-pill, 28px);
+    padding: 0.45rem 1rem;
+    align-items: center;
+    gap: 0.55rem;
+    font-size: 0.85rem;
+    font-weight: 700;
+    font-family: var(--font-sans);
+    box-shadow: var(--shadow-md);
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .desktop-menu-toggle:hover {
+    background: var(--surface-paper-hover);
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+    transform: translateY(-2px) scale(1.03);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .desktop-menu-toggle:active {
+    transform: scale(0.96);
+  }
+
+  body.sidebar-collapsed .desktop-menu-toggle {
+    display: inline-flex !important;
+    animation: fdPopIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+}
+
+@media (max-width: 768px) {
+  .desktop-menu-toggle {
+    display: none !important;
+  }
+}
+
+/* Sidebar APK Download Button */
+.btn-apk-download {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  padding: 0.6rem 0.85rem;
+  border-radius: var(--radius-md, 12px);
+  background: var(--surface-paper-tint);
+  border: 1px solid var(--border-paper);
+  color: var(--text-ink);
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.25s ease;
+  margin-top: 0.25rem;
+}
+
+.btn-apk-download i {
+  color: var(--color-primary);
+  font-size: 1.05rem;
+  transition: transform 0.25s ease;
+}
+
+.btn-apk-download:hover {
+  background: var(--color-primary-container);
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+  transform: translateY(-1px);
+}
+
+.btn-apk-download:hover i {
+  transform: scale(1.2) rotate(6deg);
 }
 
 
