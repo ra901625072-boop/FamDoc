@@ -1,11 +1,11 @@
 /* ==========================================================================
-   FamDoc Design System — Designer Polish Stylesheet
-   Family Keepsake & Document Management Platform
+   FamDoc Design System — Modern Home Page Stylesheet (UI Designer Polish)
+   Tailored specifically for Family Keepsake & Document Management Platform
    Light Theme (Mint Emerald) & AMOLED Dark Theme (Pitch Black + Neon Mint)
    ========================================================================== */
 
 /* --------------------------------------------------------------------------
-   Layout Canvas & Ambient Lighting
+   Layout Canvas & Multi-Layered Ambient Glow
    -------------------------------------------------------------------------- */
 .landing-page {
   position: relative;
@@ -21,7 +21,6 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Multi-Layered Ambient Light Orbs with Breathing Pulse */
 .landing-ambient-glow {
   position: absolute;
   top: 0;
@@ -33,22 +32,22 @@
   pointer-events: none;
   z-index: 0;
   background: 
-    radial-gradient(circle at 50% -15%, rgba(16, 185, 129, 0.22) 0%, rgba(13, 148, 136, 0.1) 40%, transparent 70%),
-    radial-gradient(circle at 80% 20%, rgba(245, 158, 11, 0.08) 0%, transparent 50%),
-    radial-gradient(circle at 20% 20%, rgba(59, 130, 246, 0.08) 0%, transparent 50%);
+    radial-gradient(circle at 50% -15%, rgba(16, 185, 129, 0.2) 0%, rgba(13, 148, 136, 0.1) 40%, transparent 70%),
+    radial-gradient(circle at 80% 25%, rgba(245, 158, 11, 0.08) 0%, transparent 50%),
+    radial-gradient(circle at 20% 25%, rgba(59, 130, 246, 0.08) 0%, transparent 50%);
   animation: ambientPulse 8s ease-in-out infinite alternate;
 }
 
 [data-theme="dark"] .landing-ambient-glow {
   background: 
-    radial-gradient(circle at 50% -15%, rgba(52, 211, 153, 0.25) 0%, rgba(45, 212, 191, 0.09) 45%, transparent 75%),
+    radial-gradient(circle at 50% -15%, rgba(52, 211, 153, 0.22) 0%, rgba(45, 212, 191, 0.08) 45%, transparent 75%),
     radial-gradient(circle at 85% 25%, rgba(245, 158, 11, 0.12) 0%, transparent 55%),
     radial-gradient(circle at 15% 25%, rgba(96, 165, 250, 0.1) 0%, transparent 55%);
 }
 
 @keyframes ambientPulse {
   0% { transform: translateX(-50%) scale(1); opacity: 0.85; }
-  50% { transform: translateX(-50%) translateY(-10px) scale(1.04); opacity: 1; }
+  50% { transform: translateX(-50%) translateY(-10px) scale(1.03); opacity: 1; }
   100% { transform: translateX(-50%) scale(1); opacity: 0.85; }
 }
 
@@ -62,14 +61,14 @@
 }
 
 /* --------------------------------------------------------------------------
-   Sticky Glassmorphism Header / Navigation Bar
+   Sticky Glassmorphism Header & Navigation Bar
    -------------------------------------------------------------------------- */
 .landing-header-wrap {
   position: sticky;
   top: 1rem;
   z-index: 999;
   padding-top: 0.5rem;
-  margin-bottom: 2.5rem;
+  margin-bottom: 2.25rem;
 }
 
 .landing-navbar {
@@ -79,27 +78,29 @@
   gap: 1.25rem;
   padding: 0.65rem 1.35rem;
   border-radius: var(--radius-pill, 28px);
-  background: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.88);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   border: 1px solid rgba(255, 255, 255, 0.6);
   box-shadow: 0 10px 30px -5px rgba(4, 40, 25, 0.08), 0 0 0 1px var(--border-paper);
   transition: transform 0.25s ease, box-shadow 0.25s ease, background-color 0.25s ease;
+  box-sizing: border-box;
 }
 
 [data-theme="dark"] .landing-navbar {
-  background: rgba(17, 17, 19, 0.85);
+  background: rgba(17, 17, 19, 0.88);
   border: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.7), 0 0 0 1px var(--border-paper);
 }
 
-/* Brand Logo Group */
+/* Brand Group */
 .nav-brand-group {
   display: flex;
   align-items: center;
   gap: 0.75rem;
   text-decoration: none;
   color: inherit;
+  flex-shrink: 0;
 }
 
 .nav-brand-crest {
@@ -114,6 +115,7 @@
   padding: 4px;
   box-shadow: 0 4px 12px rgba(4, 120, 87, 0.15);
   transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
+  box-sizing: border-box;
 }
 
 .nav-brand-group:hover .nav-brand-crest {
@@ -152,11 +154,11 @@
   color: var(--text-ink-muted);
 }
 
-/* Navigation Menu Items */
+/* Nav Menu Links */
 .nav-links-menu {
   display: flex;
   align-items: center;
-  gap: 1.5rem;
+  gap: 1.25rem;
   list-style: none;
   margin: 0;
   padding: 0;
@@ -194,18 +196,26 @@
   letter-spacing: 0.2px;
 }
 
-/* Right Control Actions */
+/* Nav Controls Group */
 .nav-controls-group {
   display: flex;
   align-items: center;
   gap: 0.65rem;
+  flex-shrink: 0;
+  position: relative;
 }
 
-.nav-theme-btn {
+/* Explicit static positioning override for guest-theme-toggle in navbar */
+.landing-navbar .nav-theme-btn,
+.landing-navbar .guest-theme-toggle {
+  position: static !important;
+  top: auto !important;
+  right: auto !important;
+  z-index: auto !important;
   width: 38px;
   height: 38px;
   border-radius: 50%;
-  border: 1px solid var(--border-paper);
+  border: 1.5px solid var(--border-paper);
   background: var(--surface-card);
   color: var(--color-primary);
   display: flex;
@@ -213,10 +223,13 @@
   justify-content: center;
   cursor: pointer;
   box-shadow: var(--shadow-sm);
+  flex-shrink: 0;
+  box-sizing: border-box;
   transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.2s ease, border-color 0.2s ease;
 }
 
-.nav-theme-btn:hover {
+.landing-navbar .nav-theme-btn:hover,
+.landing-navbar .guest-theme-toggle:hover {
   background: var(--surface-paper-hover);
   border-color: var(--color-primary);
   transform: rotate(24deg) scale(1.05);
@@ -226,7 +239,7 @@
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
-  padding: 0.5rem 1.25rem;
+  padding: 0.5rem 1.15rem;
   border-radius: var(--radius-pill, 28px);
   background: var(--surface-card);
   border: 1.5px solid var(--border-paper);
@@ -234,7 +247,10 @@
   text-decoration: none;
   font-size: 0.88rem;
   font-weight: 700;
+  white-space: nowrap;
   box-shadow: var(--shadow-sm);
+  flex-shrink: 0;
+  box-sizing: border-box;
   transition: var(--transition-smooth);
 }
 
@@ -251,19 +267,21 @@
   font-size: 0.85rem;
 }
 
-/* Mobile Hamburger Toggle Button */
+/* Mobile Hamburger Toggle */
 .nav-mobile-toggle {
   display: none;
   width: 38px;
   height: 38px;
-  border-radius: 10px;
-  border: 1px solid var(--border-paper);
+  border-radius: 50%;
+  border: 1.5px solid var(--border-paper);
   background: var(--surface-card);
   color: var(--text-ink);
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  font-size: 1rem;
+  font-size: 0.95rem;
+  flex-shrink: 0;
+  box-sizing: border-box;
   transition: var(--transition-smooth);
 }
 
@@ -272,7 +290,7 @@
   color: var(--color-primary);
 }
 
-/* Mobile Navigation Dropdown Drawer */
+/* Mobile Dropdown Drawer */
 .mobile-nav-drawer {
   display: none;
   flex-direction: column;
@@ -284,6 +302,7 @@
   box-shadow: var(--shadow-lg);
   gap: 0.5rem;
   animation: drawerSlideDown 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  box-sizing: border-box;
 }
 
 .mobile-nav-drawer.active {
@@ -326,7 +345,7 @@
    -------------------------------------------------------------------------- */
 .landing-hero-section {
   text-align: center;
-  padding: 2.75rem 0 3.75rem;
+  padding: 2.5rem 0 3.5rem;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -359,12 +378,12 @@
 
 .hero-title {
   font-family: var(--font-serif);
-  font-size: clamp(2.4rem, 5.4vw, 4rem);
+  font-size: clamp(2.3rem, 5.2vw, 3.8rem);
   font-weight: 800;
-  line-height: 1.14;
-  letter-spacing: -0.035em;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
   color: var(--text-ink);
-  max-width: 980px;
+  max-width: 960px;
   margin: 0 auto 1.25rem;
   text-wrap: balance;
 }
@@ -384,15 +403,15 @@
 }
 
 .hero-description {
-  font-size: clamp(1.08rem, 2vw, 1.25rem);
-  line-height: 1.68;
+  font-size: clamp(1.05rem, 2vw, 1.22rem);
+  line-height: 1.65;
   color: var(--text-ink-muted);
-  max-width: 800px;
+  max-width: 780px;
   margin: 0 auto 2.5rem;
   text-wrap: balance;
 }
 
-/* Action Buttons Cluster with Polished Micro-Interactions */
+/* Action Buttons */
 .hero-cta-cluster {
   display: flex;
   align-items: center;
@@ -424,6 +443,7 @@
   cursor: pointer;
   position: relative;
   overflow: hidden;
+  box-sizing: border-box;
 }
 
 .hero-btn-primary:hover {
@@ -464,6 +484,7 @@
   text-decoration: none;
   box-shadow: var(--shadow-sm);
   transition: var(--transition-smooth);
+  box-sizing: border-box;
 }
 
 .hero-btn-secondary:hover {
@@ -500,6 +521,7 @@
   text-decoration: none;
   box-shadow: var(--shadow-sm);
   transition: var(--transition-smooth);
+  box-sizing: border-box;
 }
 
 .hero-btn-apk:hover {
@@ -524,35 +546,44 @@
   border-radius: 999px;
 }
 
-/* Secondary Sign In Link */
+/* Secondary Sign In Link - Zero Hanging Arrow */
 .hero-login-sublink {
   margin-top: 0.65rem;
   margin-bottom: 2.25rem;
   font-size: 0.94rem;
   color: var(--text-ink-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  text-align: center;
 }
 
 .hero-login-sublink a {
   color: var(--color-primary);
   font-weight: 700;
   text-decoration: none;
-  margin-left: 0.25rem;
-  transition: color 0.2s ease;
+  white-space: nowrap !important;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
 }
 
 .hero-login-sublink a:hover {
   text-decoration: underline;
 }
 
-/* Trust Signals Strip */
+/* Trust Signals Strip - Perfectly Balanced on 1 Row */
 .hero-trust-strip {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 1.15rem;
-  flex-wrap: wrap;
+  gap: 0.75rem;
+  flex-wrap: nowrap;
   width: 100%;
-  max-width: 960px;
+  max-width: 1100px;
+  margin: 0 auto;
 }
 
 .trust-chip {
@@ -563,10 +594,11 @@
   font-weight: 600;
   color: var(--text-ink-muted);
   background: var(--surface-card);
-  padding: 0.4rem 0.95rem;
+  padding: 0.45rem 0.95rem;
   border-radius: var(--radius-pill, 28px);
   border: 1px solid var(--border-paper);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  white-space: nowrap;
   transition: var(--transition-smooth);
 }
 
@@ -582,7 +614,7 @@
 }
 
 /* --------------------------------------------------------------------------
-   Interactive Live Vault Test-Drive (Hero Showcase)
+   Interactive Live Vault Test-Drive (Showcase)
    -------------------------------------------------------------------------- */
 .vault-showcase-section {
   padding: 2.5rem 0 5rem;
@@ -601,7 +633,6 @@
   box-shadow: 0 24px 60px -12px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(52, 211, 153, 0.18);
 }
 
-/* Window Header Bar */
 .vault-window-topbar {
   display: flex;
   align-items: center;
@@ -674,7 +705,6 @@
   100% { transform: scale(0.95); opacity: 0.8; }
 }
 
-/* Storage Meter Box */
 .vault-storage-meter-box {
   padding: 1.25rem 1.65rem;
   background: var(--surface-card);
@@ -757,7 +787,6 @@
   border-radius: 50%;
 }
 
-/* Category Tabs Navigation */
 .vault-category-tabs {
   display: flex;
   align-items: center;
@@ -815,7 +844,6 @@
   background: rgba(52, 211, 153, 0.2);
 }
 
-/* Dynamic Document Cards Grid */
 .vault-documents-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1203,7 +1231,7 @@
   font-weight: 600;
 }
 
-/* Smartphone Mockup Frame with Biometric Ripple */
+/* Smartphone Mockup Frame */
 .android-phone-mockup {
   width: 100%;
   max-width: 290px;
@@ -1443,7 +1471,7 @@
 }
 
 /* --------------------------------------------------------------------------
-   Symmetrical Modern Footer
+   Symmetrical Modern Footer (Desktop & Mobile Optimized)
    -------------------------------------------------------------------------- */
 .landing-footer-section {
   border-top: 1px solid var(--border-paper);
@@ -1453,9 +1481,9 @@
 
 .footer-content-grid {
   display: grid;
-  grid-template-columns: 1.5fr 1fr 1fr 1fr;
-  gap: 2.75rem;
-  margin-bottom: 3.25rem;
+  grid-template-columns: 1.4fr 1fr 1fr 1fr;
+  gap: 2.5rem;
+  margin-bottom: 3rem;
 }
 
 .footer-brand-column p {
@@ -1695,7 +1723,7 @@
 }
 
 /* --------------------------------------------------------------------------
-   Responsive Breakpoint Rules
+   Responsive Breakpoints & Fine-Tuned Adaptations
    -------------------------------------------------------------------------- */
 @media (max-width: 992px) {
   .pillars-bento-grid {
@@ -1710,17 +1738,34 @@
     gap: 2.5rem;
   }
 
-  .footer-content-grid {
-    grid-template-columns: 1fr 1fr;
-    gap: 2.25rem;
-  }
-
   .vault-documents-grid {
     grid-template-columns: 1fr;
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 900px) {
+  .hero-trust-strip {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.65rem;
+    max-width: 540px;
+  }
+
+  .trust-chip {
+    justify-content: center;
+    text-align: center;
+    white-space: normal;
+    padding: 0.45rem 0.75rem;
+    font-size: 0.76rem;
+  }
+}
+
+@media (max-width: 860px) {
+  .landing-navbar {
+    padding: 0.5rem 1rem;
+    gap: 0.75rem;
+  }
+
   .nav-links-menu {
     display: none;
   }
@@ -1729,29 +1774,88 @@
     display: flex;
   }
 
+  .nav-controls-group {
+    gap: 0.45rem;
+  }
+
+  .nav-login-btn {
+    padding: 0.45rem 0.85rem;
+    font-size: 0.82rem;
+  }
+
+  /* Footer 2-Column Responsive Layout */
+  .footer-content-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem 1.5rem;
+  }
+
+  .footer-brand-column {
+    grid-column: 1 / -1;
+    text-align: center;
+  }
+
+  .footer-brand-column .nav-brand-group {
+    justify-content: center;
+  }
+
+  .footer-brand-column p {
+    max-width: 500px;
+    margin: 0.75rem auto 0;
+  }
+
+  .footer-column-author {
+    grid-column: 1 / -1;
+    text-align: center;
+  }
+
+  .footer-column-author .footer-links-list {
+    align-items: center;
+  }
+
+  .footer-bottom-bar {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 1.25rem;
+  }
+
+  .footer-social-chips {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 768px) {
   .hero-title {
-    font-size: 2.25rem;
+    font-size: clamp(2rem, 6vw, 2.6rem);
+    line-height: 1.2;
   }
 
   .hero-cta-cluster {
     flex-direction: column;
     width: 100%;
+    max-width: 440px;
   }
 
   .hero-btn-primary,
   .hero-btn-secondary,
   .hero-btn-apk {
     width: 100%;
+    height: 52px;
   }
+}
 
-  .footer-content-grid {
-    grid-template-columns: 1fr;
-    gap: 2rem;
-  }
-
-  .footer-bottom-bar {
+@media (max-width: 500px) {
+  .hero-trust-strip {
+    display: flex;
     flex-direction: column;
-    text-align: center;
+    max-width: 340px;
+    gap: 0.6rem;
+  }
+
+  .trust-chip {
+    justify-content: center;
+    width: 100%;
+    box-sizing: border-box;
   }
 }
 
@@ -1760,8 +1864,36 @@
     padding: 0 1rem;
   }
 
-  .nav-brand-tagline {
-    display: none;
+  .landing-header-wrap {
+    top: 0.5rem;
+    padding-top: 0.25rem;
+    margin-bottom: 1.75rem;
+  }
+
+  .landing-navbar {
+    padding: 0.45rem 0.75rem;
+  }
+
+  .nav-brand-name {
+    font-size: 1.15rem;
+  }
+
+  .nav-brand-crest {
+    width: 34px;
+    height: 34px;
+    padding: 3px;
+  }
+
+  .nav-login-btn {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.8rem;
+  }
+
+  .landing-navbar .nav-theme-btn,
+  .landing-navbar .guest-theme-toggle,
+  .nav-mobile-toggle {
+    width: 34px;
+    height: 34px;
   }
 
   .vault-window-topbar {
@@ -1772,6 +1904,34 @@
   .storage-accounts-legend {
     flex-direction: column;
     align-items: flex-start;
-    gap: 0.6rem;
+    gap: 0.5rem;
+  }
+
+  .footer-content-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 1.75rem 1rem;
+  }
+
+  .footer-links-list a {
+    font-size: 0.85rem;
+  }
+
+  .footer-column-title {
+    font-size: 0.88rem;
+    margin-bottom: 0.85rem;
+  }
+}
+
+@media (max-width: 380px) {
+  .nav-brand-tagline {
+    display: none;
+  }
+
+  .nav-login-btn span {
+    display: none;
+  }
+
+  .nav-login-btn {
+    padding: 0.4rem 0.55rem;
   }
 }

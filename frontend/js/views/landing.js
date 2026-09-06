@@ -388,8 +388,8 @@
               </div>
 
               <div class="hero-login-sublink">
-                Already part of a family vault?
-                <a href="#/login" id="heroLoginSubLink">Sign In to Your Vault &rarr;</a>
+                <span>Already part of a family vault?</span>
+                <a href="#/login" id="heroLoginSubLink" style="white-space: nowrap;">Sign In to Your Vault &rarr;</a>
               </div>
 
               <!-- Trust Signals Strip -->
@@ -776,7 +776,7 @@
                 </p>
               </div>
 
-              <div>
+              <div class="footer-column-product">
                 <div class="footer-column-title">Product</div>
                 <ul class="footer-links-list">
                   <li><a href="#/register">Create Vault</a></li>
@@ -786,7 +786,7 @@
                 </ul>
               </div>
 
-              <div>
+              <div class="footer-column-legal">
                 <div class="footer-column-title">Legal &amp; Privacy</div>
                 <ul class="footer-links-list">
                   <li><a href="/privacy.html">Privacy Policy</a></li>
@@ -795,7 +795,7 @@
                 </ul>
               </div>
 
-              <div>
+              <div class="footer-column-author">
                 <div class="footer-column-title">Author &amp; Source</div>
                 <ul class="footer-links-list">
                   <li><a href="https://portfolioakshay.in" target="_blank" rel="noopener">Author Portfolio</a></li>

@@ -681,11 +681,14 @@ body.drawer-open .bottom-nav,
   z-index: 10;
 }
 
-.landing-top-bar .guest-theme-toggle {
-  position: static;
-  top: auto;
-  right: auto;
-  z-index: auto;
+.landing-top-bar .guest-theme-toggle,
+.landing-navbar .guest-theme-toggle,
+.landing-header-wrap .guest-theme-toggle,
+.nav-controls-group .guest-theme-toggle {
+  position: static !important;
+  top: auto !important;
+  right: auto !important;
+  z-index: auto !important;
 }
 
 /* Modals & Dialogs Layout */
