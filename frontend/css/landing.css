@@ -627,6 +627,10 @@
   box-shadow: 0 24px 60px -12px rgba(4, 40, 25, 0.12), 0 0 0 1px rgba(16, 185, 129, 0.12);
   overflow: hidden;
   transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
 }
 
 [data-theme="dark"] .vault-window-frame {
@@ -641,6 +645,9 @@
   background: var(--surface-paper-tint);
   border-bottom: 1px solid var(--border-paper);
   gap: 1rem;
+  width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
 }
 
 .window-dots {
@@ -709,6 +716,9 @@
   padding: 1.25rem 1.65rem;
   background: var(--surface-card);
   border-bottom: 1px solid var(--border-paper);
+  width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
 }
 
 .storage-meter-header {
@@ -794,7 +804,13 @@
   padding: 1.15rem 1.65rem 0.65rem;
   background: var(--surface-card);
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
   scrollbar-width: none;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
 }
 
 .vault-category-tabs::-webkit-scrollbar {
@@ -815,6 +831,7 @@
   align-items: center;
   gap: 0.55rem;
   white-space: nowrap;
+  flex-shrink: 0;
   transition: var(--transition-smooth);
 }
 
@@ -850,6 +867,10 @@
   gap: 1.25rem;
   padding: 1.65rem;
   background: var(--surface-paper-tint);
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
 }
 
 .showcase-doc-card {
@@ -863,6 +884,10 @@
   box-shadow: var(--shadow-sm);
   transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.25s ease, box-shadow 0.25s ease;
   cursor: pointer;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
 }
 
 .doc-card-anim {
@@ -905,16 +930,21 @@
 .doc-content {
   flex-grow: 1;
   min-width: 0;
+  overflow: hidden;
 }
 
 .doc-title {
-  font-size: 0.98rem;
+  font-size: 0.96rem;
   font-weight: 700;
   color: var(--text-ink);
-  margin: 0 0 0.3rem;
-  white-space: nowrap;
+  margin: 0 0 0.35rem;
+  line-height: 1.35;
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
+  word-break: break-word;
 }
 
 .doc-meta {
@@ -945,6 +975,8 @@
   align-items: center;
   justify-content: space-between;
   margin-top: 0.4rem;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .doc-security-seal {
@@ -957,18 +989,25 @@
 }
 
 .doc-preview-trigger {
-  background: none;
-  border: none;
+  background: var(--surface-paper-tint);
+  border: 1px solid var(--border-paper);
   color: var(--color-primary);
-  font-size: 0.84rem;
+  font-size: 0.82rem;
   font-weight: 700;
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
   cursor: pointer;
-  padding: 0.25rem 0.65rem;
+  padding: 0.22rem 0.65rem;
   border-radius: var(--radius-pill, 28px);
-  transition: background-color 0.2s ease, transform 0.2s ease;
+  flex-shrink: 0;
+  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.doc-preview-trigger:hover {
+  background: var(--color-primary-container);
+  border-color: var(--color-primary);
+  transform: translateY(-1px);
 }
 
 .doc-preview-trigger:hover {
@@ -1787,6 +1826,7 @@
   .footer-content-grid {
     grid-template-columns: 1fr 1fr;
     gap: 2rem 1.5rem;
+    margin-bottom: 2.25rem;
   }
 
   .footer-brand-column {
@@ -1803,13 +1843,11 @@
     margin: 0.75rem auto 0;
   }
 
+  /* On mobile and tablet, author links live cleanly in the dedicated
+     bottom attribution bar and interactive pill chips to prevent
+     redundancy and avoid an awkward centered 3rd column */
   .footer-column-author {
-    grid-column: 1 / -1;
-    text-align: center;
-  }
-
-  .footer-column-author .footer-links-list {
-    align-items: center;
+    display: none;
   }
 
   .footer-bottom-bar {
@@ -1817,10 +1855,13 @@
     align-items: center;
     text-align: center;
     gap: 1.25rem;
+    padding-top: 1.75rem;
   }
 
   .footer-social-chips {
     justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.65rem;
   }
 }
 
@@ -1842,6 +1883,87 @@
     width: 100%;
     height: 52px;
   }
+
+  /* Vault Showcase Responsive Tablet Adjustments */
+  .vault-window-frame {
+    border-radius: var(--radius-lg, 16px);
+  }
+
+  .vault-storage-meter-box {
+    padding: 1.15rem 1.25rem;
+  }
+
+  .storage-meter-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.35rem;
+  }
+
+  .storage-pool-stats {
+    font-size: 0.82rem;
+  }
+
+  .storage-accounts-legend {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.45rem 1rem;
+    font-size: 0.78rem;
+  }
+
+  .vault-category-tabs {
+    padding: 0.85rem 1.15rem 0.55rem;
+    gap: 0.5rem;
+  }
+
+  .vault-tab-btn {
+    padding: 0.48rem 0.95rem;
+    font-size: 0.84rem;
+    flex-shrink: 0;
+  }
+
+  .vault-documents-grid {
+    padding: 1.15rem;
+    gap: 0.85rem;
+  }
+
+  .showcase-doc-card {
+    padding: 1.1rem;
+    gap: 0.95rem;
+  }
+
+  /* CTA Banner Responsive Adjustments */
+  .landing-cta-banner-section {
+    padding: 3rem 0 3.5rem;
+  }
+
+  .cta-banner-box {
+    padding: 2.75rem 1.5rem;
+    border-radius: var(--radius-lg, 16px);
+  }
+
+  .cta-banner-title {
+    font-size: clamp(1.65rem, 5vw, 2.2rem);
+  }
+
+  .cta-banner-desc {
+    font-size: 0.98rem;
+    margin-bottom: 1.75rem;
+  }
+
+  .cta-banner-actions {
+    flex-direction: column;
+    width: 100%;
+    gap: 0.75rem;
+  }
+
+  .cta-btn-light,
+  .cta-btn-ghost {
+    width: 100%;
+    max-width: 380px;
+    height: 50px;
+    justify-content: center;
+    font-size: 0.94rem;
+  }
 }
 
 @media (max-width: 500px) {
@@ -1861,7 +1983,7 @@
 
 @media (max-width: 480px) {
   .landing-container {
-    padding: 0 1rem;
+    padding: 0 0.85rem;
   }
 
   .landing-header-wrap {
@@ -1896,20 +2018,163 @@
     height: 34px;
   }
 
+  /* Vault Window Topbar on Mobile */
   .vault-window-topbar {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .storage-accounts-legend {
-    flex-direction: column;
-    align-items: flex-start;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    padding: 0.75rem 0.85rem;
     gap: 0.5rem;
   }
 
+  .window-title {
+    font-size: 0.78rem;
+    gap: 0.35rem;
+  }
+
+  .window-status-pill {
+    font-size: 0.7rem;
+    padding: 0.2rem 0.55rem;
+  }
+
+  /* Storage Meter on Mobile */
+  .vault-storage-meter-box {
+    padding: 0.95rem 0.85rem;
+  }
+
+  .storage-pool-label {
+    font-size: 0.84rem;
+  }
+
+  .storage-pool-stats {
+    font-size: 0.78rem;
+  }
+
+  .storage-accounts-legend {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.4rem 0.65rem;
+    font-size: 0.74rem;
+  }
+
+  /* Category Tabs on Mobile */
+  .vault-category-tabs {
+    padding: 0.65rem 0.85rem 0.45rem;
+    gap: 0.4rem;
+  }
+
+  .vault-tab-btn {
+    padding: 0.42rem 0.72rem;
+    font-size: 0.78rem;
+    gap: 0.35rem;
+    flex-shrink: 0;
+  }
+
+  .vault-tab-btn .tab-count-badge {
+    font-size: 0.65rem;
+    padding: 0.05rem 0.35rem;
+  }
+
+  /* Documents Grid & Cards on Mobile */
+  .vault-documents-grid {
+    padding: 0.75rem;
+    gap: 0.65rem;
+  }
+
+  .showcase-doc-card {
+    padding: 0.85rem;
+    gap: 0.75rem;
+  }
+
+  .doc-icon-box {
+    width: 38px;
+    height: 38px;
+    font-size: 1.15rem;
+    border-radius: 9px;
+    flex-shrink: 0;
+  }
+
+  .doc-title {
+    font-size: 0.88rem;
+    line-height: 1.3;
+    margin-bottom: 0.25rem;
+  }
+
+  .doc-meta {
+    font-size: 0.72rem;
+    gap: 0.35rem;
+    margin-bottom: 0.4rem;
+  }
+
+  .doc-owner-tag {
+    font-size: 0.66rem;
+    padding: 0.08rem 0.38rem;
+  }
+
+  .doc-actions {
+    margin-top: 0.35rem;
+    gap: 0.4rem;
+  }
+
+  .doc-security-seal {
+    font-size: 0.68rem;
+  }
+
+  .doc-preview-trigger {
+    font-size: 0.74rem;
+    padding: 0.18rem 0.5rem;
+  }
+
+  /* Bento Pillars & Android on Mobile */
+  .pillar-card {
+    padding: 1.5rem 1.25rem;
+  }
+
+  .android-showcase-card {
+    padding: 1.75rem 1.25rem;
+    gap: 1.5rem;
+  }
+
+  .android-highlights-grid {
+    grid-template-columns: 1fr;
+    gap: 0.85rem;
+    margin-bottom: 1.75rem;
+  }
+
+  /* CTA on Mobile */
+  .cta-banner-box {
+    padding: 2.25rem 1.25rem;
+    border-radius: var(--radius-lg, 16px);
+  }
+
+  .cta-banner-title {
+    font-size: 1.55rem;
+  }
+
+  .cta-banner-desc {
+    font-size: 0.92rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .cta-banner-actions {
+    flex-direction: column;
+    width: 100%;
+    gap: 0.65rem;
+  }
+
+  .cta-btn-light,
+  .cta-btn-ghost {
+    width: 100%;
+    max-width: 100%;
+    height: 48px;
+    font-size: 0.9rem;
+  }
+
+  /* Footer on Mobile */
   .footer-content-grid {
     grid-template-columns: 1fr 1fr;
-    gap: 1.75rem 1rem;
+    gap: 1.5rem 1rem;
+    margin-bottom: 1.75rem;
   }
 
   .footer-links-list a {
@@ -1918,7 +2183,17 @@
 
   .footer-column-title {
     font-size: 0.88rem;
-    margin-bottom: 0.85rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .social-chip {
+    padding: 0.35rem 0.75rem;
+    font-size: 0.76rem;
+  }
+
+  .footer-author-attribution {
+    font-size: 0.8rem;
+    line-height: 1.45;
   }
 }
 
