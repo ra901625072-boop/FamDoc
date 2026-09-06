@@ -8,7 +8,7 @@
 (function() {
   window.FamDocViews = window.FamDocViews || {};
 
-  // Sample family keepsakes & documents structured by real family vault categories
+  // Curated family keepsakes & documents structured by real family vault categories
   const VAULT_CATEGORIES = {
     deeds: {
       label: "Vital Deeds & Legal",
@@ -25,7 +25,8 @@
           badge: "Notarized Deed",
           drive: "Google Drive Pool A",
           date: "Sep 2026",
-          previewSummary: "Official land registry certificate and certified title deed for ancestral home. Verified with digital seal."
+          sha: "SHA-256: 4f8b92a1...c8e4",
+          previewSummary: "Official land registry certificate and certified title deed for ancestral home. Verified with digital seal and legal registry records."
         },
         {
           id: "doc-2",
@@ -38,7 +39,8 @@
           badge: "Sealed Vault",
           drive: "Google Drive Pool B",
           date: "Aug 2026",
-          previewSummary: "Signed family testament and asset allocation directives. Encrypted with restricted family permissions."
+          sha: "SHA-256: e71c4509...31ab",
+          previewSummary: "Signed family testament and asset allocation directives. Encrypted with restricted family permissions and zero cloud tracking."
         },
         {
           id: "doc-3",
@@ -51,7 +53,8 @@
           badge: "Identity Vault",
           drive: "Google Drive Pool A",
           date: "Jul 2026",
-          previewSummary: "High-resolution color biometric passport and national ID scans for all 4 family members."
+          sha: "SHA-256: a82d6341...19fe",
+          previewSummary: "High-resolution color biometric passport and national ID scans for all 4 family members, stored with Fernet AES-128 encryption."
         },
         {
           id: "doc-4",
@@ -64,7 +67,8 @@
           badge: "Official Record",
           drive: "Google Drive Pool C",
           date: "Jun 2026",
-          previewSummary: "Original vehicular certificate, road tax receipts, and transfer authorization papers."
+          sha: "SHA-256: d03a985e...77c2",
+          previewSummary: "Original vehicular certificate, road tax receipts, insurance endorsement, and transfer authorization papers."
         }
       ]
     },
@@ -83,7 +87,8 @@
           badge: "Active Policy",
           drive: "Google Drive Pool B",
           date: "Sep 2026",
-          previewSummary: "Annual health coverage policy terms, cashless hospital network directory, and member cards."
+          sha: "SHA-256: 3c9f104d...821e",
+          previewSummary: "Annual health coverage policy terms, cashless hospital network directory, and member medical insurance ID cards."
         },
         {
           id: "doc-6",
@@ -96,7 +101,8 @@
           badge: "Critical Medical",
           drive: "Google Drive Pool A",
           date: "Aug 2026",
-          previewSummary: "Detailed cardiologist assessment reports, stress test records, and specialist consultation notes."
+          sha: "SHA-256: 9b20ea61...f04c",
+          previewSummary: "Detailed cardiologist assessment reports, stress test records, and specialist medication consultation notes."
         },
         {
           id: "doc-7",
@@ -109,7 +115,8 @@
           badge: "Pediatric Log",
           drive: "Google Drive Pool C",
           date: "Jul 2026",
-          previewSummary: "Complete birth-to-adolescence vaccination records, dosage milestones, and physician signatures."
+          sha: "SHA-256: 12de48ac...9b74",
+          previewSummary: "Complete birth-to-adolescence vaccination records, dosage milestones, and pediatrician signatures."
         },
         {
           id: "doc-8",
@@ -119,10 +126,11 @@
           iconClass: "doc-icon-doc",
           size: "310 KB",
           uploader: "Dad",
-          badge: "Emergency Quick Reference",
+          badge: "Emergency Reference",
           drive: "Google Drive Pool B",
           date: "May 2026",
-          previewSummary: "Emergency clinical cheat-sheet containing blood typings, drug allergies, and doctor contact numbers."
+          sha: "SHA-256: f4619d82...50ea",
+          previewSummary: "Emergency clinical cheat-sheet containing blood typings, antibiotic allergies, and 24/7 doctor contact numbers."
         }
       ]
     },
@@ -141,7 +149,8 @@
           badge: "Restored Photo",
           drive: "Google Drive Pool A",
           date: "Sep 2026",
-          previewSummary: "Digitally remastered vintage wedding photograph captured on Kodak black-and-white negative film."
+          sha: "SHA-256: 8a71c390...4f18",
+          previewSummary: "Digitally remastered vintage wedding photograph captured on Kodak black-and-white negative film, preserved in ultra high resolution."
         },
         {
           id: "doc-10",
@@ -151,10 +160,11 @@
           iconClass: "doc-icon-pdf",
           size: "3.2 MB",
           uploader: "Grandma",
-          badge: "Generational Keepsake",
+          badge: "Generational Heirloom",
           drive: "Google Drive Pool B",
           date: "Aug 2026",
-          previewSummary: "High-resolution scan of 48-page handwritten culinary heritage notebook dating back to 1942."
+          sha: "SHA-256: c68201de...63a9",
+          previewSummary: "High-resolution scan of 48-page handwritten culinary heritage notebook dating back to 1942, featuring traditional spices and dishes."
         },
         {
           id: "doc-11",
@@ -167,7 +177,8 @@
           badge: "Original RAW",
           drive: "Google Drive Pool C",
           date: "Jun 2026",
-          previewSummary: "Panoramic family portrait gathered for 50th jubilee celebration in high-definition resolution."
+          sha: "SHA-256: b10438cf...241d",
+          previewSummary: "Panoramic family portrait gathered for 50th jubilee celebration in lossless RAW resolution."
         },
         {
           id: "doc-12",
@@ -180,7 +191,8 @@
           badge: "Milestone",
           drive: "Google Drive Pool A",
           date: "Apr 2026",
-          previewSummary: "Original scanned bachelor degree with distinction honors and university chancellor seal."
+          sha: "SHA-256: 7d1a5802...11b5",
+          previewSummary: "Original scanned master degree with distinction honors and university chancellor gold seal."
         }
       ]
     },
@@ -199,7 +211,8 @@
           badge: "Tax Clearance",
           drive: "Google Drive Pool B",
           date: "Aug 2026",
-          previewSummary: "Official electronic assessment and zero-liability payment confirmation issued by city corporation."
+          sha: "SHA-256: 22ea4518...90cf",
+          previewSummary: "Official electronic assessment and zero-liability payment confirmation issued by city municipal corporation."
         },
         {
           id: "doc-14",
@@ -212,6 +225,7 @@
           badge: "Filed & Verified",
           drive: "Google Drive Pool A",
           date: "Jul 2026",
+          sha: "SHA-256: 550b7194...e32a",
           previewSummary: "Statutory tax audit confirmation and digital acknowledgement receipt for FY2025-2026."
         },
         {
@@ -225,7 +239,8 @@
           badge: "Banking Vault",
           drive: "Google Drive Pool C",
           date: "May 2026",
-          previewSummary: "Certificates of deposit and sovereign gold bond certificates with interest maturity tables."
+          sha: "SHA-256: 4180f6bc...5710",
+          previewSummary: "Certificates of deposit and sovereign gold bond certificates with interest maturity schedule tables."
         },
         {
           id: "doc-16",
@@ -238,7 +253,8 @@
           badge: "Debt Free",
           drive: "Google Drive Pool A",
           date: "Feb 2026",
-          previewSummary: "Official bank no-objection certificate confirming 100% full repayment of residential property loan."
+          sha: "SHA-256: a918342f...08dc",
+          previewSummary: "Official bank no-objection certificate confirming 100% full repayment and release of residential property mortgage."
         }
       ]
     }
@@ -251,16 +267,16 @@
     // Render the complete, modern, designer-grade layout
     mount.innerHTML = `
       <div class="landing-page fd-page-enter">
-        <!-- Ambient Radial Background Lighting -->
+        <!-- Multi-Layered Ambient Glow Lighting -->
         <div class="landing-ambient-glow" aria-hidden="true"></div>
 
-        <!-- Sticky Glassmorphism Header -->
+        <!-- Sticky Glassmorphism Header Bar -->
         <div class="landing-header-wrap">
           <div class="landing-container">
             <header role="banner" class="landing-navbar">
               <a href="#/" class="nav-brand-group" aria-label="FamDoc Home">
                 <div class="nav-brand-crest">
-                  <img src="/img/logo.svg" alt="FamDoc Crest" class="nav-brand-logo" width="30" height="30">
+                  <img src="/img/logo.svg" alt="FamDoc Crest Logo" class="nav-brand-logo" width="30" height="30">
                 </div>
                 <div class="nav-brand-text">
                   <span class="nav-brand-name">Fam<span class="accent">Doc</span></span>
@@ -299,17 +315,40 @@
                 </ul>
               </nav>
 
-              <!-- Controls: Theme Toggle & Sign In -->
+              <!-- Controls: Theme Toggle, Mobile Toggle, Sign In -->
               <div class="nav-controls-group">
-                <button type="button" class="nav-theme-btn guest-theme-toggle" id="landingThemeToggle" aria-label="Toggle theme mode">
+                <button type="button" class="nav-theme-btn guest-theme-toggle" id="landingThemeToggle" aria-label="Toggle theme mode between light and dark">
                   <i class="fas fa-moon" aria-hidden="true"></i>
                 </button>
                 <a href="#/login" class="nav-login-btn" id="navLoginBtn">
                   <i class="fas fa-sign-in-alt" aria-hidden="true"></i>
                   <span>Sign In</span>
                 </a>
+                <button type="button" class="nav-mobile-toggle" id="mobileMenuToggle" aria-label="Open navigation menu">
+                  <i class="fas fa-bars" aria-hidden="true"></i>
+                </button>
               </div>
             </header>
+
+            <!-- Mobile Navigation Dropdown Drawer -->
+            <div class="mobile-nav-drawer" id="mobileNavDrawer" aria-hidden="true">
+              <button type="button" data-scroll="section-showcase">
+                <span><i class="fas fa-layer-group" style="margin-right: 0.6rem;"></i> Live Vault</span>
+                <span class="nav-badge">Test Drive</span>
+              </button>
+              <button type="button" data-scroll="section-pillars">
+                <span><i class="fas fa-cubes" style="margin-right: 0.6rem;"></i> Architecture</span>
+                <i class="fas fa-chevron-right" style="font-size: 0.75rem;"></i>
+              </button>
+              <button type="button" data-scroll="section-android">
+                <span><i class="fab fa-android" style="margin-right: 0.6rem;"></i> Android App</span>
+                <i class="fas fa-chevron-right" style="font-size: 0.75rem;"></i>
+              </button>
+              <button type="button" data-scroll="section-faq">
+                <span><i class="fas fa-question-circle" style="margin-right: 0.6rem;"></i> FAQ</span>
+                <i class="fas fa-chevron-right" style="font-size: 0.75rem;"></i>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -442,29 +481,33 @@
                   </div>
                 </div>
 
-                <!-- Interactive Category Filter Tabs -->
+                <!-- Interactive Category Filter Tabs with Count Badges -->
                 <div class="vault-category-tabs" role="tablist" aria-label="Vault Categories">
                   <button type="button" class="vault-tab-btn active" data-category="deeds" role="tab" aria-selected="true">
                     <i class="fas fa-file-contract" aria-hidden="true"></i>
                     <span>Vital Deeds &amp; Legal</span>
+                    <span class="tab-count-badge">4</span>
                   </button>
                   <button type="button" class="vault-tab-btn" data-category="health" role="tab" aria-selected="false">
                     <i class="fas fa-heartbeat" aria-hidden="true"></i>
                     <span>Health &amp; Medical</span>
+                    <span class="tab-count-badge">4</span>
                   </button>
                   <button type="button" class="vault-tab-btn" data-category="keepsakes" role="tab" aria-selected="false">
                     <i class="fas fa-gem" aria-hidden="true"></i>
                     <span>Family Keepsakes</span>
+                    <span class="tab-count-badge">4</span>
                   </button>
                   <button type="button" class="vault-tab-btn" data-category="tax" role="tab" aria-selected="false">
                     <i class="fas fa-calculator" aria-hidden="true"></i>
                     <span>Tax &amp; Financials</span>
+                    <span class="tab-count-badge">4</span>
                   </button>
                 </div>
 
                 <!-- Dynamic Documents Grid Container -->
                 <div class="vault-documents-grid" id="vault-documents-mount" role="region" aria-live="polite">
-                  <!-- Rendered dynamically via JavaScript -->
+                  <!-- Rendered dynamically via JavaScript with staggered animation -->
                 </div>
               </div>
             </div>
@@ -813,6 +856,10 @@
                   <span class="label">Security Seal</span>
                   <span class="val" id="modalDocSecurity">Fernet AES-128 Encrypted</span>
                 </div>
+                <div class="meta-row" style="grid-column: span 2;">
+                  <span class="label">Cryptographic Checksum</span>
+                  <span class="val" id="modalDocSha" style="font-family: var(--font-mono); font-size: 0.8rem;">SHA-256</span>
+                </div>
               </div>
             </div>
             <div class="modal-footer">
@@ -825,7 +872,7 @@
     `;
 
     // ------------------------------------------------------------------------
-    // Dynamic Interactive Document Rendering Helper
+    // Dynamic Interactive Document Rendering Helper with Staggered Animations
     // ------------------------------------------------------------------------
     function renderCategoryDocs(categoryKey) {
       const container = document.getElementById("vault-documents-mount");
@@ -834,8 +881,8 @@
       const categoryData = VAULT_CATEGORIES[categoryKey] || VAULT_CATEGORIES.deeds;
       const docs = categoryData.docs;
 
-      container.innerHTML = docs.map(doc => `
-        <article class="showcase-doc-card" data-doc-id="${doc.id}" tabindex="0" role="button" aria-label="Preview ${doc.title}">
+      container.innerHTML = docs.map((doc, idx) => `
+        <article class="showcase-doc-card doc-card-anim" data-doc-id="${doc.id}" tabindex="0" role="button" aria-label="Preview ${doc.title}" style="animation-delay: ${idx * 60}ms;">
           <div class="doc-icon-box ${doc.iconClass}">
             <i class="${doc.icon}" aria-hidden="true"></i>
           </div>
@@ -892,6 +939,9 @@
       document.getElementById("modalDocUploader").textContent = doc.uploader;
       document.getElementById("modalDocSize").textContent = doc.size;
       document.getElementById("modalDocSecurity").textContent = doc.badge;
+      
+      const shaElem = document.getElementById("modalDocSha");
+      if (shaElem) shaElem.textContent = doc.sha || "SHA-256: Verified";
 
       const iconElem = document.getElementById("modalDocIcon");
       if (iconElem) {
@@ -944,6 +994,30 @@
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape") closePreviewModal();
     });
+
+    // ------------------------------------------------------------------------
+    // Mobile Navigation Drawer Toggle
+    // ------------------------------------------------------------------------
+    const mobileToggle = document.getElementById("mobileMenuToggle");
+    const mobileDrawer = document.getElementById("mobileNavDrawer");
+    if (mobileToggle && mobileDrawer) {
+      mobileToggle.addEventListener("click", () => {
+        const isActive = mobileDrawer.classList.toggle("active");
+        mobileDrawer.setAttribute("aria-hidden", !isActive);
+        mobileToggle.innerHTML = isActive 
+          ? '<i class="fas fa-times" aria-hidden="true"></i>' 
+          : '<i class="fas fa-bars" aria-hidden="true"></i>';
+      });
+
+      // Close drawer on clicking any item inside drawer
+      mobileDrawer.querySelectorAll("button").forEach(btn => {
+        btn.addEventListener("click", () => {
+          mobileDrawer.classList.remove("active");
+          mobileDrawer.setAttribute("aria-hidden", "true");
+          if (mobileToggle) mobileToggle.innerHTML = '<i class="fas fa-bars" aria-hidden="true"></i>';
+        });
+      });
+    }
 
     // ------------------------------------------------------------------------
     // In-Page Smooth Scrolling (Router-Safe)
