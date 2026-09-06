@@ -46,6 +46,11 @@ h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-serif);
   font-weight: 700;
   line-height: 1.3;
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
 }
 
 a {
@@ -674,6 +679,13 @@ body.drawer-open .bottom-nav,
   top: 1.5rem;
   right: 1.5rem;
   z-index: 10;
+}
+
+.landing-top-bar .guest-theme-toggle {
+  position: static;
+  top: auto;
+  right: auto;
+  z-index: auto;
 }
 
 /* Modals & Dialogs Layout */

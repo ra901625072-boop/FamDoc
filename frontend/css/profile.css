@@ -7,6 +7,13 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 2rem;
+  align-items: start;
+}
+
+/* Make 3rd card (Cloud Storage Contribution) span both columns symmetrically */
+#profile-storage-card,
+.profile-grid > .famdoc-card:last-child {
+  grid-column: 1 / -1;
 }
 
 @media (max-width: 768px) {

@@ -590,6 +590,13 @@ input:-webkit-autofill:active {
   pointer-events: auto;
 }
 
+body:not(.layout-active) #famdoc-connection-indicator {
+  top: auto;
+  bottom: 20px;
+  right: 20px;
+  box-shadow: var(--shadow-lg);
+}
+
 #famdoc-connection-indicator.hidden {
   opacity: 0;
   transform: translateY(-10px);
@@ -653,6 +660,13 @@ input:-webkit-autofill:active {
 
 /* Responsive adjustment for Mobile view inside the header */
 @media (max-width: 768px) {
+  body:not(.layout-active) #famdoc-connection-indicator {
+    top: auto;
+    bottom: 16px;
+    right: 16px;
+    box-shadow: var(--shadow-lg);
+  }
+
   body.layout-active #famdoc-connection-indicator {
     top: 12px;
     right: 110px;

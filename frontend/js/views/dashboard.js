@@ -161,6 +161,7 @@
         <div class="famdoc-card fd-fade-up" style="--fd-delay: 0.3s;">
           <div class="famdoc-card-header">
             <h2 class="famdoc-card-title"><i class="fas fa-history" style="color: var(--accent-brand); margin-right: 0.5rem;"></i>Vault Activity</h2>
+            <span class="badge badge-primary" style="font-size: 0.72rem; padding: 0.2rem 0.6rem; font-family: var(--font-sans); font-weight: 600;"><i class="fas fa-circle" style="font-size: 0.45rem; margin-right: 0.35rem; color: var(--color-primary-light);"></i>Live Stream</span>
           </div>
           
           <div id="activity-feed-list" class="activity-feed scrollable-dashboard-list">
