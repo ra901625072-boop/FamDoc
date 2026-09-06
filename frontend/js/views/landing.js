@@ -1036,11 +1036,7 @@
     // ------------------------------------------------------------------------
     // Theme Switcher Synchronization
     // ------------------------------------------------------------------------
-    const themeBtn = document.getElementById("landingThemeToggle");
-    if (themeBtn && window.FamDocTheme) {
-      themeBtn.addEventListener("click", () => {
-        window.FamDocTheme.toggleTheme();
-      });
+    if (window.FamDocTheme) {
       window.FamDocTheme.updateAllControls();
     }
 

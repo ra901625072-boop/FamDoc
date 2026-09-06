@@ -46,8 +46,12 @@
       }, 350);
     },
 
-    // Quick toggle between light and dark (if using quick button)
+    // Quick toggle between light and dark (with debounce guard to prevent double-trigger)
     toggleTheme: function() {
+      if (this._isToggling) return;
+      this._isToggling = true;
+      setTimeout(() => { this._isToggling = false; }, 200);
+
       const currentEffective = this.getCurrentTheme();
       const nextMode = currentEffective === 'dark' ? 'light' : 'dark';
       this.setThemeMode(nextMode);
@@ -85,9 +89,9 @@
         btn.classList.toggle('active', btnMode === currentMode);
       });
 
-      // 2. Update quick toggle icons (mobile header, guest view)
+      // 2. Update quick toggle icons (mobile header, guest view, landing page)
       const iconClass = currentEffective === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
-      document.querySelectorAll('#mobileThemeToggle i, #desktopThemeToggle i, .guest-theme-toggle i').forEach(icon => {
+      document.querySelectorAll('#mobileThemeToggle i, #desktopThemeToggle i, #landingThemeToggle i, .guest-theme-toggle i').forEach(icon => {
         icon.className = iconClass;
       });
     },
@@ -117,7 +121,7 @@
         }
 
         // 2. Quick Theme Toggle Buttons
-        const quickBtn = e.target.closest('#mobileThemeToggle, #desktopThemeToggle, .guest-theme-toggle');
+        const quickBtn = e.target.closest('#mobileThemeToggle, #desktopThemeToggle, #landingThemeToggle, .guest-theme-toggle');
         if (quickBtn) {
           e.preventDefault();
           this.toggleTheme();
