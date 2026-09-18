@@ -63,47 +63,41 @@ a:hover {
   color: var(--accent-brand-hover);
 }
 
-/* Ambient Background Glowing Elements */
+/* Ambient Background Glowing Elements (Lightweight, GPU-friendly, Brand Harmonized) */
 body::before, body::after {
   content: '';
   position: fixed;
-  width: 45vw;
-  height: 45vw;
+  width: 50vw;
+  height: 50vw;
+  max-width: 600px;
+  max-height: 600px;
   border-radius: 50%;
-  filter: blur(120px);
   z-index: -2;
   pointer-events: none;
-  opacity: 0.25;
-  animation: glowFloat 24s infinite alternate ease-in-out;
+  opacity: 0.5;
+  will-change: transform;
 }
 
 body::before {
-  top: -10%;
-  left: -5%;
-  background: radial-gradient(circle, hsl(220, 60%, 90%) 0%, rgba(255, 255, 255, 0) 70%);
+  top: -12%;
+  left: -8%;
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.12) 0%, rgba(4, 120, 87, 0.04) 45%, transparent 70%);
 }
 
 body::after {
   bottom: -15%;
-  right: -5%;
-  background: radial-gradient(circle, hsl(200, 50%, 90%) 0%, rgba(255, 255, 255, 0) 70%);
-  animation-delay: -12s;
+  right: -8%;
+  background: radial-gradient(circle, rgba(13, 148, 136, 0.10) 0%, rgba(6, 78, 59, 0.03) 50%, transparent 70%);
 }
 
 [data-theme="dark"] body::before {
-  opacity: 0.12;
-  background: radial-gradient(circle, hsl(250, 70%, 25%) 0%, rgba(0, 0, 0, 0) 70%);
+  opacity: 0.35;
+  background: radial-gradient(circle, rgba(52, 211, 153, 0.12) 0%, rgba(16, 185, 129, 0.04) 50%, transparent 70%);
 }
 
 [data-theme="dark"] body::after {
-  opacity: 0.08;
-  background: radial-gradient(circle, hsl(210, 80%, 20%) 0%, rgba(0, 0, 0, 0) 70%);
-}
-
-@keyframes glowFloat {
-  0% { transform: translate(0, 0) scale(1) rotate(0deg); }
-  50% { transform: translate(8%, 12%) scale(1.1) rotate(90deg); }
-  100% { transform: translate(-5%, 8%) scale(0.95) rotate(180deg); }
+  opacity: 0.25;
+  background: radial-gradient(circle, rgba(45, 212, 191, 0.09) 0%, rgba(20, 41, 31, 0.05) 50%, transparent 70%);
 }
 
 /* Layout Structure */

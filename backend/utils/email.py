@@ -10,24 +10,35 @@ def send_otp_email(to_email: str, otp: str):
     It prioritizes sending via Resend API (if configured), then falls back to SMTP, 
     and finally logs to the server console if no email configuration is present.
     """
-    subject = "Your Password Reset OTP"
+    subject = "Your FamDoc Verification Code"
     body = f"""
-    <html>
-      <body style="font-family: Arial, sans-serif; background-color: #f4f4f5; padding: 20px; color: #1f2937; margin: 0;">
-        <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid #e5e7eb;">
-          <div style="text-align: center; margin-bottom: 20px;">
-            <h2 style="color: #2563eb; margin: 0; font-size: 24px;">Reset Your Password</h2>
-            <p style="color: #6b7280; margin: 5px 0 0 0; font-size: 14px;">Family Document Management System</p>
+    <!DOCTYPE html>
+    <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <title>FamDoc Security Code</title>
+      </head>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #F2FBF6; padding: 28px 12px; color: #0B291D; margin: 0; line-height: 1.6;">
+        <div style="max-width: 520px; margin: 0 auto; background-color: #FFFFFF; padding: 36px 32px; border-radius: 16px; box-shadow: 0 8px 24px rgba(4, 40, 25, 0.08); border: 1px solid #CBEAD7;">
+          <div style="text-align: center; margin-bottom: 24px;">
+            <div style="display: inline-block; padding: 8px 16px; background-color: #E8F7EE; border-radius: 9999px; margin-bottom: 12px;">
+              <span style="font-size: 13px; font-weight: 700; letter-spacing: 1px; color: #047857; text-transform: uppercase;">FamDoc Keepsake Vault</span>
+            </div>
+            <h2 style="color: #064E3B; margin: 0; font-size: 22px; font-weight: 800;">Password Reset Request</h2>
           </div>
-          <p>Hello,</p>
-          <p>We received a request to reset the password for your account. Please use the following 6-digit One-Time Password (OTP) to complete the verification:</p>
-          <div style="text-align: center; margin: 30px 0;">
-            <span style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #2563eb; background-color: #f3f4f6; padding: 12px 24px; border-radius: 6px; border: 1px dashed #2563eb; display: inline-block;">{otp}</span>
+          <p style="font-size: 15px; color: #436B59; margin-bottom: 16px;">Hello,</p>
+          <p style="font-size: 15px; color: #436B59; margin-bottom: 24px;">We received a request to reset the password for your family vault account. Use the 6-digit one-time code below to verify your identity:</p>
+          <div style="text-align: center; margin: 28px 0;">
+            <div style="display: inline-block; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 34px; font-weight: 800; letter-spacing: 8px; color: #047857; background: #F0FAF4; padding: 16px 32px; border-radius: 12px; border: 2px dashed #10B981; box-shadow: 0 4px 14px rgba(4, 120, 87, 0.12);">
+              {otp}
+            </div>
           </div>
-          <p style="color: #ef4444; font-weight: 500;">This OTP code is valid for 10 minutes. Do not share this code with anyone.</p>
-          <p>If you did not request this password reset, please ignore this email. Your password will remain unchanged.</p>
-          <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 30px 0;" />
-          <p style="font-size: 12px; color: #9ca3af; text-align: center; margin: 0;">Family Document Management System &copy; 2026</p>
+          <div style="background-color: #FEF3C7; border-left: 4px solid #F59E0B; padding: 12px 16px; border-radius: 6px; margin: 24px 0;">
+            <p style="color: #92400E; font-size: 13px; font-weight: 600; margin: 0;">⏱️ This verification code expires in 10 minutes. Never share this code with anyone.</p>
+          </div>
+          <p style="font-size: 13px; color: #6B7280; margin-top: 20px;">If you did not initiate this request, you can safely ignore this email. Your vault password will remain unchanged.</p>
+          <hr style="border: 0; border-top: 1px solid #E5E7EB; margin: 28px 0 20px 0;" />
+          <p style="font-size: 12px; color: #9CA3AF; text-align: center; margin: 0;">FamDoc — Private & Encrypted Family Keepsake Vault &copy; 2026</p>
         </div>
       </body>
     </html>

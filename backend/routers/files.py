@@ -146,23 +146,52 @@ async def upload_file(
             detail="Filename contains unsupported characters. Use only letters, numbers, spaces, and ._-()[]."
         )
 
-    content = await file.read()
-    file_size = len(content)
+    # Check upfront Content-Length header to reject oversized requests immediately
+    MAX_FILE_SIZE = 50 * 1024 * 1024 # 50MB limit
+    content_length = request.headers.get("content-length")
+    if content_length:
+        try:
+            if int(content_length) > MAX_FILE_SIZE:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="File size exceeds the maximum limit of 50MB."
+                )
+        except ValueError:
+            pass
+
+    # Read initial chunk to inspect magic bytes signature before reading entire payload
+    initial_chunk = await file.read(8192)
+    if not initial_chunk:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Uploaded file is empty."
+        )
 
     # Enforce file content verification (magic bytes check)
-    if not validate_file_content_signature(content, ext):
+    if not validate_file_content_signature(initial_chunk, ext):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="File content does not match the file extension signature."
         )
 
-    # Enforce file size limit (50MB)
-    MAX_FILE_SIZE = 50 * 1024 * 1024
-    if file_size > MAX_FILE_SIZE:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="File size exceeds the maximum limit of 50MB."
-        )
+    # Stream remaining payload in chunks enforcing maximum size constraint
+    CHUNK_SIZE = 64 * 1024
+    chunks = [initial_chunk]
+    total_bytes = len(initial_chunk)
+    while True:
+        chunk = await file.read(CHUNK_SIZE)
+        if not chunk:
+            break
+        total_bytes += len(chunk)
+        if total_bytes > MAX_FILE_SIZE:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="File size exceeds the maximum limit of 50MB."
+            )
+        chunks.append(chunk)
+
+    content = b"".join(chunks)
+    file_size = total_bytes
 
     # Enforce virus scanning check
     from utils.virus_scan import scan_file_for_viruses

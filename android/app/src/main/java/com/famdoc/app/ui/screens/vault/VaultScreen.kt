@@ -501,120 +501,38 @@ fun VaultScreen(
         }
 
         // Folder Action Menu Modal
-        if (selectedActionFolder != null) {
-            val folder = selectedActionFolder!!
-            ModalBottomSheet(
-                onDismissRequest = { selectedActionFolder = null },
-                shape = RoundedCornerShape(topStart = Dimens.RadiusExtraLarge, topEnd = Dimens.RadiusExtraLarge)
-            ) {
-                Column(modifier = Modifier.padding(Dimens.Spacing16)) {
-                    Text(
-                        text = folder.name,
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                        modifier = Modifier.padding(bottom = Dimens.Spacing12)
-                    )
-                    ListItem(
-                        headlineContent = { Text("Open Folder") },
-                        leadingContent = { Icon(Icons.Default.FolderOpen, contentDescription = null, tint = BrandAccent) },
-                        modifier = Modifier.bounceClick {
-                            selectedActionFolder = null
-                            vaultViewModel.navigateToFolder(folder)
-                        }
-                    )
-                    ListItem(
-                        headlineContent = { Text("Move Folder") },
-                        leadingContent = { Icon(Icons.AutoMirrored.Filled.DriveFileMove, contentDescription = null, tint = MintPrimaryLight) },
-                        modifier = Modifier.bounceClick {
-                            selectedActionFolder = null
-                            folderToMove = folder
-                        }
-                    )
-                    ListItem(
-                        headlineContent = { Text("Rename Folder") },
-                        leadingContent = { Icon(Icons.Default.Edit, contentDescription = null, tint = MintSecondary) },
-                        modifier = Modifier.bounceClick {
-                            selectedActionFolder = null
-                            itemToRename = "folder" to folder
-                            renameText = folder.name
-                        }
-                    )
-                    ListItem(
-                        headlineContent = { Text("Move to Recycle Bin", color = MaterialTheme.colorScheme.error) },
-                        leadingContent = { Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
-                        modifier = Modifier.bounceClick {
-                            selectedActionFolder = null
-                            itemToDelete = "folder" to folder
-                        }
-                    )
-                }
-            }
+        selectedActionFolder?.let { folder ->
+            FolderActionBottomSheet(
+                folder = folder,
+                onOpen = { vaultViewModel.navigateToFolder(folder) },
+                onMove = { folderToMove = folder },
+                onRename = {
+                    itemToRename = "folder" to folder
+                    renameText = folder.name
+                },
+                onDelete = { itemToDelete = "folder" to folder },
+                onDismiss = { selectedActionFolder = null }
+            )
         }
 
         // File Action Menu Modal
-        if (selectedActionFile != null) {
-            val file = selectedActionFile!!
-            ModalBottomSheet(
-                onDismissRequest = { selectedActionFile = null },
-                shape = RoundedCornerShape(topStart = Dimens.RadiusExtraLarge, topEnd = Dimens.RadiusExtraLarge)
-            ) {
-                Column(modifier = Modifier.padding(Dimens.Spacing16)) {
-                    Text(
-                        text = file.filename,
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                        modifier = Modifier.padding(bottom = Dimens.Spacing12)
-                    )
-                    ListItem(
-                        headlineContent = { Text("Preview / Open") },
-                        leadingContent = { Icon(Icons.Default.Visibility, contentDescription = null, tint = MintPrimaryLight) },
-                        modifier = Modifier.bounceClick {
-                            selectedActionFile = null
-                            onNavigateToFilePreview(file.id, file.filename, file.fileType)
-                        }
-                    )
-                    ListItem(
-                        headlineContent = { Text("Download") },
-                        leadingContent = { Icon(Icons.Default.Download, contentDescription = null, tint = BrandSuccess) },
-                        modifier = Modifier.bounceClick {
-                            selectedActionFile = null
-                            vaultViewModel.downloadFile(file)
-                        }
-                    )
-                    ListItem(
-                        headlineContent = { Text("Move to Folder") },
-                        leadingContent = { Icon(Icons.AutoMirrored.Filled.DriveFileMove, contentDescription = null, tint = MintSecondary) },
-                        modifier = Modifier.bounceClick {
-                            selectedActionFile = null
-                            fileToMove = file
-                        }
-                    )
-                    ListItem(
-                        headlineContent = { Text("Share Public Link") },
-                        leadingContent = { Icon(Icons.Default.Share, contentDescription = null, tint = BrandAccent) },
-                        modifier = Modifier.bounceClick {
-                            selectedActionFile = null
-                            fileToShare = file
-                            vaultViewModel.loadShareLinks(file.id)
-                        }
-                    )
-                    ListItem(
-                        headlineContent = { Text("Rename File") },
-                        leadingContent = { Icon(Icons.Default.Edit, contentDescription = null) },
-                        modifier = Modifier.bounceClick {
-                            selectedActionFile = null
-                            itemToRename = "file" to file
-                            renameText = file.filename
-                        }
-                    )
-                    ListItem(
-                        headlineContent = { Text("Move to Recycle Bin", color = MaterialTheme.colorScheme.error) },
-                        leadingContent = { Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
-                        modifier = Modifier.bounceClick {
-                            selectedActionFile = null
-                            itemToDelete = "file" to file
-                        }
-                    )
-                }
-            }
+        selectedActionFile?.let { file ->
+            FileActionBottomSheet(
+                file = file,
+                onPreview = { onNavigateToFilePreview(file.id, file.filename, file.fileType) },
+                onDownload = { vaultViewModel.downloadFile(file) },
+                onMove = { fileToMove = file },
+                onShare = {
+                    fileToShare = file
+                    vaultViewModel.loadShareLinks(file.id)
+                },
+                onRename = {
+                    itemToRename = "file" to file
+                    renameText = file.filename
+                },
+                onDelete = { itemToDelete = "file" to file },
+                onDismiss = { selectedActionFile = null }
+            )
         }
 
         // Single File Move Dialog
@@ -662,78 +580,35 @@ fun VaultScreen(
 
         // Create Folder Dialog
         if (showCreateFolderDialog) {
-            AlertDialog(
-                onDismissRequest = { showCreateFolderDialog = false },
-                title = { Text("Create New Folder", fontWeight = FontWeight.Bold) },
-                text = {
-                    OutlinedTextField(
-                        value = newFolderName,
-                        onValueChange = { newFolderName = it },
-                        label = { Text("Folder Name") },
-                        placeholder = { Text("e.g. Invoices, Medical") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
+            VaultCreateFolderDialog(
+                folderName = newFolderName,
+                onNameChange = { newFolderName = it },
+                onConfirm = {
+                    vaultViewModel.createFolder(newFolderName.trim())
+                    newFolderName = ""
+                    showCreateFolderDialog = false
                 },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            if (newFolderName.isNotBlank()) {
-                                vaultViewModel.createFolder(newFolderName.trim())
-                                newFolderName = ""
-                                showCreateFolderDialog = false
-                            }
-                        },
-                        enabled = newFolderName.isNotBlank()
-                    ) {
-                        Text("Create")
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showCreateFolderDialog = false }) {
-                        Text("Cancel")
-                    }
-                }
+                onDismiss = { showCreateFolderDialog = false }
             )
         }
 
         // Rename Dialog
         if (itemToRename != null) {
             val (type, item) = itemToRename!!
-            AlertDialog(
-                onDismissRequest = { itemToRename = null },
-                title = { Text(if (type == "folder") "Rename Folder" else "Rename File", fontWeight = FontWeight.Bold) },
-                text = {
-                    OutlinedTextField(
-                        value = renameText,
-                        onValueChange = { renameText = it },
-                        label = { Text(if (type == "folder") "Folder Name" else "File Name") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            if (renameText.isNotBlank()) {
-                                if (type == "folder") {
-                                    vaultViewModel.renameFolder((item as FolderItem).id, renameText.trim())
-                                } else {
-                                    vaultViewModel.renameFile((item as FileItem).id, renameText.trim())
-                                }
-                                itemToRename = null
-                            }
-                        },
-                        enabled = renameText.isNotBlank()
-                    ) {
-                        Text("Rename")
+            VaultRenameDialog(
+                title = if (type == "folder") "Rename Folder" else "Rename File",
+                label = if (type == "folder") "Folder Name" else "File Name",
+                value = renameText,
+                onValueChange = { renameText = it },
+                onConfirm = {
+                    if (type == "folder") {
+                        vaultViewModel.renameFolder((item as FolderItem).id, renameText.trim())
+                    } else {
+                        vaultViewModel.renameFile((item as FileItem).id, renameText.trim())
                     }
+                    itemToRename = null
                 },
-                dismissButton = {
-                    TextButton(onClick = { itemToRename = null }) {
-                        Text("Cancel")
-                    }
-                }
+                onDismiss = { itemToRename = null }
             )
         }
 

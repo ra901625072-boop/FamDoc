@@ -3,7 +3,7 @@ package com.famdoc.app
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
-import androidx.activity.ComponentActivity
+import androidx.fragment.app.FragmentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
@@ -17,7 +17,7 @@ import com.famdoc.app.ui.navigation.FamDocNavGraph
 import com.famdoc.app.ui.navigation.Screen
 import com.famdoc.app.ui.theme.FamDocTheme
 
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

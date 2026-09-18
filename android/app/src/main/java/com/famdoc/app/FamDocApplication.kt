@@ -21,6 +21,9 @@ class FamDocApplication : Application(), ImageLoaderFactory {
     lateinit var apiClient: ApiClient
         private set
 
+    lateinit var biometricPromptManager: com.famdoc.app.core.security.BiometricPromptManager
+        private set
+
     override fun onCreate() {
         super.onCreate()
         instance = this
@@ -28,6 +31,7 @@ class FamDocApplication : Application(), ImageLoaderFactory {
         secureTokenManager = SecureTokenManager(this)
         appConfig = AppConfig(this, secureTokenManager)
         apiClient = ApiClient(this, appConfig, secureTokenManager)
+        biometricPromptManager = com.famdoc.app.core.security.BiometricPromptManager(this)
 
         // Explicitly set the global Coil ImageLoader to ensure authenticated OkHttpClient is used everywhere
         coil.Coil.setImageLoader(this)

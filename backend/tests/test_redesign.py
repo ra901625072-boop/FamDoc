@@ -1336,6 +1336,40 @@ class TestBackendRedesign(unittest.TestCase):
         self.assertIsNotNone(new_charlie)
         self.assertEqual(new_charlie.username, "charlie")
 
+    def test_hashed_password_reset_security_flow(self):
+        """Verify that password reset OTPs are securely hashed and never stored in cleartext."""
+        # 1. Create a user
+        user = models.User(
+            username="otp_tester",
+            email="otp_tester@example.com",
+            password_hash=auth.get_password_hash("OldPassword123!"),
+            role="member"
+        )
+        self.db.add(user)
+        self.db.commit()
+
+        # 2. Request OTP
+        req_resp = self.client.post(
+            "/api/auth/forgot-password/request",
+            json={"email": "otp_tester@example.com"}
+        )
+        self.assertEqual(req_resp.status_code, 200)
+
+        # 3. Inspect database: Cleartext OTP must be None, hashed OTP must be present
+        otp_entry = self.db.query(models.PasswordResetOTP).filter_by(email="otp_tester@example.com").first()
+        self.assertIsNotNone(otp_entry)
+        self.assertIsNone(otp_entry.otp_code, "Cleartext OTP must NOT be stored in the database")
+        self.assertIsNotNone(otp_entry.otp_code_hash, "otp_code_hash must be present")
+        self.assertEqual(len(otp_entry.otp_code_hash), 64)
+
+        # 4. Attempt verify with incorrect code
+        bad_verify = self.client.post(
+            "/api/auth/forgot-password/verify",
+            json={"email": "otp_tester@example.com", "otp_code": "000000"}
+        )
+        self.assertEqual(bad_verify.status_code, 400)
+        self.assertIn("invalid or expired", bad_verify.json()["detail"].lower())
+
 if __name__ == "__main__":
     unittest.main()
 

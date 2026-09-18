@@ -54,7 +54,7 @@ def execute_migration_statement(sql_statement):
             conn.execute(text(sql_statement))
         return
 
-    # Retry loop to acquire lock
+    # Retry loop to acquire lock with graceful backoff
     for attempt in range(1, 4):
         try:
             with engine.begin() as conn:
@@ -64,20 +64,8 @@ def execute_migration_statement(sql_statement):
         except Exception as e:
             err_msg = str(e).lower()
             if "lock" in err_msg or "timeout" in err_msg or "cancel" in err_msg:
-                logger.warning(f"Lock timeout (attempt {attempt}/3) for: {sql_statement}. Terminating blocking backends...")
-                try:
-                    # Terminate other backends to break any locks in a fresh connection context
-                    with engine.begin() as conn:
-                        conn.execute(text("""
-                            SELECT pg_terminate_backend(pid) 
-                            FROM pg_stat_activity 
-                            WHERE datname = current_database() 
-                              AND pid <> pg_backend_pid()
-                              AND state in ('idle in transaction', 'active')
-                        """))
-                except Exception as term_err:
-                    logger.warning(f"Could not terminate backends: {term_err}")
-                time.sleep(1)
+                logger.warning(f"Lock timeout (attempt {attempt}/3) for: {sql_statement}. Waiting for lock release...")
+                time.sleep(attempt * 1.5)
             else:
                 # Real error, raise it
                 raise e
@@ -430,5 +418,15 @@ def run_migrations():
                 db_session.close()
         except Exception as e:
             logger.warning(f"Note on orphaned member cleanup: {str(e)}")
+
+    # 10. Ensure password_reset_otps has otp_code_hash column
+    if "password_reset_otps" in table_names:
+        try:
+            otp_columns = [col["name"] for col in inspector.get_columns("password_reset_otps")]
+            if "otp_code_hash" not in otp_columns:
+                logger.info("Migration: Adding otp_code_hash column to password_reset_otps")
+                execute_migration_statement("ALTER TABLE password_reset_otps ADD COLUMN otp_code_hash VARCHAR(64)")
+        except Exception as e:
+            logger.warning(f"Note on otp_code_hash migration: {str(e)}")
 
 

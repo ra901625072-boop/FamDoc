@@ -1,12 +1,29 @@
 from datetime import datetime, timedelta, timezone
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+import hashlib
+import hmac
+from fastapi import APIRouter, Depends, HTTPException, status, Request, BackgroundTasks
 from sqlalchemy.orm import Session
 from database import get_db
+from config import JWT_SECRET
 import models
 import schemas
 import auth
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
+
+def hash_otp_code(otp: str) -> str:
+    return hashlib.sha256(f"{otp.strip()}:{JWT_SECRET}".encode("utf-8")).hexdigest()
+
+def verify_otp_code(input_otp: str, db_otp: models.PasswordResetOTP) -> bool:
+    if not input_otp or not db_otp:
+        return False
+    expected_hash = hash_otp_code(input_otp)
+    if db_otp.otp_code_hash:
+        return hmac.compare_digest(db_otp.otp_code_hash, expected_hash)
+    if db_otp.otp_code:
+        return hmac.compare_digest(db_otp.otp_code.strip(), input_otp.strip())
+    return False
+
 
 from utils.rate_limiter import check_rate_limit as verify_rate_limit
 from utils.ip import get_client_ip
@@ -289,7 +306,12 @@ def family_login(request: Request, login_in: schemas.FamilyLogin, db: Session = 
     return {"access_token": access_token, "token_type": "bearer"}
 
 @router.post("/forgot-password/request")
-def forgot_password_request(request: Request, body: schemas.PasswordResetRequest, db: Session = Depends(get_db)):
+def forgot_password_request(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    body: schemas.PasswordResetRequest,
+    db: Session = Depends(get_db)
+):
     ip = get_client_ip(request)
     email = body.email.strip().lower()
 
@@ -313,19 +335,21 @@ def forgot_password_request(request: Request, body: schemas.PasswordResetRequest
     otp = "".join(secrets.choice("0123456789") for _ in range(6))
     expiry = datetime.now(timezone.utc) + timedelta(minutes=10)
 
-    # Save to DB
+    # Save to DB with secure cryptographic hash
+    otp_hash = hash_otp_code(otp)
     db_otp = models.PasswordResetOTP(
         email=email,
-        otp_code=otp,
+        otp_code=None, # Never persist cleartext OTP
+        otp_code_hash=otp_hash,
         expires_at=expiry,
         is_used=False
     )
     db.add(db_otp)
     db.commit()
 
-    # Send OTP email
+    # Send OTP email in non-blocking background task to prevent request stalls
     from utils.email import send_otp_email
-    send_otp_email(email, otp)
+    background_tasks.add_task(send_otp_email, email, otp)
 
     return {"message": "If the email is registered, a password reset OTP has been sent."}
 
@@ -351,7 +375,7 @@ def forgot_password_verify(request: Request, body: schemas.PasswordResetVerify, 
         models.PasswordResetOTP.expires_at > now
     ).order_by(models.PasswordResetOTP.created_at.desc()).first()
 
-    if not db_otp or db_otp.otp_code != body.otp_code:
+    if not db_otp or not verify_otp_code(body.otp_code, db_otp):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid or expired verification code."
@@ -381,7 +405,7 @@ def forgot_password_reset(request: Request, body: schemas.PasswordResetConfirm, 
         models.PasswordResetOTP.expires_at > now
     ).order_by(models.PasswordResetOTP.created_at.desc()).first()
 
-    if not db_otp or db_otp.otp_code != body.otp_code:
+    if not db_otp or not verify_otp_code(body.otp_code, db_otp):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid or expired verification code."

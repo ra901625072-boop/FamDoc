@@ -93,6 +93,11 @@ dependencies {
 
     // Security & Encrypted Storage
     implementation(libs.androidx.security.crypto)
+    implementation(libs.androidx.biometric)
+
+    // Offline Local Database (Room)
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
 
     // Image Loading
     implementation(libs.coil.compose)

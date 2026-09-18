@@ -271,7 +271,8 @@ class PasswordResetOTP(Base):
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     email = Column(String(255), index=True, nullable=False)
-    otp_code = Column(String(6), nullable=False)
+    otp_code = Column(String(6), nullable=True) # Legacy nullable field
+    otp_code_hash = Column(String(64), nullable=True, index=True) # SHA-256 / HMAC hash
     expires_at = Column(DateTime(timezone=True), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     is_used = Column(Boolean, default=False, nullable=False)
