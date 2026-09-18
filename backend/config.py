@@ -67,4 +67,5 @@ SMTP_SSL = os.getenv("SMTP_SSL", "false").lower() == "true"
 # Resend Email Configuration for OTP Verification
 RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
 
-
+# File Upload Settings
+MAX_FILE_SIZE_MB = int(os.getenv("MAX_FILE_SIZE_MB", "500"))

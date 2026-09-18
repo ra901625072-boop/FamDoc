@@ -123,6 +123,7 @@
 }
 
 /* Category Colors */
+.storage-segment-video { background-color: #ec4899; }
 .storage-segment-image { background-color: #3b82f6; }
 .storage-segment-pdf { background-color: #ef4444; }
 .storage-segment-document { background-color: #8b5cf6; }

@@ -270,7 +270,7 @@ class StorageManager:
             "It may still be syncing to cloud storage. Please try again shortly."
         )
 
-    def stream_file(self, file, family_config: dict, db = None):
+    def stream_file(self, file, family_config: dict, db = None, range_header: str = None):
         provider_name = file.storage_provider or "local"
         cascade_order = self._cascade_from(provider_name)
 
@@ -289,7 +289,7 @@ class StorageManager:
                 
                 # Check if provider has stream_file
                 if hasattr(self.providers[p_name], "stream_file"):
-                    stream = self.providers[p_name].stream_file(cfg, f_id, db=db)
+                    stream = self.providers[p_name].stream_file(cfg, f_id, db=db, range_header=range_header)
                     if stream is not None:
                         return stream, p_name
                         
@@ -298,7 +298,7 @@ class StorageManager:
                 
                 def fallback_generator():
                     yield content
-                return fallback_generator(), p_name
+                return (fallback_generator(), None, None, len(content)), p_name
                 
             except Exception as e:
                 logger.warning({

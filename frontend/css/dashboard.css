@@ -297,6 +297,7 @@
 }
 
 /* Category Colors (Matches Android Category Breakdown Tokens in Color.kt) */
+.storage-segment-video, .dot-video { background-color: var(--category-video, #ec4899); }
 .storage-segment-image, .dot-image { background-color: var(--category-image, #3b82f6); }
 .storage-segment-pdf, .dot-pdf { background-color: var(--category-pdf, #ef4444); }
 .storage-segment-document, .dot-document { background-color: var(--category-doc, #8b5cf6); }

@@ -303,6 +303,7 @@
 
 /* Icon Colors */
 .item-icon.folder { color: var(--folder-color); }
+.item-icon.file-video { color: var(--video-color); }
 .item-icon.file-pdf { color: var(--pdf-color); }
 .item-icon.file-image { color: var(--image-color); }
 .item-icon.file-doc { color: var(--doc-color); }
@@ -450,6 +451,16 @@
   box-shadow: var(--shadow-lg);
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-paper);
+}
+
+.preview-video {
+  max-width: 95%;
+  max-height: 80vh;
+  object-fit: contain;
+  box-shadow: var(--shadow-lg);
+  border-radius: var(--radius-md);
+  background: #000;
+  outline: none;
 }
 
 .preview-text {

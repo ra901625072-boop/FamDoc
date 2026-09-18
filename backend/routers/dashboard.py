@@ -112,18 +112,22 @@ def get_dashboard_stats(
     ).all()
     
     storage_breakdown = {
-        "pdf": {"size": 0, "count": 0},
+        "video": {"size": 0, "count": 0},
         "image": {"size": 0, "count": 0},
+        "pdf": {"size": 0, "count": 0},
         "document": {"size": 0, "count": 0},
         "sheet": {"size": 0, "count": 0},
         "text": {"size": 0, "count": 0},
         "other": {"size": 0, "count": 0}
     }
+    video_exts = {'mp4', 'm4v', 'webm', 'mkv', 'mov', 'qt', 'avi', 'wmv', 'flv', '3gp', 'ts', 'ogv', 'vob', 'asf', 'rm', 'rmvb'}
     for file_type, filename, size_bytes in active_files:
         ext = filename.split('.')[-1].lower() if '.' in filename else ''
         mime = file_type.lower() if file_type else ''
         
-        if 'pdf' in mime or ext == 'pdf':
+        if 'video' in mime or ext in video_exts:
+            cat = 'video'
+        elif 'pdf' in mime or ext == 'pdf':
             cat = 'pdf'
         elif 'image' in mime or ext in ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg']:
             cat = 'image'

@@ -54,6 +54,7 @@ private val GoogleRed = Color(0xFFEA4335)
 
 // Category Storage Breakdown Colors
 private val CategoryImageColor = Color(0xFF3B82F6)
+private val CategoryVideoColor = Color(0xFFEC4899)
 private val CategoryPdfColor = Color(0xFFEF4444)
 private val CategoryDocColor = Color(0xFF8B5CF6)
 private val CategorySheetColor = Color(0xFF10B981)
@@ -809,6 +810,7 @@ private fun MultiSegmentProgressBar(
 ) {
     val categories = listOf(
         Triple("image", "Images", CategoryImageColor),
+        Triple("video", "Videos", CategoryVideoColor),
         Triple("pdf", "PDFs", CategoryPdfColor),
         Triple("document", "Docs", CategoryDocColor),
         Triple("sheet", "Sheets", CategorySheetColor),

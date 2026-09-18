@@ -89,7 +89,7 @@ class StorageProvider(ABC):
         """
         return None
 
-    def stream_file(self, config: dict, cloud_file_id: str, db = None):
+    def stream_file(self, config: dict, cloud_file_id: str, db = None, range_header: str = None):
         """
         Optional: Returns a generator that streams the file content in chunks.
         Returns None if not supported.

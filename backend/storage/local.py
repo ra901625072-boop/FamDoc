@@ -48,7 +48,7 @@ class LocalStorageProvider(StorageProvider):
         with open(file_path, "rb") as f:
             return f.read()
 
-    def stream_file(self, config: dict, cloud_file_id: str, db = None):
+    def stream_file(self, config: dict, cloud_file_id: str, db = None, range_header: str = None):
         vault_dir = config.get("vault_folder_id")
         if not vault_dir:
             raise Exception("Local vault directory is not configured")
@@ -56,14 +56,48 @@ class LocalStorageProvider(StorageProvider):
         if not os.path.exists(file_path):
             raise Exception(f"Local file not found: {cloud_file_id}")
         
+        file_size = os.path.getsize(file_path)
+        start = 0
+        end = file_size - 1 if file_size > 0 else 0
+        is_range = False
+
+        if range_header and range_header.startswith("bytes="):
+            try:
+                range_val = range_header.replace("bytes=", "").strip()
+                parts = range_val.split("-")
+                if parts[0]:
+                    start = int(parts[0])
+                if len(parts) > 1 and parts[1]:
+                    end = int(parts[1])
+                if end >= file_size:
+                    end = file_size - 1
+                if start <= end and start < file_size:
+                    is_range = True
+            except Exception:
+                is_range = False
+
         def chunk_generator():
             with open(file_path, "rb") as f:
-                while True:
-                    chunk = f.read(128 * 1024)
-                    if not chunk:
-                        break
-                    yield chunk
-        return chunk_generator()
+                if is_range:
+                    f.seek(start)
+                    remaining = end - start + 1
+                    while remaining > 0:
+                        chunk_to_read = min(128 * 1024, remaining)
+                        chunk = f.read(chunk_to_read)
+                        if not chunk:
+                            break
+                        remaining -= len(chunk)
+                        yield chunk
+                else:
+                    while True:
+                        chunk = f.read(128 * 1024)
+                        if not chunk:
+                            break
+                        yield chunk
+
+        if is_range:
+            return chunk_generator(), start, end, file_size
+        return chunk_generator(), None, None, file_size
 
     def delete_file(self, config: dict, cloud_file_id: str, db = None) -> bool:
         vault_dir = config.get("vault_folder_id")

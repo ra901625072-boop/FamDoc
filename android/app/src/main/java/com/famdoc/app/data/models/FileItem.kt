@@ -26,6 +26,10 @@ data class FileItem(
         get() = fileType.contains("image", ignoreCase = true) ||
                 listOf("jpg", "jpeg", "png", "webp", "gif", "svg", "bmp", "ico", "heic", "heif", "tiff", "jfif").contains(extension)
 
+    val isVideo: Boolean
+        get() = fileType.contains("video", ignoreCase = true) ||
+                listOf("mp4", "m4v", "webm", "mkv", "mov", "qt", "avi", "wmv", "flv", "3gp", "ts", "ogv", "vob", "asf", "rm", "rmvb").contains(extension)
+
     val isPdf: Boolean
         get() = fileType.contains("pdf", ignoreCase = true) || extension == "pdf"
 
@@ -48,6 +52,7 @@ data class FileItem(
         get() = when {
             isPdf -> "PDF"
             isImage -> "IMAGE"
+            isVideo -> "VIDEO"
             isWord -> "DOCUMENT"
             isExcel -> "SHEET"
             isText -> "TEXT"

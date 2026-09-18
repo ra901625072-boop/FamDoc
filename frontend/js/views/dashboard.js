@@ -81,6 +81,13 @@
 
         <div class="breakdown-legend-grid" id="breakdown-legend-grid">
           <div class="breakdown-legend-chip">
+            <div class="chip-color-dot dot-video"></div>
+            <div class="chip-info">
+              <span class="chip-label">Videos</span>
+              <span class="chip-meta" id="meta-cat-video">0 B (0)</span>
+            </div>
+          </div>
+          <div class="breakdown-legend-chip">
             <div class="chip-color-dot dot-image"></div>
             <div class="chip-info">
               <span class="chip-label">Images</span>
@@ -557,6 +564,7 @@
     const breakdown = stats.storage_breakdown || {};
     
     const categories = [
+      { key: "video", label: "Videos", colorClass: "storage-segment-video", metaId: "meta-cat-video" },
       { key: "image", label: "Images", colorClass: "storage-segment-image", metaId: "meta-cat-image" },
       { key: "pdf", label: "PDFs", colorClass: "storage-segment-pdf", metaId: "meta-cat-pdf" },
       { key: "document", label: "Docs", colorClass: "storage-segment-document", metaId: "meta-cat-document" },

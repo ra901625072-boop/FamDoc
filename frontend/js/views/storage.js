@@ -521,6 +521,7 @@
     const breakdown = stats ? (stats.storage_breakdown || {}) : {};
 
     const categories = [
+      { key: "video", name: "Videos", colorClass: "storage-segment-video", hex: "#ec4899" },
       { key: "image", name: "Images", colorClass: "storage-segment-image", hex: "#3b82f6" },
       { key: "pdf", name: "PDFs", colorClass: "storage-segment-pdf", hex: "#ef4444" },
       { key: "document", name: "Docs", colorClass: "storage-segment-document", hex: "#8b5cf6" },

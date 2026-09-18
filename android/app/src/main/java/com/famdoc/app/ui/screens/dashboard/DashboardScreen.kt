@@ -256,6 +256,7 @@ private fun DashboardContent(
                     // Multi-segment Colored Category Progress Bar
                     val breakdown = stats.storageBreakdown ?: emptyMap()
                     val categories = listOf(
+                        Triple("video", "Videos", CategoryVideoColor),
                         Triple("image", "Images", CategoryImageColor),
                         Triple("pdf", "PDFs", CategoryPdfColor),
                         Triple("document", "Docs", CategoryDocColor),

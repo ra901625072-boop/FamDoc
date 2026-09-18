@@ -10,6 +10,7 @@
   let currentView = "grid";
   let activeDropdown = null;
   let activePreviewUrl = null;
+  let activeVideoKeyHandler = null;
   let familyStorageConfig = null;
 
   const selectedItems = {
@@ -89,6 +90,7 @@
 
             <select id="filter-type" class="form-control" style="padding: 0.5rem 1rem; font-size: 0.85rem; width: auto; height: auto;">
               <option value="">All Formats</option>
+              <option value="video">Videos</option>
               <option value="PDF">PDF Documents</option>
               <option value="IMAGE">Images</option>
               <option value="DOCUMENT">Word Docs</option>
@@ -741,14 +743,16 @@
       const ext = file.filename.split(".").pop().toLowerCase();
       const mime = file.file_type ? file.file_type.toLowerCase() : "";
       const isImage = mime.includes("image") || ["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(ext);
+      const isVideo = mime.includes("video") || ["mp4", "m4v", "webm", "mkv", "mov", "qt", "avi", "wmv", "flv", "3gp", "ts", "ogv", "vob", "asf"].includes(ext);
       const isPdf = ext === "pdf";
       const isGooglePdf = isPdf && file.storage_provider === "google";
+      const isGoogleMedia = isImage || isGooglePdf || (isVideo && file.storage_provider === "google");
 
       let iconHtml = "";
       const fallbackIconClass = FamDocAPI.utils.getFileIconClass(file.file_type, file.filename);
 
-      if (isImage || isGooglePdf) {
-        const cacheKey = isGooglePdf ? ("famdoc-pdf-thumb-" + file.id) : ("famdoc-image-thumb-" + file.id);
+      if (isGoogleMedia) {
+        const cacheKey = isGooglePdf ? ("famdoc-pdf-thumb-" + file.id) : (isVideo ? ("famdoc-video-thumb-" + file.id) : ("famdoc-image-thumb-" + file.id));
         const cachedThumb = localStorage.getItem(cacheKey);
         if (cachedThumb) {
           iconHtml = `
@@ -1371,6 +1375,121 @@
         const fileToken = await getPreviewToken(fileId);
         const authenticatedPreviewUrl = previewUrl + (fileToken ? `?token=${fileToken}` : "");
         contentArea.innerHTML = `<img src="${authenticatedPreviewUrl}" class="preview-image" alt="${FamDocAPI.utils.escapeHtml(file.filename)}">`;
+      } else if (mime.includes("video") || ["mp4", "m4v", "webm", "mkv", "mov", "qt", "avi", "wmv", "flv", "3gp", "ts", "ogv", "vob", "asf"].includes(ext)) {
+        const fileToken = await getPreviewToken(fileId);
+        const authenticatedPreviewUrl = previewUrl + (fileToken ? `?token=${fileToken}` : "");
+        contentArea.innerHTML = `
+          <div class="video-preview-wrapper" style="display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; max-height: 100%; padding: 0.5rem;">
+            <div style="position: relative; width: 100%; max-width: 820px; display: flex; justify-content: center; background: #000; border-radius: var(--radius-lg); overflow: hidden; box-shadow: 0 12px 30px -6px rgba(0,0,0,0.35);">
+              <video id="vault-video-element" src="${authenticatedPreviewUrl}" controls autoplay playsinline class="preview-video" style="max-height: 58vh; width: 100%; outline: none;"></video>
+            </div>
+            
+            <!-- Quick Interactive Controls (Play/Pause, -10s, +10s, Fullscreen) -->
+            <div class="video-custom-controls" style="display: flex; align-items: center; justify-content: center; gap: 0.6rem; margin-top: 0.85rem; flex-wrap: wrap;">
+              <button type="button" id="vid-btn-back10" class="btn btn-secondary" title="Rewind 10 seconds (← Arrow key)" style="display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.45rem 0.9rem; font-size: 0.85rem; border-radius: var(--radius-md);">
+                <i class="fas fa-undo-alt"></i> -10s
+              </button>
+              <button type="button" id="vid-btn-play" class="btn btn-primary" title="Play / Pause (Spacebar)" style="display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.45rem 1.1rem; font-size: 0.85rem; border-radius: var(--radius-md); min-width: 95px; justify-content: center;">
+                <i class="fas fa-pause" id="vid-icon-play"></i> <span id="vid-text-play">Pause</span>
+              </button>
+              <button type="button" id="vid-btn-fwd10" class="btn btn-secondary" title="Forward 10 seconds (→ Arrow key)" style="display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.45rem 0.9rem; font-size: 0.85rem; border-radius: var(--radius-md);">
+                +10s <i class="fas fa-redo-alt"></i>
+              </button>
+              <button type="button" id="vid-btn-fullscreen" class="btn btn-secondary" title="Toggle Fullscreen (F key)" style="display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.45rem 0.9rem; font-size: 0.85rem; border-radius: var(--radius-md);">
+                <i class="fas fa-expand"></i> Fullscreen
+              </button>
+            </div>
+
+            <div style="margin-top: 0.55rem; font-size: 0.8rem; color: var(--text-ink-muted); text-align: center; display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; justify-content: center;">
+              <span><i class="fas fa-video" style="color: var(--video-color, #ec4899); margin-right: 0.35rem;"></i>${FamDocAPI.utils.escapeHtml(file.filename)}</span>
+              <span style="opacity: 0.75;">• Shortcuts: Space (Play/Pause), ← / → (±10s), F (Fullscreen)</span>
+            </div>
+          </div>
+        `;
+
+        const vidEl = document.getElementById("vault-video-element");
+        if (vidEl) {
+          const btnPlay = document.getElementById("vid-btn-play");
+          const iconPlay = document.getElementById("vid-icon-play");
+          const textPlay = document.getElementById("vid-text-play");
+          const btnBack10 = document.getElementById("vid-btn-back10");
+          const btnFwd10 = document.getElementById("vid-btn-fwd10");
+          const btnFs = document.getElementById("vid-btn-fullscreen");
+
+          const syncPlayBtn = () => {
+            if (vidEl.paused) {
+              if (iconPlay) iconPlay.className = "fas fa-play";
+              if (textPlay) textPlay.textContent = "Play";
+            } else {
+              if (iconPlay) iconPlay.className = "fas fa-pause";
+              if (textPlay) textPlay.textContent = "Pause";
+            }
+          };
+
+          vidEl.addEventListener("play", syncPlayBtn);
+          vidEl.addEventListener("pause", syncPlayBtn);
+
+          if (btnPlay) {
+            btnPlay.addEventListener("click", () => {
+              if (vidEl.paused) vidEl.play(); else vidEl.pause();
+            });
+          }
+
+          if (btnBack10) {
+            btnBack10.addEventListener("click", () => {
+              vidEl.currentTime = Math.max(0, vidEl.currentTime - 10);
+            });
+          }
+
+          if (btnFwd10) {
+            btnFwd10.addEventListener("click", () => {
+              const dur = vidEl.duration || Infinity;
+              vidEl.currentTime = Math.min(dur, vidEl.currentTime + 10);
+            });
+          }
+
+          if (btnFs) {
+            btnFs.addEventListener("click", () => {
+              if (!document.fullscreenElement) {
+                if (vidEl.requestFullscreen) vidEl.requestFullscreen();
+                else if (vidEl.webkitRequestFullscreen) vidEl.webkitRequestFullscreen();
+              } else {
+                if (document.exitFullscreen) document.exitFullscreen();
+              }
+            });
+          }
+
+          // Attach keyboard listener for preview
+          if (activeVideoKeyHandler) {
+            window.removeEventListener("keydown", activeVideoKeyHandler);
+          }
+          activeVideoKeyHandler = (e) => {
+            const previewModal = document.getElementById("modal-preview");
+            if (!previewModal || !previewModal.classList.contains("show")) return;
+            if (["INPUT", "TEXTAREA", "SELECT"].includes(e.target.tagName)) return;
+
+            if (e.code === "Space") {
+              e.preventDefault();
+              if (vidEl.paused) vidEl.play(); else vidEl.pause();
+            } else if (e.code === "ArrowLeft") {
+              e.preventDefault();
+              vidEl.currentTime = Math.max(0, vidEl.currentTime - 10);
+            } else if (e.code === "ArrowRight") {
+              e.preventDefault();
+              const dur = vidEl.duration || Infinity;
+              vidEl.currentTime = Math.min(dur, vidEl.currentTime + 10);
+            } else if (e.key === "f" || e.key === "F") {
+              e.preventDefault();
+              if (!document.fullscreenElement) {
+                if (vidEl.requestFullscreen) vidEl.requestFullscreen();
+                else if (vidEl.webkitRequestFullscreen) vidEl.webkitRequestFullscreen();
+              } else {
+                if (document.exitFullscreen) document.exitFullscreen();
+              }
+            }
+          };
+          window.addEventListener("keydown", activeVideoKeyHandler);
+        }
       } else if (mime.includes("pdf") || ext === "pdf") {
         const fileToken = await getPreviewToken(fileId);
         const authenticatedPreviewUrl = previewUrl + (fileToken ? `?token=${fileToken}` : "");
@@ -1419,6 +1538,22 @@
   }
 
   function closeModal(modalId) {
+    if (modalId === "modal-preview") {
+      if (activeVideoKeyHandler) {
+        window.removeEventListener("keydown", activeVideoKeyHandler);
+        activeVideoKeyHandler = null;
+      }
+      const contentArea = document.getElementById("preview-content-area");
+      if (contentArea) {
+        const vid = contentArea.querySelector("video");
+        if (vid) {
+          vid.pause();
+          vid.src = "";
+          vid.load();
+        }
+        contentArea.innerHTML = "";
+      }
+    }
     document.getElementById(modalId).classList.remove("show");
     const openModals = document.querySelectorAll(".modal-overlay.show");
     if (openModals.length === 0) {

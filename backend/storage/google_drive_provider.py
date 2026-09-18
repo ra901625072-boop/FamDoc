@@ -454,7 +454,7 @@ class GoogleDriveProvider(StorageProvider):
             logger.warning(f"Failed to get thumbnailLink from Google Drive: {e}")
             return None
 
-    def stream_file(self, config: dict, cloud_file_id: str, db = None):
+    def stream_file(self, config: dict, cloud_file_id: str, db = None, range_header: str = None):
         self._get_client(config, db)
         access_token = config.get("access_token")
         if not access_token:
@@ -462,9 +462,23 @@ class GoogleDriveProvider(StorageProvider):
         
         url = f"https://www.googleapis.com/drive/v3/files/{cloud_file_id}?alt=media"
         headers = {"Authorization": f"Bearer {access_token}"}
+        if range_header:
+            headers["Range"] = range_header
         
         response = requests.get(url, headers=headers, stream=True, timeout=30)
         response.raise_for_status()
+
+        start, end, total = None, None, None
+        content_range = response.headers.get("Content-Range")
+        if content_range and "bytes " in content_range:
+            try:
+                cr_parts = content_range.replace("bytes ", "").split("/")
+                total = int(cr_parts[1]) if len(cr_parts) > 1 and cr_parts[1] != "*" else None
+                range_bounds = cr_parts[0].split("-")
+                start = int(range_bounds[0])
+                end = int(range_bounds[1])
+            except Exception:
+                pass
         
         def chunk_generator():
             try:
@@ -474,7 +488,7 @@ class GoogleDriveProvider(StorageProvider):
             finally:
                 response.close()
                 
-        return chunk_generator()
+        return chunk_generator(), start, end, total
 
     def stream_thumbnail(self, config: dict, cloud_file_id: str, db = None):
         self._get_client(config, db)

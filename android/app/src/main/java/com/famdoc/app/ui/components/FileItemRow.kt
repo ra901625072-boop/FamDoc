@@ -154,6 +154,11 @@ fun FileItemRow(
 
 fun getFileIconAndGradients(file: FileItem): Triple<ImageVector, Color, List<Color>> {
     return when {
+        file.isVideo -> Triple(
+            Icons.Default.Videocam,
+            CategoryVideoColor,
+            listOf(Color(0xFFEC4899), Color(0xFFBE185D))
+        )
         file.isPdf -> Triple(
             Icons.Default.PictureAsPdf,
             BrandError,

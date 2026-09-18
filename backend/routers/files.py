@@ -1,5 +1,7 @@
 import io
 import re
+import os
+import mimetypes
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, BackgroundTasks, Request
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
@@ -11,13 +13,29 @@ import auth
 from sqlalchemy.orm import joinedload
 from utils.audit import log_action
 from utils.ip import get_client_ip
-import os
 from serializers import serialize_file
 from datetime import datetime, timezone
 from storage.storage_manager import StorageManager
 from cache import folder_listing_cache, invalidate_family_caches
+from config import MAX_FILE_SIZE_MB
 
 SAFE_FILENAME_PATTERN = re.compile(r'^[\w\-. ()\[\]]+$', re.UNICODE)
+
+# Comprehensive format registries
+VIDEO_EXTENSIONS = {
+    ".mp4", ".m4v", ".webm", ".mkv", ".mov", ".qt", ".avi", ".wmv",
+    ".asf", ".flv", ".f4v", ".3gp", ".3g2", ".mpg", ".mpeg", ".mpe",
+    ".mp2", ".m1v", ".m2v", ".ts", ".mts", ".m2ts", ".ogv", ".vob",
+    ".rm", ".rmvb", ".divx", ".h264", ".h265", ".hevc"
+}
+DOCUMENT_EXTENSIONS = {
+    ".pdf", ".docx", ".doc", ".xlsx", ".xls", ".txt", ".pptx", ".ppt", ".csv"
+}
+IMAGE_EXTENSIONS = {
+    ".jpg", ".jpeg", ".png", ".webp", ".gif", ".svg", ".bmp", ".tiff", ".ico"
+}
+ALLOWED_EXTENSIONS = DOCUMENT_EXTENSIONS | IMAGE_EXTENSIONS | VIDEO_EXTENSIONS
+
 def validate_file_content_signature(content: bytes, ext: str) -> bool:
     """
     Validates that the file content's magic bytes match the expected signature for its extension.
@@ -28,10 +46,10 @@ def validate_file_content_signature(content: bytes, ext: str) -> bool:
         return content.startswith(b"\xff\xd8\xff")
     elif ext == ".png":
         return content.startswith(b"\x89PNG\r\n\x1a\n")
-    elif ext in (".docx", ".xlsx"):
+    elif ext in (".docx", ".xlsx", ".pptx"):
         # Office XML format (ZIP container)
         return content.startswith(b"PK\x03\x04")
-    elif ext in (".doc", ".xls"):
+    elif ext in (".doc", ".xls", ".ppt"):
         # Compound File Binary Format (OLE2)
         return content.startswith(b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1")
     elif ext == ".txt":
@@ -41,6 +59,45 @@ def validate_file_content_signature(content: bytes, ext: str) -> bool:
             return True
         except UnicodeDecodeError:
             return False
+    elif ext in (".mp4", ".m4v", ".mov", ".qt", ".3gp", ".3g2"):
+        # ISO Base Media File Format (MP4 / QuickTime / 3GP)
+        # Typically starts with box size (4 bytes) followed by box type (ftyp, moov, wide, mdat, free, skip)
+        if len(content) >= 8:
+            box_type = content[4:8]
+            if box_type in (b"ftyp", b"moov", b"wide", b"mdat", b"free", b"skip", b"pnot"):
+                return True
+        if b"ftyp" in content[:16] or b"moov" in content[:16]:
+            return True
+        return False
+    elif ext in (".mkv", ".webm"):
+        # Matroska / WebM EBML header: 0x1A 0x45 0xDF 0xA3
+        return content.startswith(b"\x1a\x45\xdf\xa3")
+    elif ext in (".avi", ".divx"):
+        # AVI: RIFF container with AVI or AVIX
+        return content.startswith(b"RIFF") and len(content) >= 12 and content[8:12] in (b"AVI ", b"AVIX")
+    elif ext in (".wmv", ".asf"):
+        # ASF GUID header: 30 26 B2 75 8E 66 CF 11 A6 D9 00 AA 00 62 CE 6C
+        return content.startswith(b"\x30\x26\xb2\x75\x8e\x66\xcf\x11\xa6\xd9\x00\xaa\x00\x62\xce\x6c")
+    elif ext in (".flv", ".f4v"):
+        # Flash Video: FLV header
+        return content.startswith(b"FLV")
+    elif ext in (".mpg", ".mpeg", ".mpe", ".m1v", ".m2v", ".vob"):
+        # MPEG Program Stream (0x000001BA) or Video Stream (0x000001B3)
+        return content.startswith(b"\x00\x00\x01\xba") or content.startswith(b"\x00\x00\x01\xb3")
+    elif ext in (".ts", ".mts", ".m2ts"):
+        # MPEG-TS packet starts with sync byte 0x47
+        return content.startswith(b"\x47")
+    elif ext == ".ogv":
+        # Ogg video container: OggS
+        return content.startswith(b"OggS")
+    elif ext in (".rm", ".rmvb"):
+        # RealMedia
+        return content.startswith(b".RMF") or content.startswith(b".ra\xfd")
+    elif ext in VIDEO_EXTENSIONS:
+        # Generic check for other video extensions: Ensure it is not an executable or script
+        if content.startswith(b"MZ") or content.startswith(b"\x7fELF") or content.startswith(b"#!/"):
+            return False
+        return True
     return True
 
 router = APIRouter(prefix="/api/files", tags=["Files"])
@@ -132,12 +189,13 @@ async def upload_file(
         )
 
     # Enforce file type validation
-    allowed_extensions = {".pdf", ".jpg", ".jpeg", ".png", ".docx", ".doc", ".xlsx", ".xls", ".txt"}
     _, ext = os.path.splitext(file.filename.lower())
-    if ext not in allowed_extensions:
+    detected_mime, _ = mimetypes.guess_type(file.filename)
+    is_video_mime = (file.content_type and file.content_type.lower().startswith("video/")) or (detected_mime and detected_mime.lower().startswith("video/"))
+    if ext not in ALLOWED_EXTENSIONS and not is_video_mime:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="File type not allowed. Supported formats: PDF, Word, Excel, Images, and TXT."
+            detail="File type not allowed. Supported formats: PDF, Word, Excel, Images, Videos, and TXT."
         )
 
     if not SAFE_FILENAME_PATTERN.match(file.filename) or len(file.filename) > 255:
@@ -147,14 +205,14 @@ async def upload_file(
         )
 
     # Check upfront Content-Length header to reject oversized requests immediately
-    MAX_FILE_SIZE = 50 * 1024 * 1024 # 50MB limit
+    MAX_FILE_SIZE = MAX_FILE_SIZE_MB * 1024 * 1024
     content_length = request.headers.get("content-length")
     if content_length:
         try:
             if int(content_length) > MAX_FILE_SIZE:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="File size exceeds the maximum limit of 50MB."
+                    detail=f"File size exceeds the maximum limit of {MAX_FILE_SIZE_MB}MB."
                 )
         except ValueError:
             pass
@@ -186,12 +244,20 @@ async def upload_file(
         if total_bytes > MAX_FILE_SIZE:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="File size exceeds the maximum limit of 50MB."
+                detail=f"File size exceeds the maximum limit of {MAX_FILE_SIZE_MB}MB."
             )
         chunks.append(chunk)
 
     content = b"".join(chunks)
     file_size = total_bytes
+
+    # Resolve accurate MIME content type
+    resolved_file_type = file.content_type
+    if not resolved_file_type or resolved_file_type == "application/octet-stream":
+        if detected_mime:
+            resolved_file_type = detected_mime
+        else:
+            resolved_file_type = "application/octet-stream"
 
     # Enforce virus scanning check
     from utils.virus_scan import scan_file_for_viruses
@@ -254,7 +320,7 @@ async def upload_file(
                 vault_folder_id=target_vault_id,
                 filename=file.filename,
                 file_content=content,
-                mimetype=file.content_type or "application/octet-stream",
+                mimetype=resolved_file_type,
                 username=target_username,
                 db=db
             )
@@ -268,7 +334,7 @@ async def upload_file(
     if upload_success and cloud_result:
         db_file = models.File(
             filename         = file.filename,
-            file_type        = file.content_type or "application/octet-stream",
+            file_type        = resolved_file_type,
             size_bytes       = file_size,
             _file_id         = cloud_result["cloud_file_id"],
             local_file_id    = None,
@@ -290,14 +356,14 @@ async def upload_file(
         result = manager.write_file(
             content      = content,
             filename     = file.filename,
-            mimetype     = file.content_type or "application/octet-stream",
+            mimetype     = resolved_file_type,
             local_config = local_config,
         )
         
         now = datetime.now(timezone.utc)
         db_file = models.File(
             filename         = file.filename,
-            file_type        = file.content_type or "application/octet-stream",
+            file_type        = resolved_file_type,
             size_bytes       = file_size,
             _file_id         = result["file_id"],
             local_file_id    = result["file_id"],
@@ -378,7 +444,8 @@ def download_file(
         media_type="application/octet-stream",
         headers={
             "Content-Disposition": f'attachment; filename="{filename}"',
-            "Access-Control-Expose-Headers": "Content-Disposition"
+            "Access-Control-Expose-Headers": "Content-Disposition",
+            "Accept-Ranges": "bytes"
         }
     )
 
@@ -463,11 +530,11 @@ def preview_file(
                     file_type = "image/jpeg"
                 except Exception:
                     pass
-            elif file_type and file_type.lower() == "application/pdf":
-                # PDF thumbnail generation fallback is not supported (cannot render PDF in <img> tag)
+            elif file_type and (file_type.lower() == "application/pdf" or file_type.lower().startswith("video/")):
+                # PDF/Video thumbnail generation fallback is not supported without pre-rendered thumbnails
                 raise HTTPException(
                     status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-                    detail="PDF thumbnail generation failed. Fallback to default icon."
+                    detail="Thumbnail generation not available for this file type. Fallback to default icon."
                 )
         except FileNotFoundError as e:
             raise HTTPException(status_code=503, detail=str(e))
@@ -486,16 +553,38 @@ def preview_file(
             headers=response_headers
         )
     else:
+        range_header = request.headers.get("range")
         try:
-            generator, provider_used = manager.stream_file(file, family_config, db=db)
+            stream_result, provider_used = manager.stream_file(file, family_config, db=db, range_header=range_header)
         except FileNotFoundError as e:
             raise HTTPException(status_code=503, detail=str(e))
         finally:
             db.close()
 
-        response_headers = {"Content-Disposition": f'inline; filename="{filename}"'}
+        if isinstance(stream_result, tuple):
+            generator, start, end, total = stream_result
+        else:
+            generator, start, end, total = stream_result, None, None, None
+
+        response_headers = {
+            "Content-Disposition": f'inline; filename="{filename}"',
+            "Accept-Ranges": "bytes"
+        }
+
+        status_code = 200
+        if start is not None and end is not None:
+            status_code = 206
+            total_str = total if total is not None else file.size_bytes
+            response_headers["Content-Range"] = f"bytes {start}-{end}/{total_str}"
+            response_headers["Content-Length"] = str(end - start + 1)
+        elif total is not None:
+            response_headers["Content-Length"] = str(total)
+        elif file.size_bytes:
+            response_headers["Content-Length"] = str(file.size_bytes)
+
         return StreamingResponse(
             generator,
+            status_code=status_code,
             media_type=file_type or "application/octet-stream",
             headers=response_headers
         )

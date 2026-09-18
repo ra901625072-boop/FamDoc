@@ -749,6 +749,9 @@ const FamDocAPI = {
       const ext = filename.split(".").pop().toLowerCase();
       const mime = fileType ? fileType.toLowerCase() : "";
 
+      if (mime.includes("video") || ["mp4", "m4v", "webm", "mkv", "mov", "qt", "avi", "wmv", "flv", "3gp", "ts", "ogv", "vob", "asf"].includes(ext)) {
+        return "file-video fas fa-file-video";
+      }
       if (mime.includes("pdf") || ext === "pdf") {
         return "file-pdf fas fa-file-pdf";
       }

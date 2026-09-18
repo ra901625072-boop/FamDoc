@@ -60,6 +60,7 @@ fun FileThumbnail(
     val (fallbackIcon, _, gradientColors) = getFileIconAndGradients(file)
     val extension = file.extension.uppercase().ifEmpty {
         when {
+            file.isVideo -> "VIDEO"
             file.isPdf -> "PDF"
             file.isImage -> "IMG"
             file.isWord -> "DOC"
@@ -70,7 +71,7 @@ fun FileThumbnail(
     }
 
     // Determine if file supports thumbnail streaming
-    val isGoogleCloudFile = file.storageProvider == "google" && (file.isImage || file.isPdf)
+    val isGoogleCloudFile = file.storageProvider == "google" && (file.isImage || file.isPdf || file.isVideo)
     val hasServerThumbnail = file.isImage || isGoogleCloudFile
 
     val cornerRadius: Dp = when (variant) {

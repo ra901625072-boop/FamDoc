@@ -5,11 +5,14 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.pdf.PdfRenderer
+import android.net.Uri
 import android.os.ParcelFileDescriptor
 import android.widget.Toast
+import android.widget.VideoView
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -44,6 +47,9 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import coil.compose.SubcomposeAsyncImage
 import coil.compose.SubcomposeAsyncImageContent
 import coil.request.ImageRequest
@@ -58,6 +64,8 @@ import com.famdoc.app.ui.components.PreviewLoadingAnimation
 import com.famdoc.app.ui.theme.*
 import com.famdoc.app.ui.viewmodel.VaultViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -82,6 +90,8 @@ fun FilePreviewScreen(
     val extension = filename.substringAfterLast('.', "").lowercase()
     val isImage = fileType.contains("image", ignoreCase = true) ||
             listOf("jpg", "jpeg", "png", "webp", "gif", "svg").contains(extension)
+    val isVideo = fileType.contains("video", ignoreCase = true) ||
+            listOf("mp4", "m4v", "webm", "mkv", "mov", "qt", "avi", "wmv", "flv", "3gp", "ts", "ogv", "vob", "asf", "rm", "rmvb").contains(extension)
     val isPdf = fileType.contains("pdf", ignoreCase = true) || extension == "pdf"
     val isText = fileType.contains("text", ignoreCase = true) ||
             listOf("txt", "md", "json", "log", "xml", "csv").contains(extension)
@@ -558,6 +568,35 @@ fun FilePreviewScreen(
                     }
                 }
 
+                isVideo -> {
+                    val token = remember { FamDocApplication.instance.secureTokenManager.getToken() }
+                    val videoUri = remember(cachedDownloadedFile, previewUrl, token) {
+                        if (cachedDownloadedFile != null) {
+                            Uri.fromFile(cachedDownloadedFile)
+                        } else {
+                            Uri.parse(if (!token.isNullOrBlank()) "$previewUrl?token=$token" else previewUrl)
+                        }
+                    }
+
+                    VideoPlayerPreviewSection(
+                        videoUri = videoUri,
+                        filename = filename,
+                        onOpenExternal = {
+                            cachedDownloadedFile?.let { file ->
+                                FileUtils.openFileWithSystemViewer(context, file, fileType)
+                            } ?: run {
+                                val fileItem = FileItem(
+                                    id = fileId,
+                                    filename = filename,
+                                    fileType = fileType,
+                                    sizeBytes = 0L
+                                )
+                                vaultViewModel.downloadFile(fileItem)
+                            }
+                        }
+                    )
+                }
+
                 else -> {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
@@ -573,19 +612,20 @@ fun FilePreviewScreen(
                                 modifier = Modifier
                                     .size(76.dp)
                                     .clip(RoundedCornerShape(Dimens.RadiusExtraLarge))
-                                    .background(MintSecondary.copy(alpha = 0.15f))
-                                    .border(1.dp, MintSecondary.copy(alpha = 0.35f), RoundedCornerShape(Dimens.RadiusExtraLarge)),
+                                    .background(if (isVideo) CategoryVideoColor.copy(alpha = 0.15f) else MintSecondary.copy(alpha = 0.15f))
+                                    .border(1.dp, if (isVideo) CategoryVideoColor.copy(alpha = 0.35f) else MintSecondary.copy(alpha = 0.35f), RoundedCornerShape(Dimens.RadiusExtraLarge)),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     imageVector = when {
+                                        isVideo -> Icons.Default.Videocam
                                         isPdf -> Icons.Default.PictureAsPdf
                                         extension in listOf("doc", "docx") -> Icons.Default.Description
                                         extension in listOf("xls", "xlsx") -> Icons.Default.TableChart
                                         else -> Icons.AutoMirrored.Filled.InsertDriveFile
                                     },
                                     contentDescription = null,
-                                    tint = MintSecondary,
+                                    tint = if (isVideo) CategoryVideoColor else MintSecondary,
                                     modifier = Modifier.size(40.dp)
                                 )
                             }
@@ -607,7 +647,7 @@ fun FilePreviewScreen(
                         }
                         Spacer(modifier = Modifier.height(Dimens.Spacing12))
                         Text(
-                            text = "Tap below to download and view this document in your device's native app.",
+                            text = if (isVideo) "Tap below to open and watch this video in your device's video player." else "Tap below to download and view this document in your device's native app.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center
@@ -629,8 +669,8 @@ fun FilePreviewScreen(
                             },
                             shape = RoundedCornerShape(Dimens.RadiusMedium),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primary,
-                                contentColor = MaterialTheme.colorScheme.onPrimary
+                                containerColor = if (isVideo) CategoryVideoColor else MaterialTheme.colorScheme.primary,
+                                contentColor = Color.White
                             ),
                             modifier = Modifier
                                 .height(Dimens.SecondaryButtonHeight)
@@ -648,9 +688,9 @@ fun FilePreviewScreen(
                                     }
                                 }
                         ) {
-                            Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null)
+                            Icon(if (isVideo) Icons.Default.PlayArrow else Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null)
                             Spacer(modifier = Modifier.width(Dimens.Spacing8))
-                            Text("Open in System Viewer", fontWeight = FontWeight.Bold)
+                            Text(if (isVideo) "Play in Video Player" else "Open in System Viewer", fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -676,4 +716,374 @@ fun FilePreviewScreen(
         }
     }
 }
+
+@Composable
+private fun VideoPlayerPreviewSection(
+    videoUri: Uri,
+    filename: String,
+    onOpenExternal: () -> Unit
+) {
+    var videoViewRef by remember { mutableStateOf<VideoView?>(null) }
+    var isPlaying by remember { mutableStateOf(true) }
+    var isFullScreen by remember { mutableStateOf(false) }
+    var currentPosMs by remember { mutableLongStateOf(0L) }
+    var durationMs by remember { mutableLongStateOf(0L) }
+    var isPrepared by remember { mutableStateOf(false) }
+    var isBuffering by remember { mutableStateOf(true) }
+    var playbackError by remember { mutableStateOf(false) }
+
+    // Periodically update current position and duration
+    LaunchedEffect(isPlaying, isPrepared) {
+        while (isActive && isPrepared) {
+            videoViewRef?.let { vv ->
+                if (vv.isPlaying) {
+                    currentPosMs = vv.currentPosition.toLong()
+                }
+                if (vv.duration > 0 && durationMs != vv.duration.toLong()) {
+                    durationMs = vv.duration.toLong()
+                }
+            }
+            delay(400)
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            try {
+                videoViewRef?.stopPlayback()
+            } catch (_: Exception) {}
+        }
+    }
+
+    fun formatDuration(ms: Long): String {
+        val totalSecs = (ms / 1000).coerceAtLeast(0)
+        val mins = totalSecs / 60
+        val secs = totalSecs % 60
+        return "%02d:%02d".format(mins, secs)
+    }
+
+    val togglePlay: () -> Unit = {
+        videoViewRef?.let { vv ->
+            if (vv.isPlaying) {
+                vv.pause()
+                isPlaying = false
+            } else {
+                vv.start()
+                isPlaying = true
+            }
+        }
+    }
+
+    val seekRelative: (Long) -> Unit = { deltaMs ->
+        videoViewRef?.let { vv ->
+            val maxDur = durationMs.coerceAtLeast(1L)
+            val target = (vv.currentPosition + deltaMs).coerceIn(0, maxDur).toInt()
+            vv.seekTo(target)
+            currentPosMs = target.toLong()
+        }
+    }
+
+    // Fullscreen Dialog overlay
+    if (isFullScreen) {
+        Dialog(
+            onDismissRequest = { isFullScreen = false },
+            properties = DialogProperties(
+                usePlatformDefaultWidth = false,
+                decorFitsSystemWindows = false
+            )
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black)
+            ) {
+                AndroidView(
+                    factory = { ctx ->
+                        VideoView(ctx).apply {
+                            videoViewRef = this
+                            setVideoURI(videoUri)
+                            setOnPreparedListener { mp ->
+                                isPrepared = true
+                                isBuffering = false
+                                durationMs = mp.duration.toLong()
+                                seekTo(currentPosMs.toInt())
+                                if (isPlaying) start()
+                            }
+                            setOnCompletionListener {
+                                isPlaying = false
+                                currentPosMs = durationMs
+                            }
+                            setOnErrorListener { _, _, _ ->
+                                playbackError = true
+                                isBuffering = false
+                                true
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxSize()
+                )
+
+                // Top Exit Fullscreen bar
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .align(Alignment.TopCenter)
+                        .background(Color.Black.copy(alpha = 0.5f))
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = filename,
+                        style = MaterialTheme.typography.titleSmall,
+                        color = Color.White,
+                        maxLines = 1,
+                        modifier = Modifier.weight(1f)
+                    )
+                    IconButton(onClick = { isFullScreen = false }) {
+                        Icon(Icons.Default.FullscreenExit, contentDescription = "Exit Fullscreen", tint = Color.White)
+                    }
+                }
+
+                // Bottom Fullscreen controls overlay
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .align(Alignment.BottomCenter)
+                        .background(Color.Black.copy(alpha = 0.6f))
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                ) {
+                    // Slider
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = formatDuration(currentPosMs),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color.White
+                        )
+                        Slider(
+                            value = currentPosMs.toFloat().coerceIn(0f, durationMs.toFloat().coerceAtLeast(1f)),
+                            onValueChange = { newPos ->
+                                currentPosMs = newPos.toLong()
+                                videoViewRef?.seekTo(newPos.toInt())
+                            },
+                            valueRange = 0f..durationMs.toFloat().coerceAtLeast(1f),
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(horizontal = 8.dp),
+                            colors = SliderDefaults.colors(
+                                thumbColor = CategoryVideoColor,
+                                activeTrackColor = CategoryVideoColor,
+                                inactiveTrackColor = Color.White.copy(alpha = 0.3f)
+                            )
+                        )
+                        Text(
+                            text = formatDuration(durationMs),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color.White
+                        )
+                    }
+
+                    // Action buttons: -10s, Play/Pause, +10s
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(onClick = { seekRelative(-10000L) }) {
+                            Icon(Icons.Default.Replay10, contentDescription = "Rewind 10s", tint = Color.White, modifier = Modifier.size(32.dp))
+                        }
+                        Spacer(modifier = Modifier.width(16.dp))
+                        FilledIconButton(
+                            onClick = togglePlay,
+                            colors = IconButtonDefaults.filledIconButtonColors(containerColor = CategoryVideoColor)
+                        ) {
+                            Icon(
+                                if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                contentDescription = if (isPlaying) "Pause" else "Play",
+                                tint = Color.White,
+                                modifier = Modifier.size(28.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(16.dp))
+                        IconButton(onClick = { seekRelative(10000L) }) {
+                            Icon(Icons.Default.Forward10, contentDescription = "Forward 10s", tint = Color.White, modifier = Modifier.size(32.dp))
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Inline Layout
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = Dimens.ScreenPaddingHorizontal, vertical = Dimens.Spacing16),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        // Video Viewport Box
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(260.dp)
+                .clip(RoundedCornerShape(Dimens.RadiusMedium))
+                .background(Color.Black)
+                .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f), RoundedCornerShape(Dimens.RadiusMedium)),
+            contentAlignment = Alignment.Center
+        ) {
+            AndroidView(
+                factory = { ctx ->
+                    VideoView(ctx).apply {
+                        videoViewRef = this
+                        setVideoURI(videoUri)
+                        setOnPreparedListener { mp ->
+                            isPrepared = true
+                            isBuffering = false
+                            durationMs = mp.duration.toLong()
+                            start()
+                            isPlaying = true
+                        }
+                        setOnCompletionListener {
+                            isPlaying = false
+                            currentPosMs = durationMs
+                        }
+                        setOnErrorListener { _, _, _ ->
+                            playbackError = true
+                            isBuffering = false
+                            true
+                        }
+                    }
+                },
+                modifier = Modifier.fillMaxSize()
+            )
+
+            if (isBuffering && !playbackError) {
+                CircularProgressIndicator(
+                    color = CategoryVideoColor,
+                    modifier = Modifier.size(44.dp)
+                )
+            }
+
+            if (playbackError) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.padding(Dimens.Spacing16)
+                ) {
+                    Icon(Icons.Default.ErrorOutline, contentDescription = null, tint = Color.White, modifier = Modifier.size(36.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        "Streaming playback issue. Use external player below.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.White,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(Dimens.Spacing12))
+
+        // Progress scrubber with timestamps
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = formatDuration(currentPosMs),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Slider(
+                value = currentPosMs.toFloat().coerceIn(0f, durationMs.toFloat().coerceAtLeast(1f)),
+                onValueChange = { newPos ->
+                    currentPosMs = newPos.toLong()
+                    videoViewRef?.seekTo(newPos.toInt())
+                },
+                valueRange = 0f..durationMs.toFloat().coerceAtLeast(1f),
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = Dimens.Spacing8),
+                colors = SliderDefaults.colors(
+                    thumbColor = CategoryVideoColor,
+                    activeTrackColor = CategoryVideoColor
+                )
+            )
+            Text(
+                text = formatDuration(durationMs),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
+        Spacer(modifier = Modifier.height(Dimens.Spacing8))
+
+        // Dedicated Playback Control Row: -10s, Play/Pause, +10s, Fullscreen
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Rewind 10s
+            FilledTonalIconButton(
+                onClick = { seekRelative(-10000L) },
+                modifier = Modifier.bounceClick(scaleDown = 0.9f) { seekRelative(-10000L) }
+            ) {
+                Icon(Icons.Default.Replay10, contentDescription = "Rewind 10 seconds")
+            }
+
+            // Play / Pause
+            FilledIconButton(
+                onClick = togglePlay,
+                colors = IconButtonDefaults.filledIconButtonColors(containerColor = CategoryVideoColor),
+                modifier = Modifier
+                    .size(54.dp)
+                    .bounceClick(scaleDown = 0.9f) { togglePlay() }
+            ) {
+                Icon(
+                    if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                    contentDescription = if (isPlaying) "Pause" else "Play",
+                    tint = Color.White,
+                    modifier = Modifier.size(30.dp)
+                )
+            }
+
+            // Forward 10s
+            FilledTonalIconButton(
+                onClick = { seekRelative(10000L) },
+                modifier = Modifier.bounceClick(scaleDown = 0.9f) { seekRelative(10000L) }
+            ) {
+                Icon(Icons.Default.Forward10, contentDescription = "Forward 10 seconds")
+            }
+
+            // Fullscreen
+            FilledTonalIconButton(
+                onClick = { isFullScreen = true },
+                modifier = Modifier.bounceClick(scaleDown = 0.9f) { isFullScreen = true }
+            ) {
+                Icon(Icons.Default.Fullscreen, contentDescription = "Fullscreen")
+            }
+        }
+
+        Spacer(modifier = Modifier.height(Dimens.Spacing24))
+
+        // Open in System Player fallback
+        OutlinedButton(
+            onClick = onOpenExternal,
+            shape = RoundedCornerShape(Dimens.RadiusMedium),
+            border = BorderStroke(1.dp, CategoryVideoColor.copy(alpha = 0.6f)),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(Dimens.SecondaryButtonHeight)
+                .bounceClick(scaleDown = 0.96f) { onOpenExternal() }
+        ) {
+            Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null, tint = CategoryVideoColor)
+            Spacer(modifier = Modifier.width(Dimens.Spacing8))
+            Text("Open in External Video App", color = CategoryVideoColor, fontWeight = FontWeight.SemiBold)
+        }
+    }
+}
+
 

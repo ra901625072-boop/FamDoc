@@ -49,6 +49,7 @@ val GoogleBrandYellow = Color(0xFFFBBC05)
 val GoogleBrandRed = Color(0xFFEA4335)
 
 // Storage Category Breakdown Colors
+val CategoryVideoColor = Color(0xFFEC4899)      // Vibrant Pink / Video
 val CategoryImageColor = Color(0xFF3B82F6)      // Modern Blue
 val CategoryPdfColor = Color(0xFFEF4444)        // Vibrant Red
 val CategoryDocColor = Color(0xFF8B5CF6)        // Rich Purple

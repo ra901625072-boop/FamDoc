@@ -661,6 +661,7 @@ private fun CategoryFilterRow(
 ) {
     val categories = listOf(
         null to "All Files",
+        "video" to "Videos",
         "image" to "Images",
         "pdf" to "PDFs",
         "document" to "Docs",

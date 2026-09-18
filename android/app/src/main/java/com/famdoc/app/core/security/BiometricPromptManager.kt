@@ -1,7 +1,7 @@
 package com.famdoc.app.core.security
 
 import android.content.Context
-import androidx.appcompat.app.AppCompatActivity
+import androidx.fragment.app.FragmentActivity
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG
 import androidx.biometric.BiometricManager.Authenticators.DEVICE_CREDENTIAL
@@ -34,7 +34,7 @@ class BiometricPromptManager(
     }
 
     fun showBiometricPrompt(
-        activity: AppCompatActivity,
+        activity: FragmentActivity,
         title: String = "FamDoc Vault Authentication",
         subtitle: String = "Verify your fingerprint or face to unlock",
         description: String = "Confirm your identity to access family records",

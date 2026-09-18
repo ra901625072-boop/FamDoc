@@ -42,23 +42,39 @@ def search_files(
 
     # 2. Search by type
     if file_type:
+        ft = file_type.lower()
         # Map simple categories to MIME type substrings
-        if file_type == "pdf":
+        if ft == "pdf":
             db_query = db_query.filter(models.File.file_type.like("%pdf%"))
-        elif file_type == "image":
+        elif ft == "video":
+            db_query = db_query.filter(
+                models.File.file_type.like("%video%") |
+                models.File.filename.like("%.mp4") |
+                models.File.filename.like("%.mkv") |
+                models.File.filename.like("%.mov") |
+                models.File.filename.like("%.webm") |
+                models.File.filename.like("%.avi") |
+                models.File.filename.like("%.wmv") |
+                models.File.filename.like("%.flv") |
+                models.File.filename.like("%.3gp") |
+                models.File.filename.like("%.ts") |
+                models.File.filename.like("%.ogv") |
+                models.File.filename.like("%.m4v")
+            )
+        elif ft == "image":
             db_query = db_query.filter(
                 models.File.file_type.like("%image%") | 
                 models.File.file_type.like("%png%") | 
                 models.File.file_type.like("%jpeg%") | 
                 models.File.file_type.like("%jpg%")
             )
-        elif file_type == "document":
+        elif ft == "document":
             db_query = db_query.filter(
                 models.File.file_type.like("%word%") | 
                 models.File.file_type.like("%officedocument%") | 
                 models.File.file_type.like("%pdf%")
             )
-        elif file_type == "text":
+        elif ft == "text":
             db_query = db_query.filter(models.File.file_type.like("%text%"))
         else:
             db_query = db_query.filter(models.File.file_type.like(f"%{file_type}%"))

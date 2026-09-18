@@ -65,6 +65,7 @@
   --warning-red-dark: #7F1D1D;
 
   /* Category Distribution Colors (Matching Android Storage Breakdown) */
+  --cat-video: #EC4899;             /* Vibrant Pink/Rose */
   --cat-images: #3B82F6;            /* Modern Blue */
   --cat-pdfs: #EF4444;              /* Red */
   --cat-docs: #8B5CF6;              /* Vault Violet */
@@ -73,6 +74,7 @@
   --cat-other: #6B7280;             /* Slate */
 
   --folder-color: #047857;
+  --video-color: #EC4899;
   --pdf-color: #EF4444;
   --image-color: #3B82F6;
   --doc-color: #8B5CF6;
@@ -191,6 +193,7 @@
   --warning-red-dark: #FECACA;
 
   /* Category Distribution Colors */
+  --cat-video: #F472B6;
   --cat-images: #60A5FA;
   --cat-pdfs: #F87171;
   --cat-docs: #A78BFA;
@@ -199,6 +202,7 @@
   --cat-other: #9CA3AF;
 
   --folder-color: #34D399;
+  --video-color: #F472B6;
   --pdf-color: #F87171;
   --image-color: #60A5FA;
   --doc-color: #A78BFA;

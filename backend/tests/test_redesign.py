@@ -1370,6 +1370,144 @@ class TestBackendRedesign(unittest.TestCase):
         self.assertEqual(bad_verify.status_code, 400)
         self.assertIn("invalid or expired", bad_verify.json()["detail"].lower())
 
+    def test_video_upload_content_signatures_and_rejection(self):
+        admin_token = auth.create_access_token(data={"sub": self.admin.email, "id": self.admin.id, "role": self.admin.role})
+        headers = {"Authorization": f"Bearer {admin_token}"}
+
+        # 1. Valid MP4 upload
+        mp4_content = b"\x00\x00\x00\x18ftypisom\x00\x00\x02\x00isomiso2mp41" + b"\x00" * 100
+        res = self.client.post(
+            "/api/files/upload",
+            files={"file": ("family_vacation.mp4", mp4_content, "video/mp4")},
+            data={"folder_id": ""},
+            headers=headers
+        )
+        self.assertEqual(res.status_code, 201)
+        mp4_data = res.json()
+        self.assertEqual(mp4_data["filename"], "family_vacation.mp4")
+        self.assertEqual(mp4_data["file_type"], "video/mp4")
+        mp4_file_id = mp4_data["id"]
+
+        # 2. Valid WebM upload
+        webm_content = b"\x1a\x45\xdf\xa3\x93\x42\x82\x88matroska" + b"\x00" * 100
+        res = self.client.post(
+            "/api/files/upload",
+            files={"file": ("birthday.webm", webm_content, "video/webm")},
+            data={"folder_id": ""},
+            headers=headers
+        )
+        self.assertEqual(res.status_code, 201)
+
+        # 3. Valid AVI upload
+        avi_content = b"RIFF\x24\x00\x00\x00AVI LIST" + b"\x00" * 100
+        res = self.client.post(
+            "/api/files/upload",
+            files={"file": ("clip.avi", avi_content, "video/x-msvideo")},
+            data={"folder_id": ""},
+            headers=headers
+        )
+        self.assertEqual(res.status_code, 201)
+
+        # 4. Valid QuickTime MOV upload
+        mov_content = b"\x00\x00\x00\x14ftypqt  " + b"\x00" * 100
+        res = self.client.post(
+            "/api/files/upload",
+            files={"file": ("movie.mov", mov_content, "video/quicktime")},
+            data={"folder_id": ""},
+            headers=headers
+        )
+        self.assertEqual(res.status_code, 201)
+
+        # 5. Fake MP4 file (invalid magic bytes)
+        fake_mp4_content = b"this is clearly not a real video container format"
+        res = self.client.post(
+            "/api/files/upload",
+            files={"file": ("malicious.mp4", fake_mp4_content, "video/mp4")},
+            data={"folder_id": ""},
+            headers=headers
+        )
+        self.assertEqual(res.status_code, 400)
+        self.assertIn("File content does not match the file extension signature", res.json().get("detail", ""))
+
+        # 6. Test thumbnail endpoint returns 415 for video when no cloud thumbnail
+        res_thumb = self.client.get(f"/api/files/{mp4_file_id}/preview?thumbnail=true", headers=headers)
+        self.assertEqual(res_thumb.status_code, 415)
+
+    def test_video_search_and_dashboard_breakdown(self):
+        admin_token = auth.create_access_token(data={"sub": self.admin.email, "id": self.admin.id, "role": self.admin.role})
+        headers = {"Authorization": f"Bearer {admin_token}"}
+
+        # Upload a video file
+        mp4_content = b"\x00\x00\x00\x18ftypmp42\x00\x00\x00\x00isommp42" + b"\x00" * 200
+        res = self.client.post(
+            "/api/files/upload",
+            files={"file": ("reunion.mp4", mp4_content, "video/mp4")},
+            data={"folder_id": ""},
+            headers=headers
+        )
+        self.assertEqual(res.status_code, 201)
+
+        # Upload a PDF file to contrast
+        pdf_content = b"%PDF-1.4\n%sample pdf content"
+        res_pdf = self.client.post(
+            "/api/files/upload",
+            files={"file": ("recipe.pdf", pdf_content, "application/pdf")},
+            data={"folder_id": ""},
+            headers=headers
+        )
+        self.assertEqual(res_pdf.status_code, 201)
+
+        # Search with file_type="video"
+        res_search_video = self.client.get("/api/search?file_type=video", headers=headers)
+        self.assertEqual(res_search_video.status_code, 200)
+        video_results = res_search_video.json()
+        self.assertIsInstance(video_results, list)
+        filenames = [f["filename"] for f in video_results]
+        self.assertIn("reunion.mp4", filenames)
+        self.assertNotIn("recipe.pdf", filenames)
+
+        # Check dashboard storage breakdown
+        res_stats = self.client.get("/api/dashboard/stats", headers=headers)
+        self.assertEqual(res_stats.status_code, 200)
+        stats = res_stats.json()
+        breakdown = stats.get("storage_breakdown", {})
+        self.assertIn("video", breakdown)
+        self.assertGreaterEqual(breakdown["video"]["count"], 1)
+        self.assertGreater(breakdown["video"]["size"], 0)
+
+    def test_video_range_request_partial_content(self):
+        admin_token = auth.create_access_token(data={"sub": self.admin.email, "id": self.admin.id, "role": self.admin.role})
+        headers = {"Authorization": f"Bearer {admin_token}"}
+
+        # Upload a video file
+        mp4_content = b"\x00\x00\x00\x18ftypisom\x00\x00\x02\x00isomiso2mp41" + b"ABCDEFGHIJ" * 20
+        res = self.client.post(
+            "/api/files/upload",
+            files={"file": ("stream_test.mp4", mp4_content, "video/mp4")},
+            data={"folder_id": ""},
+            headers=headers
+        )
+        self.assertEqual(res.status_code, 201)
+        file_id = res.json()["id"]
+
+        # Request partial content: bytes 0-9 (first 10 bytes)
+        headers_range = headers.copy()
+        headers_range["Range"] = "bytes=0-9"
+        res_stream = self.client.get(f"/api/files/{file_id}/preview", headers=headers_range)
+        self.assertEqual(res_stream.status_code, 206)
+        self.assertEqual(len(res_stream.content), 10)
+        self.assertEqual(res_stream.content, mp4_content[0:10])
+        self.assertEqual(res_stream.headers.get("accept-ranges"), "bytes")
+        self.assertEqual(res_stream.headers.get("content-range"), f"bytes 0-9/{len(mp4_content)}")
+
+        # Request partial content: bytes 10- (from byte 10 to end)
+        headers_range["Range"] = "bytes=10-"
+        res_stream2 = self.client.get(f"/api/files/{file_id}/preview", headers=headers_range)
+        self.assertEqual(res_stream2.status_code, 206)
+        self.assertEqual(len(res_stream2.content), len(mp4_content) - 10)
+        self.assertEqual(res_stream2.content, mp4_content[10:])
+        self.assertEqual(res_stream2.headers.get("content-range"), f"bytes 10-{len(mp4_content)-1}/{len(mp4_content)}")
+
 if __name__ == "__main__":
     unittest.main()
 
