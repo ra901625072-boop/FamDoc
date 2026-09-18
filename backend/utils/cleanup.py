@@ -23,7 +23,7 @@ def purge_old_recycle_bin_items(db: Session, retention_days: int = 30):
                 
                 if file.google_drive_file_id:
                     try:
-                        cfg = family_config.get("google", {})
+                        cfg = manager.resolve_file_account_config(file, db)
                         manager.providers["google"].delete_file(cfg, file.google_drive_file_id, db=db)
                         deleted_somewhere = True
                     except Exception as e:
@@ -38,7 +38,12 @@ def purge_old_recycle_bin_items(db: Session, retention_days: int = 30):
                         provider.delete_file(config, file.file_id, db=db)
                 logger.info(f"Cleanup Job: Purged file {file.filename}")
             except Exception as e:
-                logger.warning(f"Warning: Cleanup Job failed to delete file {file.filename}: {e}")
+                logger.warning(f"Warning: Cleanup Job failed to delete cloud file for {file.filename}: {e}")
+            if file.storage_account_id:
+                acct = db.get(models.StorageAccount, file.storage_account_id)
+                if acct:
+                    acct.cached_quota_used = max(0, (acct.cached_quota_used or 0) - (file.size_bytes or 0))
+                    db.add(acct)
             db.delete(file)
         db.commit()
 

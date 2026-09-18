@@ -171,9 +171,12 @@ def remove_family_member(
                 )
         db.delete(sa)
 
-    # 2. Invalidate active token / session
-    if target_user and target_user.current_token_jti:
-        db.add(models.RevokedToken(jti=target_user.current_token_jti))
+    # 2. Invalidate active tokens / sessions
+    if target_user:
+        if target_user.current_token_jti:
+            db.add(models.RevokedToken(jti=target_user.current_token_jti))
+        if target_user.mobile_token_jti:
+            db.add(models.RevokedToken(jti=target_user.mobile_token_jti))
 
     # 3. Clean up PasswordResetOTPs for this user
     if target_user and target_user.email:

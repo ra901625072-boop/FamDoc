@@ -137,6 +137,12 @@ def run_migrations():
                 logger.info("Migration: Successfully added google_drive_folder_id column to folders table.")
             except Exception as e:
                 logger.error(f"Migration error (folders google_drive_folder_id): {str(e)}")
+        if "account_folder_ids" not in columns:
+            try:
+                execute_migration_statement("ALTER TABLE folders ADD COLUMN account_folder_ids TEXT")
+                logger.info("Migration: Successfully added account_folder_ids column to folders table.")
+            except Exception as e:
+                logger.error(f"Migration error (folders account_folder_ids): {str(e)}")
         # Data migration for folders
         with engine.begin() as conn:
             try:
@@ -294,6 +300,13 @@ def run_migrations():
                 logger.info("Migration: Successfully added current_token_jti column to users table.")
             except Exception as e:
                 logger.error(f"Migration error (users current_token_jti): {str(e)}")
+
+        if "mobile_token_jti" not in columns:
+            try:
+                execute_migration_statement("ALTER TABLE users ADD COLUMN mobile_token_jti VARCHAR(64)")
+                logger.info("Migration: Successfully added mobile_token_jti column to users table.")
+            except Exception as e:
+                logger.error(f"Migration error (users mobile_token_jti): {str(e)}")
 
     # 4. Migrate audit_logs table
     if "audit_logs" in table_names:

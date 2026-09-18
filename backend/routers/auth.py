@@ -25,14 +25,14 @@ def verify_otp_code(input_otp: str, db_otp: models.PasswordResetOTP) -> bool:
     return False
 
 
-from utils.rate_limiter import check_rate_limit as verify_rate_limit
+from utils.rate_limiter import check_rate_limit as verify_rate_limit, reset_rate_limit
 from utils.ip import get_client_ip
 
 def check_rate_limit(ip: str):
-    if verify_rate_limit(f"auth_login:{ip}", max_requests=5, window_seconds=600):
+    if verify_rate_limit(f"auth_login:{ip}", max_requests=25, window_seconds=60):
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Too many family login attempts. Please try again in 10 minutes."
+            detail="Too many login attempts. Please wait 1 minute before trying again."
         )
 
 @router.post("/register", response_model=schemas.UserResponse, status_code=status.HTTP_201_CREATED)
@@ -147,11 +147,21 @@ def login(request: Request, credentials: schemas.UserLogin, db: Session = Depend
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    # Reset rate limit counter on valid credentials
+    reset_rate_limit(f"auth_login:{ip}")
+
+    # Determine client type (e.g. mobile vs web) to allow concurrent cross-device sessions
+    client_type = "mobile" if (
+        request.headers.get("x-client-type") == "mobile" or 
+        "okhttp" in request.headers.get("user-agent", "").lower()
+    ) else "web"
+
     access_token = auth.create_access_token(
         data={
             "sub": user.email,
             "id": user.id,
             "role": user.role,
+            "client_type": client_type,
         }
     )
     from jose import jwt
@@ -159,7 +169,10 @@ def login(request: Request, credentials: schemas.UserLogin, db: Session = Depend
         payload = jwt.decode(access_token, auth.JWT_SECRET, algorithms=[auth.JWT_ALGORITHM])
         jti = payload.get("jti")
         if jti:
-            user.current_token_jti = jti
+            if client_type == "mobile":
+                user.mobile_token_jti = jti
+            else:
+                user.current_token_jti = jti
             db.commit()
     except Exception:
         pass
@@ -286,12 +299,21 @@ def family_login(request: Request, login_in: schemas.FamilyLogin, db: Session = 
     db.commit()
     db.refresh(user)
 
+    # Reset rate limit counter on successful family login
+    reset_rate_limit(f"auth_login:{ip}")
+
+    client_type = "mobile" if (
+        request.headers.get("x-client-type") == "mobile" or 
+        "okhttp" in request.headers.get("user-agent", "").lower()
+    ) else "web"
+
     # Generate token
     access_token = auth.create_access_token(
         data={
             "sub": user.email,
             "id": user.id,
             "role": user.role,
+            "client_type": client_type,
         }
     )
     from jose import jwt
@@ -299,7 +321,10 @@ def family_login(request: Request, login_in: schemas.FamilyLogin, db: Session = 
         payload = jwt.decode(access_token, auth.JWT_SECRET, algorithms=[auth.JWT_ALGORITHM])
         jti = payload.get("jti")
         if jti:
-            user.current_token_jti = jti
+            if client_type == "mobile":
+                user.mobile_token_jti = jti
+            else:
+                user.current_token_jti = jti
             db.commit()
     except Exception:
         pass
@@ -476,8 +501,13 @@ def logout(
         if jti:
             revoked = models.RevokedToken(jti=jti)
             db.add(revoked)
-            if current_user.current_token_jti == jti:
-                current_user.current_token_jti = None
+            client_type = payload.get("client_type", "web")
+            if client_type == "mobile":
+                if current_user.mobile_token_jti == jti:
+                    current_user.mobile_token_jti = None
+            else:
+                if current_user.current_token_jti == jti:
+                    current_user.current_token_jti = None
             db.commit()
     except Exception:
         pass

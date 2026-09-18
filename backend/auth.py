@@ -133,8 +133,14 @@ def get_current_user_with_scopes(
     if user is None:
         raise credentials_exception
 
-    if scope == "session" and user.current_token_jti and jti != user.current_token_jti:
-        raise credentials_exception
+    if scope == "session":
+        client_type = payload.get("client_type", "web")
+        if client_type == "mobile":
+            if user.mobile_token_jti and jti != user.mobile_token_jti:
+                raise credentials_exception
+        else:
+            if user.current_token_jti and jti != user.current_token_jti:
+                raise credentials_exception
 
     return user
 

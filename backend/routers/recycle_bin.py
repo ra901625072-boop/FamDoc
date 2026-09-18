@@ -148,7 +148,7 @@ def purge_folder_recursive(folder_id: int, family: models.Family, db: Session):
         deleted_somewhere = False
         if file.google_drive_file_id:
             try:
-                cfg = family_config.get("google", {})
+                cfg = manager.resolve_file_account_config(file, db)
                 manager.providers["google"].delete_file(cfg, file.google_drive_file_id, db=db)
                 deleted_somewhere = True
             except Exception as e:
@@ -160,13 +160,33 @@ def purge_folder_recursive(folder_id: int, family: models.Family, db: Session):
                 manager.providers[provider].delete_file(config, file.file_id, db=db)
             except Exception as e:
                 print(f"Warning: Failed to delete cloud file {file.file_id} on {file.storage_provider} during purge: {e}")
+        if file.storage_account_id:
+            from models import StorageAccount
+            acct = db.get(StorageAccount, file.storage_account_id)
+            if acct:
+                acct.cached_quota_used = max(0, (acct.cached_quota_used or 0) - (file.size_bytes or 0))
+                db.add(acct)
         db.delete(file)
             
     # 3. Delete folder record and cloud folder node
     folder = db.query(models.Folder).filter(models.Folder.id == folder_id).first()
     if folder:
         deleted_folder_somewhere = False
-        if folder.google_drive_folder_id:
+        folder_mappings = folder.account_folder_ids or {}
+        if folder_mappings:
+            from storage import get_storage_provider
+            from models import StorageAccount
+            provider = get_storage_provider("google")
+            for acct_id_str, cloud_fid in folder_mappings.items():
+                try:
+                    acct = db.query(StorageAccount).get(int(acct_id_str))
+                    if acct:
+                        acct_cfg = manager.get_account_config(acct)
+                        provider.delete_file(acct_cfg, cloud_fid, db=db)
+                except Exception as e:
+                    print(f"Warning: Failed to delete Google Drive folder {cloud_fid} on account {acct_id_str} during purge: {e}")
+            deleted_folder_somewhere = True
+        elif folder.google_drive_folder_id:
             try:
                 from storage import get_storage_provider
                 provider = get_storage_provider("google")
@@ -223,7 +243,7 @@ def purge_item(
                 
                 if file.google_drive_file_id:
                     try:
-                        cfg = family_config.get("google", {})
+                        cfg = manager.resolve_file_account_config(file, db)
                         manager.providers["google"].delete_file(cfg, file.google_drive_file_id, db=db)
                         deleted_somewhere = True
                     except Exception as e:
@@ -235,6 +255,13 @@ def purge_item(
                     manager.providers[provider].delete_file(config, file.file_id, db=db)
             except Exception as e:
                 print(f"Warning: Failed to delete cloud file {file.file_id} during purge: {e}")
+            
+            if file.storage_account_id:
+                from models import StorageAccount
+                acct = db.get(StorageAccount, file.storage_account_id)
+                if acct:
+                    acct.cached_quota_used = max(0, (acct.cached_quota_used or 0) - (file.size_bytes or 0))
+                    db.add(acct)
             
             db.delete(file)
             db.commit()

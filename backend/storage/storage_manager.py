@@ -174,13 +174,18 @@ class StorageManager:
     def _get_or_refresh_free_space(self, acct, db: Session) -> Optional[int]:
         now = datetime.now(timezone.utc)
         QUOTA_CACHE_TTL_SECONDS = 300
-        if acct.quota_checked_at and (now - acct.quota_checked_at).total_seconds() < QUOTA_CACHE_TTL_SECONDS:
+        checked_at = acct.quota_checked_at
+        if checked_at and checked_at.tzinfo is None:
+            checked_at = checked_at.replace(tzinfo=timezone.utc)
+        if checked_at and (now - checked_at).total_seconds() < QUOTA_CACHE_TTL_SECONDS:
             if acct.cached_quota_total is None:
                 return None
-            return acct.cached_quota_total - (acct.cached_quota_used or 0)
+            return max(0, acct.cached_quota_total - (acct.cached_quota_used or 0))
         try:
             cfg = acct.config
             if not cfg or not cfg.get("client_id") or not (cfg.get("refresh_token") or cfg.get("access_token")):
+                if acct.cached_quota_total is not None:
+                    return max(0, acct.cached_quota_total - (acct.cached_quota_used or 0))
                 return None
             if hasattr(self.providers["google"], "get_quota"):
                 total, used = self.providers["google"].get_quota(cfg, db=db)
@@ -188,19 +193,23 @@ class StorageManager:
                 acct.cached_quota_used = used
                 acct.quota_checked_at = now
                 db.commit()
-                return (total - used) if total is not None else None
-            return None
+                return max(0, total - used) if total is not None else None
         except Exception as e:
             logger.warning(f"Failed to refresh free space for storage account {acct.id}: {e}")
+            if acct.cached_quota_total is not None:
+                return max(0, acct.cached_quota_total - (acct.cached_quota_used or 0))
             return None
+        if acct.cached_quota_total is not None:
+            return max(0, acct.cached_quota_total - (acct.cached_quota_used or 0))
+        return None
 
     def _resolve_account_config(self, file, db: Session) -> Optional[dict]:
         if file.storage_provider == "google":
-            # 1. Try file's designated storage account if valid
+            # 1. Try file's designated storage account if valid (active or disconnecting during migration)
             if file.storage_account_id:
                 from models import StorageAccount
-                acct = db.query(StorageAccount).get(file.storage_account_id)
-                if acct and acct.status == "active":
+                acct = db.get(StorageAccount, file.storage_account_id)
+                if acct and acct.status in ("active", "disconnecting"):
                     cfg = (acct.config or {}).copy()
                     if cfg.get("client_id") and (cfg.get("refresh_token") or cfg.get("access_token")):
                         cfg["vault_folder_id"] = acct.vault_folder_id
@@ -237,6 +246,108 @@ class StorageManager:
                     return g_cfg
 
         return {}
+
+    def get_account_config(self, acct) -> dict:
+        """Build a complete Google Drive config dict from a specific StorageAccount."""
+        cfg = (acct.config or {}).copy()
+        cfg["vault_folder_id"] = acct.vault_folder_id
+        cfg["family_id"] = acct.family_id
+        cfg["storage_account_id"] = acct.id
+        cfg["email"] = acct.email
+        return cfg
+
+    def resolve_file_account_config(self, file, db: Session) -> dict:
+        """Public API: Resolve the correct Google Drive config for a specific file's storage account."""
+        return self._resolve_account_config(file, db)
+
+    def _ensure_folder_recursive(self, folder, acct, acct_config, family, db: Session) -> str:
+        """Recursively ensure folder tree exists on a specific account's Google Drive."""
+        from models import Folder
+        acct_key = str(acct.id)
+        folder_map = dict(folder.account_folder_ids or {})
+
+        # If this folder already has an ID recorded for this specific account, return it
+        if acct_key in folder_map and folder_map[acct_key]:
+            return folder_map[acct_key]
+
+        # For backwards compatibility: if this account's vault matches family.vault_folder_id
+        # and folder.google_drive_folder_id is already populated, it was created on this account
+        if folder.google_drive_folder_id and (
+            (family.vault_folder_id and acct.vault_folder_id == family.vault_folder_id)
+            or acct.priority == 0
+        ):
+            folder_map[acct_key] = folder.google_drive_folder_id
+            folder.account_folder_ids = folder_map
+            db.commit()
+            return folder.google_drive_folder_id
+
+        # Resolve parent folder ID on THIS specific account
+        if folder.parent_id is not None:
+            parent = db.query(Folder).filter(
+                Folder.id == folder.parent_id,
+                Folder.family_id == family.id
+            ).first()
+            if parent:
+                parent_cloud_id = self._ensure_folder_recursive(parent, acct, acct_config, family, db)
+            else:
+                parent_cloud_id = acct.vault_folder_id or family.vault_folder_id
+        else:
+            parent_cloud_id = acct.vault_folder_id or family.vault_folder_id
+
+        # Find or create the folder on THIS account's Drive
+        if hasattr(self.providers["google"], "find_or_create_folder"):
+            cloud_folder_id = self.providers["google"].find_or_create_folder(
+                config=acct_config,
+                parent_folder_id=parent_cloud_id,
+                folder_name=folder.name,
+                db=db
+            )
+        else:
+            cloud_folder_id = self.providers["google"].create_folder(
+                config=acct_config,
+                parent_folder_id=parent_cloud_id,
+                folder_name=folder.name,
+                db=db
+            )
+
+        # Store the folder ID for this specific account
+        folder_map[acct_key] = cloud_folder_id
+        folder.account_folder_ids = folder_map
+        if not folder.google_drive_folder_id:
+            folder.google_drive_folder_id = cloud_folder_id
+        # Keep legacy column synchronized
+        if family.storage_provider == "google" and not folder.cloud_folder_id:
+            folder.cloud_folder_id = cloud_folder_id
+        db.commit()
+        db.refresh(folder)
+        return cloud_folder_id
+
+    def ensure_folder_for_account(self, folder_id, acct, family, db: Session) -> str:
+        """Ensure the folder tree exists on a specific StorageAccount's Google Drive.
+        Returns the cloud folder ID to upload into."""
+        if not acct.vault_folder_id and family and family.storage_provider == "google":
+            try:
+                acct_config = self.get_account_config(acct)
+                if hasattr(self.providers.get("google"), "ensure_vault_folder"):
+                    acct.vault_folder_id = self.providers["google"].ensure_vault_folder(family.id, acct_config, db=db)
+                    db.commit()
+            except Exception as e:
+                logger.warning(f"Could not auto-create vault folder for account {acct.id}: {e}")
+
+        if folder_id is None:
+            return acct.vault_folder_id or family.vault_folder_id
+
+        from models import Folder
+        folder = db.query(Folder).filter(
+            Folder.id == folder_id,
+            Folder.family_id == family.id
+        ).first()
+        if not folder:
+            return acct.vault_folder_id or family.vault_folder_id
+
+        acct_config = self.get_account_config(acct)
+        return self._ensure_folder_recursive(folder, acct, acct_config, family, db)
+
 
     def read_file(self, file, family_config: dict, db = None) -> bytes:
         provider_name = file.storage_provider or "local"
@@ -476,17 +587,13 @@ class StorageManager:
                 continue
 
             try:
-                target_config = (target_account.config or {}).copy()
-                target_config["vault_folder_id"] = target_account.vault_folder_id
-                target_config["family_id"] = file.family_id
-                target_config["storage_account_id"] = target_account.id
+                target_config = self.get_account_config(target_account)
 
-                if file.folder_id is not None:
-                    target_vault_id = ensure_folder_cloud_id(file.folder_id, "google", file.family, db)
-                    target_username = None
-                else:
-                    target_vault_id = target_account.vault_folder_id or file.family.vault_folder_id
-                    target_username = None
+                # Resolve folder tree on the TARGET account's Drive
+                target_vault_id = self.ensure_folder_for_account(
+                    file.folder_id, target_account, file.family, db
+                )
+                target_username = None
 
                 cloud_result = self.providers["google"].upload_file(
                     config=target_config,
@@ -513,6 +620,9 @@ class StorageManager:
                 file.lock_acquired_at = None
                 file.lock_holder = None
                 file.sync_retry_count = 0
+                # Update cached quota so next selection uses accurate data
+                if target_account:
+                    target_account.cached_quota_used = (target_account.cached_quota_used or 0) + file.size_bytes
                 db.commit()
 
                 try:
@@ -557,15 +667,16 @@ class StorageManager:
     def migrate_account_files(self, account_id: int, db: Session):
         """
         Migrates files stored on a disconnecting StorageAccount to another active account.
+        Migrates all files associated with this account (active and soft-deleted) so zero
+        files remain on the disconnected account.
         """
         from models import File, StorageAccount
-        acct = db.query(StorageAccount).get(account_id)
+        acct = db.get(StorageAccount, account_id)
         if not acct:
             return
 
         files = db.query(File).filter(
-            File.storage_account_id == account_id,
-            File.deleted_at == None
+            File.storage_account_id == account_id
         ).all()
 
         logger.info(f"Account Disconnect Migration: Starting migration of {len(files)} files for account {account_id}")
@@ -579,14 +690,12 @@ class StorageManager:
                 # 2. Select target replacement account
                 target_acct = self.select_target_account(file.family, file.size_bytes, db)
                 if target_acct and target_acct.id != account_id:
-                    target_config = (target_acct.config or {}).copy()
-                    target_config["vault_folder_id"] = target_acct.vault_folder_id
-                    target_config["family_id"] = file.family_id
-                    target_config["storage_account_id"] = target_acct.id
+                    target_config = self.get_account_config(target_acct)
+                    target_vault_id = self.ensure_folder_for_account(file.folder_id, target_acct, file.family, db)
 
                     cloud_result = self.providers["google"].upload_file(
                         config=target_config,
-                        vault_folder_id=target_acct.vault_folder_id,
+                        vault_folder_id=target_vault_id,
                         filename=file.filename,
                         file_content=content,
                         mimetype=file.file_type or "application/octet-stream",
@@ -596,6 +705,10 @@ class StorageManager:
                     file.google_drive_file_id = cloud_result["cloud_file_id"]
                     file.cloud_file_id = cloud_result["cloud_file_id"]
                     file.cloud_link = cloud_result.get("cloud_link")
+                    if target_acct:
+                        target_acct.cached_quota_used = (target_acct.cached_quota_used or 0) + file.size_bytes
+                    if acct:
+                        acct.cached_quota_used = max(0, (acct.cached_quota_used or 0) - file.size_bytes)
                 else:
                     # Fallback: promote back to local storage
                     local_config = self.get_family_config(file.family, db).get("local", {})
@@ -612,12 +725,14 @@ class StorageManager:
                     file.google_drive_file_id = None
                     file.cloud_file_id = None
                     file.pending_sync = True
+                    if acct:
+                        acct.cached_quota_used = max(0, (acct.cached_quota_used or 0) - file.size_bytes)
 
                 db.commit()
 
                 # Delete from old account if possible
                 try:
-                    old_cfg = (acct.config or {}).copy()
+                    old_cfg = self.get_account_config(acct)
                     if old_cloud_file_id:
                         self.providers["google"].delete_file(old_cfg, old_cloud_file_id, db=db)
                 except Exception as del_err:

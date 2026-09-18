@@ -27,6 +27,10 @@ class InMemoryRateLimiter:
                 self._store[key].append(now)
             return False
 
+    def reset_key(self, key: str):
+        with self._lock:
+            self._store.pop(key, None)
+
 class RedisRateLimiter:
     def __init__(self, redis_url: str):
         self.redis_url = redis_url
@@ -42,6 +46,13 @@ class RedisRateLimiter:
         except Exception as e:
             logger.error(f"Failed to initialize Redis connection: {e}")
             self._connect_failed = True
+
+    def reset_key(self, key: str):
+        if self.client and not self._connect_failed:
+            try:
+                self.client.delete(f"rate_limit:{key}")
+            except Exception:
+                pass
 
     def is_rate_limited(self, key: str, max_requests: int, window_seconds: int, increment: bool = True) -> bool:
         if self._connect_failed or not self.client:
@@ -100,6 +111,11 @@ class PluggableRateLimiter:
                 return res
         return self.in_memory_limiter.is_rate_limited(key, max_requests, window_seconds, increment)
 
+    def reset_key(self, key: str):
+        if self.redis_limiter and not self.redis_limiter._connect_failed:
+            self.redis_limiter.reset_key(key)
+        self.in_memory_limiter.reset_key(key)
+
 # Global rate limiter instance
 _global_rate_limiter = PluggableRateLimiter()
 
@@ -110,3 +126,9 @@ def check_rate_limit(key: str, max_requests: int = 5, window_seconds: int = 600,
         bool: True if key is rate limited, False otherwise.
     """
     return _global_rate_limiter.is_rate_limited(key, max_requests, window_seconds, increment)
+
+def reset_rate_limit(key: str):
+    """
+    Resets/clears the rate limit for a key (e.g. on successful login).
+    """
+    _global_rate_limiter.reset_key(key)

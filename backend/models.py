@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, BigInteger, String, DateTime, ForeignKey, Boolean, UniqueConstraint, Index
+from sqlalchemy import Column, Integer, BigInteger, String, DateTime, ForeignKey, Boolean, UniqueConstraint, Index, Text
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import Base
@@ -14,6 +14,7 @@ class User(Base):
     role = Column(String(50), default="member") # "admin" or "member"
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     current_token_jti = Column(String(64), nullable=True)
+    mobile_token_jti = Column(String(64), nullable=True)
 
     # Relationships
     families_administered = relationship("Family", back_populates="admin")
@@ -117,6 +118,25 @@ class Folder(Base):
     deletion_batch_id = Column(String(36), nullable=True, index=True)
     cloud_folder_id = Column(String(255), nullable=True)
     google_drive_folder_id = Column(String(255), nullable=True)
+    _account_folder_ids = Column("account_folder_ids", Text, nullable=True)
+
+    @property
+    def account_folder_ids(self) -> dict:
+        if not self._account_folder_ids:
+            return {}
+        try:
+            import json
+            return json.loads(self._account_folder_ids)
+        except Exception:
+            return {}
+
+    @account_folder_ids.setter
+    def account_folder_ids(self, val: dict):
+        if val is None:
+            self._account_folder_ids = None
+        else:
+            import json
+            self._account_folder_ids = json.dumps(val)
 
     # Relationships
     family = relationship("Family", back_populates="folders")

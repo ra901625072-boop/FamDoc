@@ -312,6 +312,27 @@ class GoogleDriveProvider(StorageProvider):
         new_folder = self._execute_with_retry(_create, config, db)
         return new_folder.get('id')
 
+    def find_or_create_folder(self, config: dict, parent_folder_id: str, folder_name: str, db = None) -> str:
+        safe_name = folder_name.replace("'", "\\'")
+        query = f"mimeType = 'application/vnd.google-apps.folder' and name = '{safe_name}' and '{parent_folder_id}' in parents and trashed = false"
+        def _find(service):
+            return service.files().list(
+                q=query,
+                spaces='drive',
+                fields='files(id, name)',
+                pageSize=1,
+                supportsAllDrives=True,
+                includeItemsFromAllDrives=True
+            ).execute()
+        try:
+            results = self._execute_with_retry(_find, config, db)
+            files = results.get('files', [])
+            if files:
+                return files[0]['id']
+        except Exception as e:
+            logger.warning(f"Failed to search for folder '{folder_name}' in Google Drive: {e}. Will create folder.")
+        return self.create_folder(config, parent_folder_id, folder_name, db=db)
+
     def move_file(self, config: dict, cloud_file_id: str, new_parent_id: str, db = None) -> bool:
         def _move(service):
             # Retrieve the existing parents to remove

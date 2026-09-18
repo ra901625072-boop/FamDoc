@@ -18,6 +18,9 @@ class AuthInterceptor(
         val originalRequest = chain.request()
         val builder = originalRequest.newBuilder()
 
+        // Identify mobile client to backend
+        builder.addHeader("X-Client-Type", "mobile")
+
         // Inject Authorization header if token exists
         val token = tokenManager.getToken()
         if (!token.isNullOrBlank() && originalRequest.header("Authorization") == null) {

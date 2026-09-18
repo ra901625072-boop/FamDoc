@@ -241,7 +241,20 @@ def rename_folder(
         manager = StorageManager()
         family_config = manager.get_family_config(family, db)
 
-        if folder.google_drive_folder_id:
+        folder_mappings = folder.account_folder_ids or {}
+        if folder_mappings:
+            provider = get_storage_provider("google")
+            for acct_id_str, cloud_fid in folder_mappings.items():
+                try:
+                    acct = db.query(models.StorageAccount).get(int(acct_id_str))
+                    if acct:
+                        acct_cfg = manager.get_account_config(acct)
+                        provider.rename_file(acct_cfg, cloud_fid, new_name, db=db)
+                        renamed_somewhere = True
+                except Exception as e:
+                    import logging
+                    logging.getLogger(__name__).warning(f"Failed to rename folder on account {acct_id_str}: {e}")
+        elif folder.google_drive_folder_id:
             try:
                 provider = get_storage_provider("google")
                 provider.rename_file(family_config.get("google", {}), folder.google_drive_folder_id, new_name, db=db)
@@ -387,7 +400,23 @@ def move_folder(
         manager = StorageManager()
         family_config = manager.get_family_config(family, db)
 
-        if folder.google_drive_folder_id:
+        folder_mappings = folder.account_folder_ids or {}
+        if folder_mappings:
+            provider = get_storage_provider("google")
+            for acct_id_str, cloud_fid in folder_mappings.items():
+                try:
+                    acct = db.query(models.StorageAccount).get(int(acct_id_str))
+                    if acct:
+                        dest_google_id = manager.ensure_folder_for_account(
+                            folder_in.parent_id, acct, family, db
+                        )
+                        acct_cfg = manager.get_account_config(acct)
+                        provider.move_file(acct_cfg, cloud_fid, dest_google_id, db=db)
+                        moved_somewhere = True
+                except Exception as e:
+                    import logging
+                    logging.getLogger(__name__).warning(f"Failed to move folder on account {acct_id_str}: {e}")
+        elif folder.google_drive_folder_id:
             try:
                 dest_google_id = ensure_folder_cloud_id(folder_in.parent_id, "google", family, db)
                 provider = get_storage_provider("google")

@@ -296,38 +296,76 @@ async def upload_file(
 
     upload_success = False
     cloud_result = None
+    selected_account = None
 
     if provider == "google":
-        try:
-            target_config = family_config.get(provider, {})
-            manager.initialize_family_storage(family, db)
-            
-            # Direct cloud upload, skipping local storage
-            if folder_id is not None:
-                from routers.folders import ensure_folder_cloud_id
-                target_vault_id = ensure_folder_cloud_id(folder_id, provider, family, db)
-                target_username = None
-            else:
-                target_vault_id = family.vault_folder_id
-                target_username = None
+        manager.initialize_family_storage(family, db)
 
-            cloud_result = manager.providers[provider].upload_file(
-                config=target_config,
-                vault_folder_id=target_vault_id,
-                filename=file.filename,
-                file_content=content,
-                mimetype=resolved_file_type,
-                username=target_username,
-                db=db
-            )
-            upload_success = True
-        except Exception as e:
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.warning(f"Direct cloud upload to {provider} failed: {e}. Falling back to local storage and background sync.")
-            upload_success = False
+        # Check if active accounts exist and whether any account has enough capacity
+        # Use the load-balancing algorithm to pick the best drive
+        selected_account = manager.select_target_account(family, file_size, db)
+        if not selected_account:
+            active_accts = db.query(models.StorageAccount).filter(
+                models.StorageAccount.family_id == family.id,
+                models.StorageAccount.status == "active"
+            ).all()
+            if active_accts:
+                # All active accounts have known limits, and none can fit this file
+                max_free = 0
+                for a in active_accts:
+                    free = manager._get_or_refresh_free_space(a, db)
+                    if free and free > max_free:
+                        max_free = free
+
+                def _fmt(b):
+                    if b >= 1024 * 1024 * 1024:
+                        return f"{b / (1024 * 1024 * 1024):.1f} GB"
+                    elif b >= 1024 * 1024:
+                        return f"{b / (1024 * 1024):.1f} MB"
+                    elif b >= 1024:
+                        return f"{b / 1024:.1f} KB"
+                    return f"{b} bytes"
+
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=(
+                        f"File '{file.filename}' ({_fmt(file_size)}) cannot be uploaded. "
+                        f"No single Google Drive account has sufficient free space (largest available space on a single drive is {_fmt(max_free)}). "
+                        "Google Drive does not allow splitting a single file across multiple accounts."
+                    )
+                )
+
+        if selected_account:
+            try:
+                target_config = manager.get_account_config(selected_account)
+                
+                # Resolve folder tree on the TARGET account's Drive
+                target_vault_id = manager.ensure_folder_for_account(
+                    folder_id, selected_account, family, db
+                )
+
+                cloud_result = manager.providers[provider].upload_file(
+                    config=target_config,
+                    vault_folder_id=target_vault_id,
+                    filename=file.filename,
+                    file_content=content,
+                    mimetype=resolved_file_type,
+                    username=None,
+                    db=db
+                )
+                upload_success = True
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Direct cloud upload to {provider} failed: {e}. Falling back to local storage and background sync.")
+                upload_success = False
 
     if upload_success and cloud_result:
+        # Update cached quota immediately so next upload sees accurate data
+        if selected_account:
+            selected_account.cached_quota_used = (selected_account.cached_quota_used or 0) + file_size
+            db.add(selected_account)
+
         db_file = models.File(
             filename         = file.filename,
             file_type        = resolved_file_type,
@@ -345,7 +383,8 @@ async def upload_file(
             cloud_link       = cloud_result.get("cloud_link"),
             google_drive_file_id = cloud_result["cloud_file_id"],
             primary_storage  = provider,
-            backup_status    = "none"
+            backup_status    = "none",
+            storage_account_id = selected_account.id if selected_account else None
         )
     else:
         local_config = family_config.get("local", {})
@@ -373,7 +412,8 @@ async def upload_file(
             synced_to        = None,
             cloud_link       = None,
             primary_storage  = provider,
-            backup_status    = "none"
+            backup_status    = "none",
+            storage_account_id = selected_account.id if selected_account else None
         )
 
     db.add(db_file)
@@ -637,7 +677,7 @@ def rename_file(
         
         if file.google_drive_file_id:
             try:
-                cfg = family_config.get("google", {})
+                cfg = manager.resolve_file_account_config(file, db)
                 manager.providers["google"].rename_file(cfg, file.google_drive_file_id, new_name, db=db)
                 renamed_somewhere = True
             except Exception as e:
@@ -748,15 +788,29 @@ def move_file(
         try:
             from storage.storage_manager import StorageManager
             from storage import get_storage_provider
-            from routers.folders import ensure_folder_cloud_id
             manager = StorageManager()
             family_config = manager.get_family_config(family, db)
 
             if file.google_drive_file_id:
                 try:
-                    dest_google_id = ensure_folder_cloud_id(file_in.folder_id, "google", family, db)
+                    # Use the file's own account credentials and resolve folder on that account
+                    cfg = manager.resolve_file_account_config(file, db)
+                    # Resolve the destination folder's storage account
+                    if file.storage_account_id:
+                        from models import StorageAccount
+                        file_acct = db.query(StorageAccount).get(file.storage_account_id)
+                        if file_acct and file_acct.status in ("active", "disconnecting"):
+                            dest_google_id = manager.ensure_folder_for_account(
+                                file_in.folder_id, file_acct, family, db
+                            )
+                        else:
+                            from routers.folders import ensure_folder_cloud_id
+                            dest_google_id = ensure_folder_cloud_id(file_in.folder_id, "google", family, db)
+                    else:
+                        from routers.folders import ensure_folder_cloud_id
+                        dest_google_id = ensure_folder_cloud_id(file_in.folder_id, "google", family, db)
                     provider = get_storage_provider("google")
-                    provider.move_file(family_config.get("google", {}), file.google_drive_file_id, dest_google_id, db=db)
+                    provider.move_file(cfg, file.google_drive_file_id, dest_google_id, db=db)
                     moved_somewhere = True
                 except Exception as e:
                     import logging
@@ -766,6 +820,7 @@ def move_file(
                 provider_name = family.storage_provider
                 provider = get_storage_provider(provider_name)
                 provider_config = family_config.get(provider_name, {})
+                from routers.folders import ensure_folder_cloud_id
                 dest_cloud_id = ensure_folder_cloud_id(file_in.folder_id, provider_name, family, db)
                 provider.move_file(provider_config, file.cloud_file_id, dest_cloud_id, db=db)
         except Exception as e:
