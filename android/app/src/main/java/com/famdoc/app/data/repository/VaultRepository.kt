@@ -99,18 +99,30 @@ class VaultRepository(
     }
 
     suspend fun uploadFile(uri: Uri, folderId: Int? = null): Resource<FileItem> = withContext(Dispatchers.IO) {
+        var tempFile: java.io.File? = null
         try {
-            val part = FileUtils.prepareMultipartPart(context, uri)
+            val prep = FileUtils.prepareMultipartUpload(context, uri)
+            tempFile = prep.tempFile
             val folderPart = FileUtils.createFolderIdRequestBody(folderId)
 
-            val response = apiClient.filesApi.uploadFile(part, folderPart)
+            val response = apiClient.filesApi.uploadFile(prep.part, folderPart)
             if (response.isSuccessful && response.body() != null) {
                 Resource.Success(response.body()!!)
             } else {
                 Resource.Error(ErrorTranslator.translate(response))
             }
-        } catch (e: Exception) {
-            Resource.Error(ErrorTranslator.translate(e), e)
+        } catch (t: Throwable) {
+            if (t is OutOfMemoryError) {
+                Resource.Error("File is too large for device memory. Please close background apps or select a smaller video.")
+            } else if (t is Exception) {
+                Resource.Error(ErrorTranslator.translate(t), t)
+            } else {
+                Resource.Error(t.localizedMessage ?: "Unexpected error during upload: ${t.javaClass.simpleName}")
+            }
+        } finally {
+            try {
+                tempFile?.let { if (it.exists()) it.delete() }
+            } catch (_: Exception) {}
         }
     }
 

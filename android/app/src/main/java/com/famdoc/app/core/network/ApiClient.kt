@@ -32,7 +32,7 @@ class ApiClient(
     val okHttpClient: OkHttpClient by lazy {
         val logging = HttpLoggingInterceptor().apply {
             level = if (appConfig.isDebugMode()) {
-                HttpLoggingInterceptor.Level.BODY
+                HttpLoggingInterceptor.Level.HEADERS
             } else {
                 HttpLoggingInterceptor.Level.NONE
             }
@@ -43,9 +43,9 @@ class ApiClient(
             .connectionPool(ConnectionPool(5, 5, TimeUnit.MINUTES))
             .addInterceptor(authInterceptor)
             .addInterceptor(logging)
-            .connectTimeout(20, TimeUnit.SECONDS)
-            .readTimeout(45, TimeUnit.SECONDS)
-            .writeTimeout(45, TimeUnit.SECONDS)
+            .connectTimeout(60, TimeUnit.SECONDS)
+            .readTimeout(180, TimeUnit.SECONDS)
+            .writeTimeout(300, TimeUnit.SECONDS)
             .retryOnConnectionFailure(true)
             .build()
     }

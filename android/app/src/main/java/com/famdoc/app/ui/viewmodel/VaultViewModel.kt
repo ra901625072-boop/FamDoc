@@ -206,13 +206,17 @@ class VaultViewModel(private val vaultRepository: VaultRepository) : ViewModel()
 
     fun uploadFile(uri: Uri) {
         viewModelScope.launch {
-            _uploadState.value = Resource.Loading("Uploading file...")
-            val folderId = _currentFolder.value?.id
-            val result = vaultRepository.uploadFile(uri, folderId)
-            _uploadState.value = result
-            if (result is Resource.Success) {
-                loadFiles(folderId)
-                loadFolders()
+            try {
+                _uploadState.value = Resource.Loading("Uploading file...")
+                val folderId = _currentFolder.value?.id
+                val result = vaultRepository.uploadFile(uri, folderId)
+                _uploadState.value = result
+                if (result is Resource.Success) {
+                    loadFiles(folderId)
+                    loadFolders()
+                }
+            } catch (t: Throwable) {
+                _uploadState.value = Resource.Error(t.localizedMessage ?: "Failed to upload file")
             }
         }
     }

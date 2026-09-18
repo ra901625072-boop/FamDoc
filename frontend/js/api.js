@@ -4,9 +4,22 @@
 // Configurable base URL for cross-origin hosting (e.g. backend on Render and frontend on Vercel)
 // - If empty, relative paths are used (Option A: Proxy Rewrite in vercel.json)
 // - Alternatively, set to your Render backend URL (e.g. "https://your-backend.onrender.com")
-// Supports dynamic overrides in local storage via: localStorage.setItem("famdoc_api_base_url", "YOUR_BACKEND_URL")
-const API_BASE_URL = localStorage.getItem("famdoc_api_base_url") || "";
-window.FamDocAPI_BaseURL = API_BASE_URL; // expose globally for connection manager
+function resolveApiBaseUrl() {
+  const custom = localStorage.getItem("famdoc_api_base_url");
+  if (custom) return custom.trim().replace(/\/+$/, "");
+  if (typeof window !== "undefined" && window.location) {
+    const host = window.location.hostname;
+    // On hosted static frontends (e.g. Vercel, Netlify, custom domain), route directly to the Render backend
+    // to bypass serverless proxy 4.5MB request body limits for video and large file uploads!
+    if (host && host !== "localhost" && host !== "127.0.0.1" && !host.includes("onrender.com")) {
+      return "https://famdoc-backend.onrender.com";
+    }
+  }
+  return "";
+}
+
+const API_BASE_URL = resolveApiBaseUrl();
+window.FamDocAPI_BaseURL = API_BASE_URL; // expose globally for connection manager and upload manager
 
 function translateValidationError(field, message) {
   const cleanMsg = message.replace(/^value error,\s*/i, "");

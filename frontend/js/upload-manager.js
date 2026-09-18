@@ -436,7 +436,13 @@
       const xhr = new XMLHttpRequest();
       activeXhr = xhr;
       
-      const API_BASE_URL = localStorage.getItem("famdoc_api_base_url") || "";
+      let API_BASE_URL = window.FamDocAPI_BaseURL || localStorage.getItem("famdoc_api_base_url") || "";
+      if (!API_BASE_URL && typeof window !== "undefined" && window.location) {
+        const host = window.location.hostname;
+        if (host && host !== "localhost" && host !== "127.0.0.1" && !host.includes("onrender.com")) {
+          API_BASE_URL = "https://famdoc-backend.onrender.com";
+        }
+      }
       const uploadUrl = API_BASE_URL + "/api/files/upload";
       
       xhr.open("POST", uploadUrl, true);
@@ -460,10 +466,17 @@
             resolve(xhr.responseText);
           }
         } else {
-          let errorMsg = "Upload failed";
+          let errorMsg = `Upload failed (${xhr.status})`;
+          if (xhr.status === 413) {
+            errorMsg = "File size exceeds upload limit (413 Payload Too Large).";
+          }
           try {
             const errData = JSON.parse(xhr.responseText);
-            errorMsg = errData.detail || errorMsg;
+            if (typeof errData.detail === "string") {
+              errorMsg = errData.detail;
+            } else if (Array.isArray(errData.detail)) {
+              errorMsg = errData.detail.map(d => d.msg || JSON.stringify(d)).join("; ");
+            }
           } catch (err) {}
           reject(new Error(errorMsg));
         }
@@ -471,7 +484,7 @@
       
       xhr.onerror = () => {
         activeXhr = null;
-        reject(new Error("Network error occurred during upload"));
+        reject(new Error("Network error during upload. Please check your connection."));
       };
 
       xhr.onabort = () => {

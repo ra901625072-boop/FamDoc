@@ -59,44 +59,39 @@ def validate_file_content_signature(content: bytes, ext: str) -> bool:
             return True
         except UnicodeDecodeError:
             return False
-    elif ext in (".mp4", ".m4v", ".mov", ".qt", ".3gp", ".3g2"):
-        # ISO Base Media File Format (MP4 / QuickTime / 3GP)
-        # Typically starts with box size (4 bytes) followed by box type (ftyp, moov, wide, mdat, free, skip)
-        if len(content) >= 8:
-            box_type = content[4:8]
-            if box_type in (b"ftyp", b"moov", b"wide", b"mdat", b"free", b"skip", b"pnot"):
-                return True
-        if b"ftyp" in content[:16] or b"moov" in content[:16]:
-            return True
-        return False
-    elif ext in (".mkv", ".webm"):
-        # Matroska / WebM EBML header: 0x1A 0x45 0xDF 0xA3
-        return content.startswith(b"\x1a\x45\xdf\xa3")
-    elif ext in (".avi", ".divx"):
-        # AVI: RIFF container with AVI or AVIX
-        return content.startswith(b"RIFF") and len(content) >= 12 and content[8:12] in (b"AVI ", b"AVIX")
-    elif ext in (".wmv", ".asf"):
-        # ASF GUID header: 30 26 B2 75 8E 66 CF 11 A6 D9 00 AA 00 62 CE 6C
-        return content.startswith(b"\x30\x26\xb2\x75\x8e\x66\xcf\x11\xa6\xd9\x00\xaa\x00\x62\xce\x6c")
-    elif ext in (".flv", ".f4v"):
-        # Flash Video: FLV header
-        return content.startswith(b"FLV")
-    elif ext in (".mpg", ".mpeg", ".mpe", ".m1v", ".m2v", ".vob"):
-        # MPEG Program Stream (0x000001BA) or Video Stream (0x000001B3)
-        return content.startswith(b"\x00\x00\x01\xba") or content.startswith(b"\x00\x00\x01\xb3")
-    elif ext in (".ts", ".mts", ".m2ts"):
-        # MPEG-TS packet starts with sync byte 0x47
-        return content.startswith(b"\x47")
-    elif ext == ".ogv":
-        # Ogg video container: OggS
-        return content.startswith(b"OggS")
-    elif ext in (".rm", ".rmvb"):
-        # RealMedia
-        return content.startswith(b".RMF") or content.startswith(b".ra\xfd")
     elif ext in VIDEO_EXTENSIONS:
-        # Generic check for other video extensions: Ensure it is not an executable or script
-        if content.startswith(b"MZ") or content.startswith(b"\x7fELF") or content.startswith(b"#!/"):
+        # Check against common dangerous script/executable signatures
+        if content.startswith(b"MZ") or content.startswith(b"\x7fELF") or content.startswith(b"#!/") or content.startswith(b"<?php") or content.startswith(b"<html") or content.startswith(b"<!DOCTYPE"):
             return False
+
+        # ISO Base Media File Format (MP4 / QuickTime / 3GP / M4V)
+        if ext in (".mp4", ".m4v", ".mov", ".qt", ".3gp", ".3g2"):
+            if len(content) >= 8:
+                box_type = content[4:8]
+                if box_type in (b"ftyp", b"moov", b"wide", b"mdat", b"free", b"skip", b"pnot", b"styp", b"meta", b"uuid"):
+                    return True
+            # Scan first 256 bytes for common ISO/QuickTime atom identifiers
+            header_sample = content[:256]
+            if any(atom in header_sample for atom in (b"ftyp", b"moov", b"mdat", b"wide", b"styp", b"free", b"skip", b"pnot", b"qt  ")):
+                return True
+            return False
+
+        elif ext in (".mkv", ".webm"):
+            return content.startswith(b"\x1a\x45\xdf\xa3")
+        elif ext in (".avi", ".divx"):
+            return content.startswith(b"RIFF") and len(content) >= 12 and content[8:12] in (b"AVI ", b"AVIX")
+        elif ext in (".wmv", ".asf"):
+            return content.startswith(b"\x30\x26\xb2\x75\x8e\x66\xcf\x11\xa6\xd9\x00\xaa\x00\x62\xce\x6c")
+        elif ext in (".flv", ".f4v"):
+            return content.startswith(b"FLV")
+        elif ext in (".mpg", ".mpeg", ".mpe", ".m1v", ".m2v", ".vob"):
+            return content.startswith(b"\x00\x00\x01\xba") or content.startswith(b"\x00\x00\x01\xb3")
+        elif ext in (".ts", ".mts", ".m2ts"):
+            return content.startswith(b"\x47")
+        elif ext == ".ogv":
+            return content.startswith(b"OggS")
+        elif ext in (".rm", ".rmvb"):
+            return content.startswith(b".RMF") or content.startswith(b".ra\xfd")
         return True
     return True
 
@@ -249,6 +244,7 @@ async def upload_file(
         chunks.append(chunk)
 
     content = b"".join(chunks)
+    del chunks
     file_size = total_bytes
 
     # Resolve accurate MIME content type

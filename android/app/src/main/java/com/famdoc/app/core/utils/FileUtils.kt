@@ -42,20 +42,45 @@ object FileUtils {
         return name
     }
 
-    fun prepareMultipartPart(context: Context, uri: Uri): MultipartBody.Part {
+    data class PreparedUpload(
+        val part: MultipartBody.Part,
+        val tempFile: File?
+    )
+
+    fun prepareMultipartUpload(context: Context, uri: Uri): PreparedUpload {
+        cleanupStaleUploads(context)
         val fileName = getFileNameFromUri(context, uri)
-        val tempFile = File(context.cacheDir, fileName)
+        val safeName = fileName.replace(Regex("[^a-zA-Z0-9._-]"), "_")
+        val tempFile = File(context.cacheDir, "up_${System.currentTimeMillis()}_$safeName")
 
         context.contentResolver.openInputStream(uri)?.use { input: InputStream ->
             FileOutputStream(tempFile).use { output: FileOutputStream ->
-                input.copyTo(output)
+                val buffer = ByteArray(64 * 1024)
+                var bytesRead: Int
+                while (input.read(buffer).also { bytesRead = it } != -1) {
+                    output.write(buffer, 0, bytesRead)
+                }
+                output.flush()
             }
         }
 
         val mimeType = context.contentResolver.getType(uri) ?: getMimeTypeFromFilename(fileName)
         val requestBody = tempFile.asRequestBody(mimeType.toMediaTypeOrNull())
+        val part = MultipartBody.Part.createFormData("file", fileName, requestBody)
+        return PreparedUpload(part, tempFile)
+    }
 
-        return MultipartBody.Part.createFormData("file", fileName, requestBody)
+    fun prepareMultipartPart(context: Context, uri: Uri): MultipartBody.Part {
+        return prepareMultipartUpload(context, uri).part
+    }
+
+    private fun cleanupStaleUploads(context: Context) {
+        try {
+            val oneHourAgo = System.currentTimeMillis() - 3600_000
+            context.cacheDir.listFiles()?.filter {
+                it.name.startsWith("up_") && it.lastModified() < oneHourAgo
+            }?.forEach { it.delete() }
+        } catch (_: Exception) {}
     }
 
     fun createFolderIdRequestBody(folderId: Int?): RequestBody? {
