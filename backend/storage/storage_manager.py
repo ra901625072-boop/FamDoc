@@ -481,7 +481,6 @@ class StorageManager:
         import socket
         from models import File
         from sqlalchemy import or_
-        from routers.folders import ensure_folder_cloud_id
 
         now_utc = datetime.now(timezone.utc)
         timeout_limit = now_utc - timedelta(minutes=10)

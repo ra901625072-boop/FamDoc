@@ -4,7 +4,6 @@ import sys
 # Add backend directory to python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from sqlalchemy.orm import Session
 from database import SessionLocal
 import models
 from storage import get_storage_provider

@@ -41,8 +41,10 @@ class TestBackendRedesign(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         Base.metadata.drop_all(bind=engine)
+        engine.dispose()
         try:
-            os.remove("./test_redesign_temp.db")
+            if os.path.exists("./test_redesign_temp.db"):
+                os.remove("./test_redesign_temp.db")
         except OSError:
             pass
 

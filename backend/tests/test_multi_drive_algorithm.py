@@ -8,11 +8,9 @@ from unittest.mock import patch, MagicMock
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 
 from main import app
-from database import Base, get_db
+from database import Base
 import models
 import auth
 from storage.storage_manager import StorageManager
@@ -27,7 +25,13 @@ class TestMultiDriveAlgorithm(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        pass
+        Base.metadata.drop_all(bind=engine)
+        engine.dispose()
+        try:
+            if os.path.exists("./test_redesign_temp.db"):
+                os.remove("./test_redesign_temp.db")
+        except OSError:
+            pass
 
     def setUp(self):
         self.db = TestingSessionLocal()

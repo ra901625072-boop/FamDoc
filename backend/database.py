@@ -416,7 +416,7 @@ def run_migrations():
     # 9. Clean up any legacy orphaned member users (users with role='member' that have no family memberships)
     if "users" in table_names and "family_members" in table_names:
         try:
-            from models import User, FamilyMember, Family
+            from models import User
             db_session = SessionLocal()
             try:
                 orphaned_users = db_session.query(User).filter(

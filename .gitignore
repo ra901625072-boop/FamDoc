@@ -41,7 +41,15 @@ venv.bak/
 *.sqlite
 *.sqlite3
 local_vault/
+backend/local_vault/
 service-account.json
+
+# Node & Frontend Build Artifacts
+node_modules/
+.vite/
+*.tsbuildinfo
+frontend/dist/
+frontend/public/
 
 # Logs & Debugging
 *.log

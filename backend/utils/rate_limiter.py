@@ -99,7 +99,7 @@ class PluggableRateLimiter:
         
         if self.redis_url:
             try:
-                import redis
+                import redis  # noqa: F401
                 self.redis_limiter = RedisRateLimiter(self.redis_url)
             except ImportError:
                 logger.warning("redis-py package is not installed. Using in-memory rate limiter.")
