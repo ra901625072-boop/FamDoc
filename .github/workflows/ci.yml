@@ -63,3 +63,31 @@ jobs:
       - name: Build Android Debug APK
         working-directory: ./android
         run: ./gradlew assembleDebug --no-daemon
+
+  frontend-validation:
+    name: Frontend Build & Playwright Parity
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Root & Frontend Dependencies
+        run: |
+          npm ci
+          cd frontend && npm ci
+
+      - name: Build Frontend (Vite & TypeScript)
+        working-directory: ./frontend
+        run: npm run build
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Playwright Parity Tests
+        run: npx playwright test
+
