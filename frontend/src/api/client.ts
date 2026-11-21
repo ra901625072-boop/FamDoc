@@ -296,8 +296,15 @@ export const api = {
       return performRequest<FamilyDetails>('/api/family/details');
     },
 
-    async regenerateCode(name = 'Family Vault', maxMembers = 10): Promise<{ secret_code: string }> {
-      return performRequest<{ secret_code: string }>('/api/family/regenerate-code', {
+    async updateDetails(name: string, maxMembers: number): Promise<FamilyDetails> {
+      return performRequest<FamilyDetails>('/api/family/details', {
+        method: 'PUT',
+        body: JSON.stringify({ name, max_members: maxMembers }),
+      });
+    },
+
+    async regenerateCode(name = 'Family Vault', maxMembers = 10): Promise<{ secret_code: string; expires_at?: string }> {
+      return performRequest<{ secret_code: string; expires_at?: string }>('/api/family/regenerate-code', {
         method: 'POST',
         body: JSON.stringify({ name, max_members: maxMembers }),
       });

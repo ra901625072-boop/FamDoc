@@ -211,6 +211,18 @@ export function useRemoveFamilyMember() {
   });
 }
 
+export function useUpdateFamilyDetails() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: { name: string; maxMembers: number }) =>
+      api.family.updateDetails(vars.name, vars.maxMembers),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.familyDetails });
+      qc.invalidateQueries({ queryKey: queryKeys.familyMembers });
+    },
+  });
+}
+
 export function useRegenerateSecretCode() {
   const qc = useQueryClient();
   return useMutation({
@@ -219,8 +231,14 @@ export function useRegenerateSecretCode() {
     onSuccess: (data) => {
       if (data?.secret_code) {
         localStorage.setItem('famdoc_family_secret_code', data.secret_code);
+        const expiresAt = data.expires_at || new Date(Date.now() + 60 * 1000).toISOString();
+        localStorage.setItem('famdoc_family_code_expires_at', expiresAt);
         if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('famdoc:secret-code-updated', { detail: data.secret_code }));
+          window.dispatchEvent(
+            new CustomEvent('famdoc:secret-code-updated', {
+              detail: { secret_code: data.secret_code, expires_at: expiresAt },
+            })
+          );
         }
       }
       qc.invalidateQueries({ queryKey: queryKeys.familyDetails });

@@ -11,10 +11,28 @@ import auth
 
 router = APIRouter(prefix="/api/family", tags=["Family"])
 
-def generate_family_secret_code() -> str:
-    # 8 uppercase alphanumeric characters
+def generate_family_secret_code(family_name: str = "", max_members: int = 10) -> str:
+    # First two letters from family name
+    clean_letters = "".join(c for c in (family_name or "").strip() if c.isalpha()).upper()
+    if len(clean_letters) >= 2:
+        name_part = clean_letters[:2]
+    elif len(clean_letters) == 1:
+        name_part = f"{clean_letters}X"
+    else:
+        name_part = "FD"
+
+    # Next two digits: number of family members (e.g. 10 -> "10", 4 -> "04")
+    try:
+        num = int(max_members)
+        members_part = f"{num:02d}"[-2:]
+    except Exception:
+        members_part = "10"
+
+    # Last 4 characters: random alphanumeric
     alphabet = string.ascii_uppercase + string.digits
-    return "".join(secrets.choice(alphabet) for _ in range(8))
+    random_part = "".join(secrets.choice(alphabet) for _ in range(4))
+
+    return f"{name_part}{members_part}{random_part}"
 
 @router.post("/setup", response_model=schemas.FamilySetupResponse)
 def setup_family(
@@ -34,7 +52,7 @@ def setup_family(
     family_id = "".join(secrets.choice(string.ascii_lowercase + string.digits) for _ in range(12))
 
     import hashlib
-    plaintext_code = generate_family_secret_code()
+    plaintext_code = generate_family_secret_code(setup_data.name, setup_data.max_members)
     # Format code with hyphen for better UX (e.g. XXXX-XXXX)
     formatted_plaintext = f"{plaintext_code[:4]}-{plaintext_code[4:]}"
     hashed_code = auth.get_password_hash(plaintext_code)
@@ -47,7 +65,7 @@ def setup_family(
         secret_code_hash=hashed_code,
         secret_code_sha256=sha256_hash,
         max_members=setup_data.max_members,
-        expires_at=datetime.now(timezone.utc) + timedelta(days=7)
+        expires_at=datetime.now(timezone.utc) + timedelta(minutes=1)
     )
     db.add(new_family)
     db.flush()
@@ -65,7 +83,8 @@ def setup_family(
         family_id=family_id,
         name=setup_data.name,
         secret_code=formatted_plaintext,
-        max_members=setup_data.max_members
+        max_members=setup_data.max_members,
+        expires_at=new_family.expires_at
     )
 
 @router.get("/members", response_model=List[schemas.FamilyMemberResponse])
@@ -223,6 +242,33 @@ def get_family_details(
 
     return family
 
+@router.put("/details", response_model=schemas.FamilyResponse)
+def update_family_details(
+    update_data: schemas.FamilySetup,
+    current_user: models.User = Depends(auth.get_admin_user),
+    db: Session = Depends(get_db)
+):
+    family = db.query(models.Family).filter(models.Family.admin_id == current_user.id).first()
+    if not family:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="You do not administer any family group."
+        )
+
+    # Check that new max_members isn't less than current member count
+    current_count = db.query(models.FamilyMember).filter(models.FamilyMember.family_id == family.id).count()
+    if update_data.max_members < current_count:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Cannot reduce capacity to {update_data.max_members}. You already have {current_count} active members."
+        )
+
+    family.name = update_data.name.strip()
+    family.max_members = update_data.max_members
+    db.commit()
+    db.refresh(family)
+    return family
+
 @router.post("/regenerate-code", response_model=schemas.FamilySetupResponse)
 def regenerate_family_code(
     setup_data: schemas.FamilySetup,
@@ -238,22 +284,26 @@ def regenerate_family_code(
         )
 
     import hashlib
-    plaintext_code = generate_family_secret_code()
+    effective_name = setup_data.name.strip() if setup_data.name else family.name
+    effective_max = setup_data.max_members if setup_data.max_members else family.max_members
+
+    plaintext_code = generate_family_secret_code(effective_name, effective_max)
     formatted_plaintext = f"{plaintext_code[:4]}-{plaintext_code[4:]}"
     hashed_code = auth.get_password_hash(plaintext_code)
     sha256_hash = hashlib.sha256(plaintext_code.encode("utf-8")).hexdigest()
 
     # Update family details
-    family.name = setup_data.name
-    family.max_members = setup_data.max_members
+    family.name = effective_name
+    family.max_members = effective_max
     family.secret_code_hash = hashed_code
     family.secret_code_sha256 = sha256_hash
-    family.expires_at = datetime.now(timezone.utc) + timedelta(days=7)
+    family.expires_at = datetime.now(timezone.utc) + timedelta(minutes=1)
     db.commit()
 
     return schemas.FamilySetupResponse(
         family_id=family.id,
         name=family.name,
         secret_code=formatted_plaintext,
-        max_members=family.max_members
+        max_members=family.max_members,
+        expires_at=family.expires_at
     )

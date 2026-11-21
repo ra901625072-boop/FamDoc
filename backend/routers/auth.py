@@ -82,20 +82,21 @@ def register(user_in: schemas.UserRegister, db: Session = Depends(get_db)):
     # Generate an ID for the family
     family_id = "".join(secrets.choice(string.ascii_lowercase + string.digits) for _ in range(12))
     
-    # Generate family secret code
-    alphabet = string.ascii_uppercase + string.digits
-    plaintext_code = "".join(secrets.choice(alphabet) for _ in range(8))
+    # Generate family secret code (first 2 letters of name, 2 digits members, 4 random chars)
+    from routers.family import generate_family_secret_code
+    fam_name = f"{new_user.username}'s Family"
+    plaintext_code = generate_family_secret_code(fam_name, 10)
     hashed_code = auth.get_password_hash(plaintext_code)
     sha256_hash = hashlib.sha256(plaintext_code.encode("utf-8")).hexdigest()
     
     new_family = models.Family(
         id=family_id,
-        name=f"{new_user.username}'s Family",
+        name=fam_name,
         admin_id=new_user.id,
         secret_code_hash=hashed_code,
         secret_code_sha256=sha256_hash,
         max_members=10,
-        expires_at=datetime.now(timezone.utc) + timedelta(days=7)
+        expires_at=datetime.now(timezone.utc) + timedelta(minutes=1)
     )
     db.add(new_family)
     db.flush()
@@ -355,19 +356,20 @@ def google_verify(request: Request, verify_in: schemas.GoogleAuthVerify, db: Ses
             db.flush()
 
             family_id = "".join(secrets.choice(string.ascii_lowercase + string.digits) for _ in range(12))
-            alphabet = string.ascii_uppercase + string.digits
-            plaintext_code = "".join(secrets.choice(alphabet) for _ in range(8))
+            from routers.family import generate_family_secret_code
+            fam_name = f"{new_user.username}'s Family"
+            plaintext_code = generate_family_secret_code(fam_name, 10)
             hashed_code = auth.get_password_hash(plaintext_code)
             sha256_hash = hashlib.sha256(plaintext_code.encode("utf-8")).hexdigest()
 
             new_family = models.Family(
                 id=family_id,
-                name=f"{new_user.username}'s Family",
+                name=fam_name,
                 admin_id=new_user.id,
                 secret_code_hash=hashed_code,
                 secret_code_sha256=sha256_hash,
                 max_members=10,
-                expires_at=datetime.now(timezone.utc) + timedelta(days=7)
+                expires_at=datetime.now(timezone.utc) + timedelta(minutes=1)
             )
             db.add(new_family)
             db.flush()

@@ -130,6 +130,15 @@ export interface FamilyDetails {
   max_members: number;
   member_count?: number;
   created_at: string;
+  expires_at?: string;
+}
+
+export interface FamilySetupResponse {
+  family_id: string;
+  name: string;
+  secret_code: string;
+  max_members: number;
+  expires_at?: string;
 }
 
 export interface FamilyMember {

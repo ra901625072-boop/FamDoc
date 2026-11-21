@@ -75,6 +75,7 @@ class FamilySetupResponse(BaseModel):
     name: str
     secret_code: str # Plaintext, displayed only once
     max_members: int
+    expires_at: Optional[datetime] = None
 
 class FamilyLogin(BaseModel):
     username: str = Field(..., min_length=3, max_length=20, pattern=r"^[a-zA-Z0-9_]+$")

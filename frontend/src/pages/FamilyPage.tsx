@@ -24,15 +24,53 @@ export function FamilyPage() {
   const [localSecretCode, setLocalSecretCode] = useState<string | null>(() => {
     return typeof window !== 'undefined' ? localStorage.getItem('famdoc_family_secret_code') : null;
   });
+  const [expiresAt, setExpiresAt] = useState<string | null>(() => {
+    return typeof window !== 'undefined' ? localStorage.getItem('famdoc_family_code_expires_at') : null;
+  });
+  const [timeLeft, setTimeLeft] = useState<number | null>(null);
+
   const isAdmin = effectiveUser?.role === 'admin';
 
   useEffect(() => {
+    if (family?.expires_at) {
+      setExpiresAt(family.expires_at);
+      localStorage.setItem('famdoc_family_code_expires_at', family.expires_at);
+    }
+  }, [family]);
+
+  // Live 1-Minute Countdown Timer
+  useEffect(() => {
+    if (!expiresAt) {
+      setTimeLeft(null);
+      return;
+    }
+
+    const calcRemaining = () => {
+      const expTime = new Date(expiresAt).getTime();
+      const now = Date.now();
+      const diff = Math.floor((expTime - now) / 1000);
+      setTimeLeft(diff > 0 ? diff : 0);
+    };
+
+    calcRemaining();
+    const timer = setInterval(calcRemaining, 1000);
+    return () => clearInterval(timer);
+  }, [expiresAt]);
+
+  useEffect(() => {
     const handleCodeUpdate = (e: Event) => {
-      const custom = e as CustomEvent<string>;
-      if (custom.detail) {
+      const custom = e as CustomEvent<{ secret_code: string; expires_at?: string } | string>;
+      if (custom.detail && typeof custom.detail === 'object') {
+        setLocalSecretCode(custom.detail.secret_code);
+        if (custom.detail.expires_at) {
+          setExpiresAt(custom.detail.expires_at);
+          localStorage.setItem('famdoc_family_code_expires_at', custom.detail.expires_at);
+        }
+      } else if (typeof custom.detail === 'string') {
         setLocalSecretCode(custom.detail);
       } else {
         setLocalSecretCode(localStorage.getItem('famdoc_family_secret_code'));
+        setExpiresAt(localStorage.getItem('famdoc_family_code_expires_at'));
       }
     };
     window.addEventListener('famdoc:secret-code-updated', handleCodeUpdate);
@@ -42,13 +80,17 @@ export function FamilyPage() {
   const effectiveCode = family?.secret_code || localSecretCode || 'FAMD-0000-0000';
 
   const handleCopyCode = () => {
-    if (effectiveCode && effectiveCode !== 'FAMD-0000-0000') {
-      navigator.clipboard.writeText(effectiveCode);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } else {
+    if (!effectiveCode || effectiveCode === 'FAMD-0000-0000') {
       alert('Please generate a family invitation code first.');
+      return;
     }
+    if (timeLeft === 0) {
+      alert('This family code has expired (it was only valid for 1 minute). Please click the regenerate button to create a fresh code.');
+      return;
+    }
+    navigator.clipboard.writeText(effectiveCode);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   const handleRegenerateCode = async () => {
@@ -64,7 +106,10 @@ export function FamilyPage() {
         if (res && res.secret_code) {
           localStorage.setItem('famdoc_family_secret_code', res.secret_code);
           setLocalSecretCode(res.secret_code);
-          alert(`New secret code generated: ${res.secret_code}`);
+          const exp = res.expires_at || new Date(Date.now() + 60 * 1000).toISOString();
+          localStorage.setItem('famdoc_family_code_expires_at', exp);
+          setExpiresAt(exp);
+          alert(`New 1-minute secret code generated: ${res.secret_code} (Valid for 60 seconds)`);
           refetchFamily();
         }
       } catch (err: unknown) {
@@ -143,31 +188,54 @@ export function FamilyPage() {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-            <span
-              style={{
-                fontFamily: 'var(--font-mono)',
-                fontSize: '1.25rem',
-                fontWeight: 800,
-                letterSpacing: '2px',
-                color: 'var(--text-ink)',
-                backgroundColor: 'var(--surface-card)',
-                padding: '0.5rem 1.25rem',
-                borderRadius: 'var(--radius-md)',
-                border: '1px solid var(--border-paper)',
-                boxShadow: 'var(--shadow-sm)',
-              }}
-            >
-              {familyLoading ? 'LOADING...' : effectiveCode}
-            </span>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0.25rem' }}>
+              <span
+                style={{
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: '1.25rem',
+                  fontWeight: 800,
+                  letterSpacing: '2px',
+                  color: 'var(--text-ink)',
+                  backgroundColor: 'var(--surface-card)',
+                  padding: '0.5rem 1.25rem',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid var(--border-paper)',
+                  boxShadow: 'var(--shadow-sm)',
+                  textDecoration: timeLeft === 0 ? 'line-through' : 'none',
+                  opacity: timeLeft === 0 ? 0.6 : 1,
+                }}
+              >
+                {familyLoading ? 'LOADING...' : effectiveCode}
+              </span>
+              {effectiveCode && effectiveCode !== 'FAMD-0000-0000' && timeLeft !== null && (
+                <span
+                  style={{
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    color: timeLeft <= 15 ? '#ef4444' : '#10b981',
+                    backgroundColor: timeLeft <= 15 ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)',
+                    padding: '0.15rem 0.5rem',
+                    borderRadius: '10px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.3rem',
+                  }}
+                >
+                  <i className={`fas ${timeLeft > 0 ? 'fa-stopwatch' : 'fa-exclamation-circle'}`} aria-hidden="true" />
+                  <span>{timeLeft > 0 ? `Valid for: ${timeLeft}s` : 'Expired (Valid for 1 min)'}</span>
+                </span>
+              )}
+            </div>
 
             <button
               type="button"
               className="btn btn-secondary btn-sm"
               onClick={handleCopyCode}
+              disabled={timeLeft === 0}
               style={{ padding: '0.5rem 0.85rem', fontSize: '0.82rem' }}
             >
               <i className={`fas ${copied ? 'fa-check' : 'fa-copy'}`} aria-hidden="true" />
-              <span>{copied ? 'Copied' : 'Copy Code'}</span>
+              <span>{copied ? 'Copied' : timeLeft === 0 ? 'Expired' : 'Copy Code'}</span>
             </button>
 
             {isAdmin && (
@@ -175,10 +243,11 @@ export function FamilyPage() {
                 type="button"
                 className="btn btn-secondary btn-sm"
                 onClick={handleRegenerateCode}
-                title="Regenerate secret invite code"
+                title="Regenerate 1-minute secret invite code"
                 style={{ padding: '0.5rem 0.75rem' }}
+                disabled={regenCodeMut.isPending}
               >
-                <i className="fas fa-sync-alt" aria-hidden="true" />
+                <i className={`fas fa-sync-alt ${regenCodeMut.isPending ? 'fa-spin' : ''}`} aria-hidden="true" />
               </button>
             )}
           </div>
@@ -409,23 +478,47 @@ export function FamilyPage() {
                   padding: '1rem',
                   borderRadius: 'var(--radius-md)',
                   border: '1px dashed var(--border-paper-dark)',
-                  marginBottom: '1.5rem',
+                  marginBottom: '1rem',
+                  textDecoration: timeLeft === 0 ? 'line-through' : 'none',
+                  opacity: timeLeft === 0 ? 0.6 : 1,
                 }}
               >
                 {effectiveCode}
               </div>
 
+              {effectiveCode && effectiveCode !== 'FAMD-0000-0000' && timeLeft !== null && (
+                <div style={{ marginBottom: '1.25rem' }}>
+                  <span
+                    style={{
+                      fontSize: '0.8rem',
+                      fontWeight: 700,
+                      color: timeLeft <= 15 ? '#ef4444' : '#10b981',
+                      backgroundColor: timeLeft <= 15 ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)',
+                      padding: '0.25rem 0.75rem',
+                      borderRadius: '14px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                    }}
+                  >
+                    <i className={`fas ${timeLeft > 0 ? 'fa-stopwatch' : 'fa-exclamation-circle'}`} aria-hidden="true" />
+                    <span>{timeLeft > 0 ? `Valid for: ${timeLeft}s` : 'Expired (Valid for 1 min)'}</span>
+                  </span>
+                </div>
+              )}
+
               <button
                 type="button"
                 className="btn btn-primary"
                 style={{ width: '100%', justifyContent: 'center' }}
+                disabled={timeLeft === 0}
                 onClick={() => {
                   handleCopyCode();
                   setShowInviteModal(false);
                 }}
               >
                 <i className="fas fa-copy" aria-hidden="true" />
-                <span>Copy Code & Close</span>
+                <span>{timeLeft === 0 ? 'Code Expired (Regenerate First)' : 'Copy Code & Close'}</span>
               </button>
             </div>
           </div>
