@@ -1,0 +1,169 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import "tailwindcss";
+
+:root {
+  /* LIGHT THEME: Refreshing Emerald Forest & Mint Green Palette */
+  --color-primary: #047857;          /* MintPrimary: Deep Emerald Forest */
+  --color-primary-light: #10B981;    /* MintPrimaryLight: Bright Mint */
+  --color-primary-dark: #064E3B;     /* MintPrimaryDark: Deep Spruce */
+  --color-secondary: #0D9488;        /* MintSecondary: Sage Teal */
+  --color-primary-container: #D1FAE5;/* MintSecondaryContainer: Mint Highlight */
+  --color-on-primary-container: #064E3B;
+
+  /* Canvas & Surfaces */
+  --bg-linen: #F2FBF6;               /* MintBackground: Mint-tinted crisp canvas */
+  --surface-card: #FFFFFF;           /* MintSurface: Pure crisp white cards */
+  --surface-paper-tint: #E8F7EE;     /* MintSurfaceVariant: Soft mint surface */
+  --surface-paper-hover: #F0FAF4;    /* Light interactive card hover */
+  --surface-alert-info: #E6F4EA;
+  --surface-nav-glass: rgba(255, 255, 255, 0.92);
+  --overlay-bg: rgba(6, 78, 59, 0.45);
+
+  /* Typography */
+  --text-ink: #0B291D;               /* MintTextPrimary: Deep Emerald Black */
+  --text-ink-muted: #436B59;         /* MintTextSecondary: Balanced Sage Slate */
+
+  /* Borders & Glows */
+  --border-paper: #CBEAD7;           /* MintBorder: Delicate jade border */
+  --border-paper-dark: #B5DEC4;
+  --card-glow-border: rgba(16, 185, 129, 0.22);
+
+  /* Keepsake Warm Amber & Status Accents */
+  --brand-accent: #F59E0B;
+  --brand-accent-light: #FBBF24;
+  --brand-accent-glow: rgba(245, 158, 11, 0.4);
+
+  --success-sage: #059669;
+  --success-sage-light: #D1FAE5;
+  --success-sage-border: #A7F3D0;
+  --success-sage-dark: #064E3B;
+
+  --warning-red: #EF4444;
+  --warning-red-hover: #DC2626;
+  --warning-red-light: #FEE2E2;
+  --warning-red-border: #FECACA;
+  --warning-red-dark: #7F1D1D;
+
+  /* Category Distribution Colors */
+  --cat-video: #EC4899;
+  --cat-images: #3B82F6;
+  --cat-pdfs: #EF4444;
+  --cat-docs: #8B5CF6;
+  --cat-sheets: #10B981;
+  --cat-text: #F59E0B;
+  --cat-other: #6B7280;
+
+  --folder-color: #047857;
+  --video-color: #EC4899;
+  --pdf-color: #EF4444;
+  --image-color: #3B82F6;
+  --doc-color: #8B5CF6;
+  --sheet-color: #10B981;
+  --text-color: #F59E0B;
+  --generic-color: #6B7280;
+
+  /* Radii Scale */
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-pill: 28px;
+  --radius-full: 9999px;
+
+  /* Typography Fonts */
+  --font-serif: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+[data-theme="dark"] {
+  --color-primary: #34D399;          /* DarkPrimary: Luminous Mint */
+  --color-primary-light: #6EE7B7;
+  --color-primary-dark: #10B981;
+  --color-secondary: #2DD4BF;
+  --color-primary-container: #14291F;
+  --color-on-primary-container: #A7F3D0;
+
+  /* Canvas & Surfaces: Pure AMOLED Pitch Black */
+  --bg-linen: #000000;               /* Pure Black */
+  --surface-card: #111113;           /* Elevated Obsidian */
+  --surface-paper-tint: #191A1E;     /* Deep Charcoal */
+  --surface-paper-hover: #161619;
+  --surface-alert-info: #0F1F17;
+  --surface-nav-glass: rgba(17, 17, 19, 0.88);
+  --overlay-bg: rgba(0, 0, 0, 0.75);
+
+  /* Typography */
+  --text-ink: #F4F4F5;
+  --text-ink-muted: #A1A1AA;
+
+  /* Borders & Glows */
+  --border-paper: #26262B;
+  --border-paper-dark: #333338;
+  --card-glow-border: rgba(52, 211, 153, 0.2);
+
+  --brand-accent: #F59E0B;
+  --brand-accent-light: #FBBF24;
+  --brand-accent-glow: rgba(245, 158, 11, 0.45);
+
+  --success-sage: #34D399;
+  --success-sage-light: #14291F;
+  --success-sage-border: #1B3C2D;
+  --success-sage-dark: #A7F3D0;
+
+  --warning-red: #F87171;
+  --warning-red-hover: #EF4444;
+  --warning-red-light: #2A1414;
+  --warning-red-border: #451A1A;
+  --warning-red-dark: #FECACA;
+
+  --folder-color: #34D399;
+  --video-color: #F472B6;
+  --pdf-color: #F87171;
+  --image-color: #60A5FA;
+  --doc-color: #A78BFA;
+  --sheet-color: #34D399;
+  --text-color: #FBBF24;
+  --generic-color: #9CA3AF;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-sans);
+  background-color: var(--bg-linen);
+  color: var(--text-ink);
+  min-height: 100vh;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-serif);
+}
+
+@keyframes fdShake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-6px); }
+  40%, 80% { transform: translateX(6px); }
+}
+
+.fd-shake {
+  animation: fdShake 0.4s ease-in-out;
+}
+
+/* Scrollbar customization */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-paper);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-ink-muted);
+}
