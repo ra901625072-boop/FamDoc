@@ -8,9 +8,12 @@ import {
   useCurrentUser,
 } from '../api/hooks';
 import { api } from '../api/client';
+import { useAuthStore } from '../stores/useAuthStore';
 
 export function FamilyPage() {
   const { data: user } = useCurrentUser();
+  const authUser = useAuthStore((s) => s.user);
+  const effectiveUser = user || authUser;
   const { data: family, isLoading: familyLoading, refetch: refetchFamily } = useFamilyDetails();
   const { data: members = [], isLoading: membersLoading, refetch: refetchMembers } = useFamilyMembers();
   const removeMemberMut = useRemoveFamilyMember();
@@ -21,7 +24,7 @@ export function FamilyPage() {
   const [localSecretCode, setLocalSecretCode] = useState<string | null>(() => {
     return typeof window !== 'undefined' ? localStorage.getItem('famdoc_family_secret_code') : null;
   });
-  const isAdmin = user?.role === 'admin';
+  const isAdmin = effectiveUser?.role === 'admin';
 
   useEffect(() => {
     const handleCodeUpdate = (e: Event) => {

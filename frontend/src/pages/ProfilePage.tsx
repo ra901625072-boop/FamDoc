@@ -24,12 +24,14 @@ export function ProfilePage() {
   const [copiedCode, setCopiedCode] = useState(false);
   const [statusMsg, setStatusMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
-  const isAdmin = user?.role === 'admin';
+  const authUser = useAuthStore((s) => s.user);
+  const effectiveUser = user || authUser;
+  const isAdmin = effectiveUser?.role === 'admin';
   const effectiveCode = localSecretCode || family?.secret_code || '';
 
   useEffect(() => {
-    if (user?.username) setUsername(user.username);
-  }, [user]);
+    if (effectiveUser?.username) setUsername(effectiveUser.username);
+  }, [effectiveUser]);
 
   useEffect(() => {
     const handleCodeUpdate = (e: Event) => {
