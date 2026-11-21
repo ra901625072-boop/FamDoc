@@ -82,8 +82,8 @@ export function AppLayout() {
       {/* Sidebar Navigation Drawer */}
       <nav
         id="sidebarMenu"
-        className={`sidebar fixed inset-y-0 left-0 z-50 w-64 bg-[var(--surface-card)] border-r border-[var(--border-paper)] flex flex-col transition-transform duration-300 ease-in-out md:static md:translate-x-0 ${
-          mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+        className={`sidebar fixed inset-y-0 left-0 z-50 w-72 bg-[var(--surface-card)] border-r border-[var(--border-paper)] flex flex-col transition-transform duration-300 ease-in-out md:sticky md:top-0 md:h-screen md:shrink-0 md:translate-x-0 md:z-30 ${
+          mobileMenuOpen ? 'translate-x-0 open' : '-translate-x-full'
         }`}
       >
         {/* Drawer Header Banner */}
@@ -111,9 +111,9 @@ export function AppLayout() {
               navigate('/profile');
               setMobileMenuOpen(false);
             }}
-            className="flex items-center gap-3 cursor-pointer p-2 rounded-xl bg-white/10 hover:bg-white/15 transition-colors"
+            className="flex items-center gap-3 cursor-pointer p-2.5 rounded-xl bg-white/10 hover:bg-white/15 transition-colors"
           >
-            <div className="w-10 h-10 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-sm shadow-inner ring-2 ring-emerald-300/40">
+            <div className="w-10 h-10 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-sm shadow-inner ring-2 ring-emerald-300/40 shrink-0">
               {userInitials}
             </div>
             <div className="flex-1 min-w-0">
@@ -137,7 +137,7 @@ export function AppLayout() {
                 className={({ isActive }) =>
                   `nav-item flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
                     isActive
-                      ? 'bg-[var(--color-primary)] text-white shadow-sm'
+                      ? 'active bg-[var(--color-primary)] text-white shadow-sm font-bold'
                       : 'text-[var(--text-ink)] hover:bg-[var(--surface-paper-hover)] text-[var(--text-ink-muted)] hover:text-[var(--text-ink)]'
                   }`
                 }
@@ -178,10 +178,10 @@ export function AppLayout() {
       </nav>
 
       {/* Main Content Area */}
-      <main className="flex-1 flex flex-col min-w-0 pb-20 md:pb-6">
-        <div className="hidden md:flex items-center justify-between px-8 py-4 border-b border-[var(--border-paper)] bg-[var(--surface-card)]/80 backdrop-blur-md sticky top-0 z-30">
+      <main className="main-content flex-1 flex flex-col min-w-0 pb-20 md:pb-6">
+        <div className="hidden md:flex items-center justify-between px-8 py-3.5 border-b border-[var(--border-paper)] bg-[var(--surface-card)]/80 backdrop-blur-md sticky top-0 z-20">
           <div className="flex items-center gap-3">
-            <h1 className="text-lg font-bold text-[var(--text-ink)]">FamDoc Cloud Vault</h1>
+            <h1 className="text-base font-bold text-[var(--text-ink)] tracking-tight">FamDoc Cloud Vault</h1>
           </div>
           <div className="flex items-center gap-4">
             <ConnectionPill />
