@@ -40,6 +40,16 @@ DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./family_documents.db")
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
+if DATABASE_URL.startswith("postgresql://"):
+    try:
+        import psycopg  # noqa
+    except ImportError:
+        try:
+            import psycopg2  # noqa
+            DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg2://", 1)
+        except ImportError:
+            pass
+
 # JWT Authentication Settings
 JWT_SECRET = os.getenv("JWT_SECRET", "super-secret-family-document-vault-key-1234567890")
 IS_DEFAULT_JWT_SECRET = JWT_SECRET == "super-secret-family-document-vault-key-1234567890"
