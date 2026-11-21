@@ -1,0 +1,14 @@
+.git
+.gitignore
+.env
+.pytest_cache
+.ruff_cache
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+*.db
+local_vault
+tests
+scripts
+builds
