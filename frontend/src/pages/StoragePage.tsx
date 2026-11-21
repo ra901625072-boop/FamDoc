@@ -7,10 +7,11 @@ import {
   useFamilyMembers,
 } from '../api/hooks';
 import { api } from '../api/client';
+import type { StorageAccount } from '../api/types';
 
 export function StoragePage() {
-  const { data: config } = useStorageConfig();
-  const { data: accounts = [], isLoading: accountsLoading } = useStorageAccounts();
+  const { data: config, refetch: refetchConfig } = useStorageConfig();
+  const { data: accounts = [], isLoading: accountsLoading, refetch: refetchAccounts } = useStorageAccounts();
   const { data: members = [] } = useFamilyMembers();
   const updateModeMut = useUpdateStorageMode();
   const deleteAccountMut = useDeleteStorageAccount();
@@ -24,8 +25,23 @@ export function StoragePage() {
   const [copiedUri, setCopiedUri] = useState(false);
   const credFileInputRef = useRef<HTMLInputElement>(null);
 
-  const totalBytes = config?.total_capacity_bytes ?? 15 * 1024 * 1024 * 1024;
-  const usedBytes = config?.used_bytes ?? 0;
+  // Modals for Edit Label & Assign Member
+  const [editingAccount, setEditingAccount] = useState<StorageAccount | null>(null);
+  const [newLabelText, setNewLabelText] = useState('');
+  const [assigningAccount, setAssigningAccount] = useState<StorageAccount | null>(null);
+  const [selectedAssignUserId, setSelectedAssignUserId] = useState<number | null>(null);
+
+  // Compute real storage pool metrics
+  const calculatedCapacity = accounts.reduce((sum, a) => sum + (a.cached_quota_total || 0), 0);
+  const calculatedUsed = accounts.reduce((sum, a) => sum + (a.cached_quota_used || 0), 0);
+  const totalBytes = config?.total_capacity_bytes && config.total_capacity_bytes > 0
+    ? config.total_capacity_bytes
+    : calculatedCapacity > 0
+    ? calculatedCapacity
+    : 15 * 1024 * 1024 * 1024;
+  const usedBytes = config?.total_used_bytes !== undefined && config.total_used_bytes > 0
+    ? config.total_used_bytes
+    : calculatedUsed;
   const freeBytes = Math.max(0, totalBytes - usedBytes);
   const usedPct = totalBytes > 0 ? Math.min(100, Math.round((usedBytes / totalBytes) * 100)) : 0;
 
@@ -90,6 +106,34 @@ export function StoragePage() {
   const handleDeleteAccount = async (id: number, email: string) => {
     if (confirm(`Disconnect and remove Google Account "${email}" from the pooled vault?`)) {
       await deleteAccountMut.mutateAsync(id);
+      refetchAccounts();
+      refetchConfig();
+    }
+  };
+
+  const handleSaveLabel = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingAccount) return;
+    try {
+      await api.storage.updateAccount(editingAccount.id, { label: newLabelText.trim() });
+      setEditingAccount(null);
+      refetchAccounts();
+      refetchConfig();
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Failed to update account label.');
+    }
+  };
+
+  const handleSaveAssignment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!assigningAccount) return;
+    try {
+      await api.storage.updateAccount(assigningAccount.id, { user_id: selectedAssignUserId });
+      setAssigningAccount(null);
+      refetchAccounts();
+      refetchConfig();
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Failed to assign member to account.');
     }
   };
 
@@ -429,54 +473,54 @@ export function StoragePage() {
             <div className="mode-segmented-control" style={{ display: 'flex', border: '1px solid var(--border-paper)', borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>
               <button
                 type="button"
-                className={`mode-segment-btn ${config?.active_provider === 'google_drive' || !config?.active_provider ? 'active' : ''}`}
-                onClick={() => updateModeMut.mutate('google_drive')}
+                className={`mode-segment-btn ${config?.storage_provider !== 'local' ? 'active' : ''}`}
+                onClick={() => updateModeMut.mutate('google')}
                 style={{
                   padding: '0.4rem 0.85rem',
                   fontSize: '0.8rem',
                   border: 'none',
                   cursor: 'pointer',
                   backgroundColor:
-                    config?.active_provider === 'google_drive' || !config?.active_provider
+                    config?.storage_provider !== 'local'
                       ? 'var(--color-primary-container)'
                       : 'var(--surface-paper-tint)',
                   color:
-                    config?.active_provider === 'google_drive' || !config?.active_provider
+                    config?.storage_provider !== 'local'
                       ? 'var(--color-primary)'
                       : 'var(--text-ink-muted)',
                   fontWeight: 600,
                 }}
               >
                 <i className="fab fa-google" style={{ color: '#4285F4', marginRight: '0.35rem' }} aria-hidden="true" />
-                Google Drive Pool
+                Google Drive Pooling (Default)
               </button>
               <button
                 type="button"
-                className={`mode-segment-btn ${config?.active_provider === 'r2' ? 'active' : ''}`}
-                onClick={() => updateModeMut.mutate('r2')}
+                className={`mode-segment-btn ${config?.storage_provider === 'local' ? 'active' : ''}`}
+                onClick={() => updateModeMut.mutate('local')}
                 style={{
                   padding: '0.4rem 0.85rem',
                   fontSize: '0.8rem',
                   border: 'none',
                   cursor: 'pointer',
                   backgroundColor:
-                    config?.active_provider === 'r2'
+                    config?.storage_provider === 'local'
                       ? 'var(--color-primary-container)'
                       : 'var(--surface-paper-tint)',
                   color:
-                    config?.active_provider === 'r2'
+                    config?.storage_provider === 'local'
                       ? 'var(--color-primary)'
                       : 'var(--text-ink-muted)',
                   fontWeight: 600,
                 }}
               >
-                <i className="fas fa-hdd" style={{ marginRight: '0.35rem' }} aria-hidden="true" />
-                Cloudflare R2 Direct
+                <i className="fas fa-server" style={{ marginRight: '0.35rem' }} aria-hidden="true" />
+                Local Server Storage
               </button>
             </div>
           </div>
           <div id="hero-mode-note" style={{ fontSize: '0.8rem', color: 'var(--text-ink-muted)', fontStyle: 'italic' }}>
-            Uploads route automatically to the drive with most free space.
+            Uploads automatically route and pool across all connected family accounts.
           </div>
         </div>
       </div>
@@ -527,13 +571,17 @@ export function StoragePage() {
               </div>
             ) : (
               accounts.map((acc) => {
-                const limit = acc.storage_limit_bytes || 15 * 1024 * 1024 * 1024;
-                const used = acc.storage_used_bytes || 0;
+                const limit = acc.cached_quota_total && acc.cached_quota_total > 0
+                  ? acc.cached_quota_total
+                  : 15 * 1024 * 1024 * 1024;
+                const used = acc.cached_quota_used || 0;
                 const pct = limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : 0;
+                const displayName = acc.label || acc.email || 'Google Account';
 
                 return (
                   <div
                     key={acc.id}
+                    className="fd-fade-up"
                     style={{
                       background: 'var(--surface-paper-tint)',
                       border: '1px solid var(--border-paper)',
@@ -548,36 +596,71 @@ export function StoragePage() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
                         <div
                           style={{
-                            width: '32px',
-                            height: '32px',
+                            width: '34px',
+                            height: '34px',
                             borderRadius: '50%',
                             backgroundColor: '#e8f0fe',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
+                            flexShrink: 0,
                           }}
                         >
-                          <i className="fab fa-google" style={{ color: '#4285F4' }} aria-hidden="true" />
+                          <i className="fab fa-google" style={{ color: '#4285F4', fontSize: '1rem' }} aria-hidden="true" />
                         </div>
                         <div>
-                          <div style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text-ink)' }}>
-                            {acc.account_email}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
+                            <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-ink)' }}>
+                              {displayName}
+                            </span>
+                            <span
+                              className={`badge ${acc.status === 'active' ? 'badge-primary' : 'badge-secondary'}`}
+                              style={{ fontSize: '0.68rem', padding: '0.15rem 0.45rem' }}
+                            >
+                              {acc.status === 'active' ? 'Active' : acc.status}
+                            </span>
                           </div>
                           <div style={{ fontSize: '0.74rem', color: 'var(--text-ink-muted)' }}>
-                            Active • Pooled Vault Quota
+                            {acc.email} • {acc.member_username ? `Assigned to: ${acc.member_username}` : 'Shared Pool'}
                           </div>
                         </div>
                       </div>
 
-                      <button
-                        type="button"
-                        className="btn btn-danger btn-sm"
-                        style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}
-                        onClick={() => handleDeleteAccount(acc.id, acc.account_email)}
-                        title="Disconnect account"
-                      >
-                        <i className="fas fa-unlink" aria-hidden="true" />
-                      </button>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                        <button
+                          type="button"
+                          className="btn btn-secondary btn-sm"
+                          style={{ padding: '0.3rem 0.55rem', fontSize: '0.75rem' }}
+                          onClick={() => {
+                            setEditingAccount(acc);
+                            setNewLabelText(acc.label || '');
+                          }}
+                          title="Edit label"
+                        >
+                          <i className="fas fa-edit" aria-hidden="true" />
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-secondary btn-sm"
+                          style={{ padding: '0.3rem 0.55rem', fontSize: '0.75rem' }}
+                          onClick={() => {
+                            setAssigningAccount(acc);
+                            setSelectedAssignUserId(acc.user_id || null);
+                          }}
+                          title="Assign to family member"
+                        >
+                          <i className="fas fa-user-tag" aria-hidden="true" />
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-danger btn-sm"
+                          style={{ padding: '0.3rem 0.55rem', fontSize: '0.75rem' }}
+                          onClick={() => handleDeleteAccount(acc.id, acc.email || displayName)}
+                          title="Disconnect account"
+                        >
+                          <i className="fas fa-trash-alt" aria-hidden="true" />
+                        </button>
+                      </div>
                     </div>
 
                     <div style={{ background: 'var(--surface-card)', height: '6px', borderRadius: '4px', overflow: 'hidden' }}>
@@ -586,13 +669,14 @@ export function StoragePage() {
                           width: `${pct}%`,
                           height: '100%',
                           background: 'var(--accent-gradient)',
+                          transition: 'width 0.3s ease',
                         }}
                       />
                     </div>
 
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-ink-muted)' }}>
-                      <span>Used: {api.helpers.formatBytes(used)}</span>
-                      <span>Total: {api.helpers.formatBytes(limit)}</span>
+                      <span>Used: <strong>{api.helpers.formatBytes(used)}</strong> ({pct}%)</span>
+                      <span>Total: <strong>{api.helpers.formatBytes(limit)}</strong></span>
                     </div>
                   </div>
                 );
@@ -607,68 +691,177 @@ export function StoragePage() {
             <div>
               <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.15rem', margin: '0 0 0.25rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <i className="fas fa-users" style={{ color: 'var(--accent-brand)' }} aria-hidden="true" />
-                <span>Family Contributors</span>
+                <span>Family Cloud Contributors</span>
               </h3>
               <span id="contributors-count-badge" style={{ fontSize: '0.76rem', color: 'var(--text-ink-muted)', fontWeight: 500 }}>
-                {members.length} Member{members.length !== 1 ? 's' : ''} in Vault
+                {members.length} Household Member{members.length !== 1 ? 's' : ''}
               </span>
             </div>
           </div>
 
           <p style={{ fontSize: '0.82rem', color: 'var(--text-ink-muted)', marginBottom: '1rem' }}>
-            Every family member who links their free personal Google Drive adds 15 GB to your shared family vault.
+            Every family member who links their Google Drive expands your shared family pool with zero server costs.
           </p>
 
           <div className="contributors-roster-list" style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-            {members.map((m) => (
-              <div
-                key={m.id}
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  padding: '0.75rem 1rem',
-                  borderRadius: 'var(--radius-md)',
-                  background: 'var(--surface-paper-tint)',
-                  border: '1px solid var(--border-paper)',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <div
-                    style={{
-                      width: '26px',
-                      height: '26px',
-                      borderRadius: '50%',
-                      backgroundColor: 'var(--color-primary-container)',
-                      color: 'var(--color-primary)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontWeight: 700,
-                      fontSize: '0.72rem',
-                    }}
-                  >
-                    {m.username.substring(0, 2).toUpperCase()}
-                  </div>
-                  <div>
-                    <div style={{ fontWeight: 600, fontSize: '0.84rem', color: 'var(--text-ink)' }}>
-                      {m.username}
-                    </div>
-                    <div style={{ fontSize: '0.72rem', color: 'var(--text-ink-muted)' }}>
-                      {m.email}
-                    </div>
-                  </div>
-                </div>
+            {members.map((m) => {
+              const linkedAccount = accounts.find(
+                (a) => a.user_id === m.user_id || (a.email && a.email.toLowerCase() === m.email.toLowerCase())
+              );
+              const isConnected = Boolean(linkedAccount || m.storage_connected);
+              const quotaText = linkedAccount?.cached_quota_total
+                ? api.helpers.formatBytes(linkedAccount.cached_quota_total)
+                : m.storage_contributed_bytes
+                ? api.helpers.formatBytes(m.storage_contributed_bytes)
+                : '15 GB';
 
-                <span className="cloud-member-badge active" style={{ fontSize: '0.75rem' }}>
-                  <i className="fab fa-google" style={{ color: '#4285F4', marginRight: '0.35rem' }} aria-hidden="true" />
-                  +15 GB Active
-                </span>
-              </div>
-            ))}
+              return (
+                <div
+                  key={m.id}
+                  className="fd-fade-up"
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '0.75rem 1rem',
+                    borderRadius: 'var(--radius-md)',
+                    background: 'var(--surface-paper-tint)',
+                    border: '1px solid var(--border-paper)',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                    <div
+                      style={{
+                        width: '30px',
+                        height: '30px',
+                        borderRadius: '50%',
+                        backgroundColor: 'var(--color-primary-container)',
+                        color: 'var(--color-primary)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontWeight: 700,
+                        fontSize: '0.75rem',
+                        flexShrink: 0,
+                      }}
+                    >
+                      {m.username.substring(0, 2).toUpperCase()}
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: '0.86rem', color: 'var(--text-ink)' }}>
+                        {m.username}
+                      </div>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--text-ink-muted)' }}>
+                        {linkedAccount ? `Linked: ${linkedAccount.label || linkedAccount.email}` : m.email}
+                      </div>
+                    </div>
+                  </div>
+
+                  {isConnected ? (
+                    <span className="cloud-member-badge active" style={{ fontSize: '0.75rem' }}>
+                      <i className="fab fa-google" style={{ color: '#4285F4', marginRight: '0.35rem' }} aria-hidden="true" />
+                      +{quotaText} Active
+                    </span>
+                  ) : (
+                    <span className="cloud-member-badge none" style={{ fontSize: '0.75rem' }}>
+                      <i className="fas fa-layer-group" style={{ marginRight: '0.35rem' }} aria-hidden="true" />
+                      Shared Pool
+                    </span>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
+
+      {/* Edit Label Modal */}
+      {editingAccount && (
+        <div className="modal-overlay show" onClick={() => setEditingAccount(null)}>
+          <div className="famdoc-modal fd-pop-in" style={{ maxWidth: '420px' }} onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">Edit Drive Label</h3>
+              <button type="button" className="modal-close" onClick={() => setEditingAccount(null)}>
+                <i className="fas fa-times" aria-hidden="true" />
+              </button>
+            </div>
+            <form onSubmit={handleSaveLabel}>
+              <div className="modal-body" style={{ padding: '1.25rem' }}>
+                <p style={{ fontSize: '0.82rem', color: 'var(--text-ink-muted)', marginBottom: '1rem' }}>
+                  Choose a friendly label for <strong>{editingAccount.email}</strong> (e.g. "Dad's Drive", "Family Photos").
+                </p>
+                <div className="form-group">
+                  <label className="form-label" htmlFor="edit-drive-label">Drive Label</label>
+                  <input
+                    type="text"
+                    id="edit-drive-label"
+                    className="form-control"
+                    value={newLabelText}
+                    onChange={(e) => setNewLabelText(e.target.value)}
+                    placeholder="e.g. Papa's Drive"
+                    required
+                    maxLength={50}
+                    autoFocus
+                  />
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-secondary" onClick={() => setEditingAccount(null)}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary">
+                  Save Label
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Assign Member Modal */}
+      {assigningAccount && (
+        <div className="modal-overlay show" onClick={() => setAssigningAccount(null)}>
+          <div className="famdoc-modal fd-pop-in" style={{ maxWidth: '440px' }} onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">Assign to Family Member</h3>
+              <button type="button" className="modal-close" onClick={() => setAssigningAccount(null)}>
+                <i className="fas fa-times" aria-hidden="true" />
+              </button>
+            </div>
+            <form onSubmit={handleSaveAssignment}>
+              <div className="modal-body" style={{ padding: '1.25rem' }}>
+                <p style={{ fontSize: '0.82rem', color: 'var(--text-ink-muted)', marginBottom: '1rem' }}>
+                  Select which household member contributed <strong>{assigningAccount.email}</strong>:
+                </p>
+                <div className="form-group">
+                  <label className="form-label" htmlFor="assign-member-select">Household Member</label>
+                  <select
+                    id="assign-member-select"
+                    className="form-control"
+                    value={selectedAssignUserId || ''}
+                    onChange={(e) => setSelectedAssignUserId(e.target.value ? Number(e.target.value) : null)}
+                  >
+                    <option value="">Shared Family Pool (Unassigned)</option>
+                    {members.map((m) => (
+                      <option key={m.user_id} value={m.user_id}>
+                        {m.username} ({m.email})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-secondary" onClick={() => setAssigningAccount(null)}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary">
+                  Save Assignment
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

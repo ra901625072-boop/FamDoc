@@ -223,7 +223,7 @@ export function AppLayout() {
           <ConnectionPill />
         </div>
 
-        <div id="view-mount-point" className="w-full">
+        <div id="view-mount-point" style={{ width: '100%', flex: 1, display: 'flex', flexDirection: 'column' }}>
           <Outlet />
         </div>
       </main>

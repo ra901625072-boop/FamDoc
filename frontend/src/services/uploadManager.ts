@@ -131,6 +131,9 @@ export const uploadService = {
       pending.progress = 100;
       await db.put(STORE_NAME, pending);
       await this.notify();
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('famdoc:upload-completed', { detail: pending }));
+      }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Upload failed';
       pending.status = 'failed';

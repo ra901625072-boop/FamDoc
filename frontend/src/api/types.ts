@@ -63,6 +63,8 @@ export interface DashboardStats {
   total_members?: number;
   used_storage_bytes?: number;
   storage_provider?: string;
+  storage_quota_bytes?: number;
+  storage_breakdown?: Record<string, { size: number; count: number }>;
   category_breakdown?: CategoryBreakdown;
   recent_files?: FileItem[];
   recent_uploads?: FileItem[];
@@ -79,40 +81,68 @@ export interface DashboardStats {
 }
 
 export interface StorageConfig {
-  active_provider: string;
+  storage_provider?: string;
+  active_provider?: string;
+  is_configured?: boolean;
+  client_id?: string | null;
+  google_configured?: boolean;
+  has_env_credentials?: boolean;
+  user_contributed_storage_bytes?: number;
+  user_has_connected_account?: boolean;
+  accounts?: StorageAccount[];
   total_capacity_bytes: number;
-  used_bytes: number;
-  free_bytes: number;
+  total_used_bytes?: number;
+  used_bytes?: number;
+  free_bytes?: number;
   google_accounts_count?: number;
   is_pooling_active?: boolean;
 }
 
 export interface StorageAccount {
   id: number;
-  account_email: string;
-  display_name?: string;
-  storage_limit_bytes: number;
-  storage_used_bytes: number;
-  is_active: boolean;
+  family_id?: string;
+  provider?: string;
+  email?: string;
+  account_email?: string;
+  label?: string;
+  status: 'active' | 'error' | 'disconnecting' | 'disconnected' | string;
+  priority?: number;
+  user_id?: number | null;
+  member_username?: string | null;
+  member_email?: string | null;
+  member_role?: string | null;
+  cached_quota_total?: number | null;
+  cached_quota_used?: number | null;
+  storage_limit_bytes?: number;
+  storage_used_bytes?: number;
+  is_active?: boolean;
   needs_reauth?: boolean;
-  connected_at: string;
+  connected_at?: string;
+  created_at?: string;
+  display_name?: string;
 }
 
 export interface FamilyDetails {
-  id: number;
+  id: number | string;
   name: string;
-  secret_code: string;
+  secret_code?: string;
+  admin_id?: number;
   max_members: number;
-  member_count: number;
+  member_count?: number;
   created_at: string;
 }
 
 export interface FamilyMember {
   id: number;
+  user_id: number;
+  family_id?: string;
   username: string;
   email: string;
   role: UserRole;
   joined_at: string;
+  storage_connected?: boolean;
+  storage_contributed_bytes?: number;
+  storage_account_email?: string | null;
 }
 
 export interface ShareLink {
@@ -142,8 +172,10 @@ export interface TrashItem {
   id: number;
   item_type: 'file' | 'folder';
   name: string;
+  filename?: string;
   original_folder_id?: number | null;
   size?: number;
+  size_bytes?: number;
   deleted_at: string;
 }
 

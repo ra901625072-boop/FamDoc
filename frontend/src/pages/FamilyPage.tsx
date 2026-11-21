@@ -11,18 +11,22 @@ import { api } from '../api/client';
 
 export function FamilyPage() {
   const { data: user } = useCurrentUser();
-  const { data: family, isLoading: familyLoading } = useFamilyDetails();
-  const { data: members = [], isLoading: membersLoading } = useFamilyMembers();
+  const { data: family, isLoading: familyLoading, refetch: refetchFamily } = useFamilyDetails();
+  const { data: members = [], isLoading: membersLoading, refetch: refetchMembers } = useFamilyMembers();
   const removeMemberMut = useRemoveFamilyMember();
-  const regenCodeMut = useRegenerateSecretCode();
 
   const [copied, setCopied] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
+  const [localSecretCode, setLocalSecretCode] = useState<string | null>(() => {
+    return typeof window !== 'undefined' ? localStorage.getItem('famdoc_family_secret_code') : null;
+  });
   const isAdmin = user?.role === 'admin';
 
+  const effectiveCode = family?.secret_code || localSecretCode || 'FAMD-0000-0000';
+
   const handleCopyCode = () => {
-    if (family?.secret_code) {
-      navigator.clipboard.writeText(family.secret_code);
+    if (effectiveCode) {
+      navigator.clipboard.writeText(effectiveCode);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
@@ -30,19 +34,37 @@ export function FamilyPage() {
 
   const handleRegenerateCode = async () => {
     if (confirm('Regenerate family secret code? The old code will immediately stop working for new invites.')) {
-      await regenCodeMut.mutateAsync();
+      try {
+        const res = await api.family.regenerateCode(family?.name, family?.max_members);
+        if (res && res.secret_code) {
+          localStorage.setItem('famdoc_family_secret_code', res.secret_code);
+          setLocalSecretCode(res.secret_code);
+          alert(`New secret code generated: ${res.secret_code}`);
+          refetchFamily();
+        }
+      } catch (err: unknown) {
+        alert(err instanceof Error ? err.message : 'Failed to regenerate code.');
+      }
     }
   };
 
-  const handleRemove = async (memberId: number, memberName: string) => {
+  const handleRemove = async (userId: number, memberName: string) => {
     if (
       confirm(
         `Are you sure you want to remove "${memberName}" from the family vault? They will immediately lose all access rights and session keys.`
       )
     ) {
-      await removeMemberMut.mutateAsync(memberId);
+      try {
+        await removeMemberMut.mutateAsync(userId);
+        refetchMembers();
+      } catch (err: unknown) {
+        alert(err instanceof Error ? err.message : 'Failed to remove member.');
+      }
     }
   };
+
+  const connectedCount = members.filter((m) => m.storage_connected).length;
+  const totalPooledBytes = members.reduce((sum, m) => sum + (m.storage_contributed_bytes || 0), 0);
 
   return (
     <div className="fd-fade-in space-y-6">
@@ -110,7 +132,7 @@ export function FamilyPage() {
                 boxShadow: 'var(--shadow-sm)',
               }}
             >
-              {familyLoading ? 'LOADING...' : family?.secret_code || 'FAMD-0000-0000'}
+              {familyLoading ? 'LOADING...' : effectiveCode}
             </span>
 
             <button
@@ -178,10 +200,10 @@ export function FamilyPage() {
             </div>
             <div>
               <strong style={{ fontSize: '0.92rem', color: 'var(--text-ink)' }}>
-                Family Cloud Storage Pool: {members.length} Members Active
+                Family Cloud Storage Pool: {connectedCount > 0 ? `${connectedCount} Connected Drive${connectedCount !== 1 ? 's' : ''}` : 'Shared Pool Active'} ({totalPooledBytes > 0 ? api.helpers.formatBytes(totalPooledBytes) : '15 GB'} Total Capacity)
               </strong>
               <div style={{ fontSize: '0.8rem', color: 'var(--text-ink-muted)' }}>
-                Personal Google Drives contribute towards pooled family cloud capacity.
+                {members.length} Household Members enrolled in family keepsakes vault.
               </div>
             </div>
           </div>
@@ -279,10 +301,17 @@ export function FamilyPage() {
                       </td>
 
                       <td data-label="Cloud Storage">
-                        <span className="cloud-member-badge active" title="Storage Pool Active">
-                          <i className="fab fa-google" style={{ color: '#4285F4', marginRight: '0.35rem' }} aria-hidden="true" />
-                          Google Drive (15 GB)
-                        </span>
+                        {m.storage_connected ? (
+                          <span className="cloud-member-badge active" title="Storage Pool Active">
+                            <i className="fab fa-google" style={{ color: '#4285F4', marginRight: '0.35rem' }} aria-hidden="true" />
+                            Google Drive ({api.helpers.formatBytes(m.storage_contributed_bytes || 16106127360)})
+                          </span>
+                        ) : (
+                          <span className="cloud-member-badge none" title="Using shared family pool">
+                            <i className="fas fa-layer-group" style={{ marginRight: '0.35rem' }} aria-hidden="true" />
+                            Shared Pool
+                          </span>
+                        )}
                       </td>
 
                       <td data-label="Joined">{joinedDate}</td>
@@ -297,7 +326,7 @@ export function FamilyPage() {
                             type="button"
                             className="btn btn-danger"
                             style={{ padding: '0.35rem 0.65rem', fontSize: '0.75rem' }}
-                            onClick={() => handleRemove(m.id, m.username)}
+                            onClick={() => handleRemove(m.user_id, m.username)}
                           >
                             <i className="fas fa-user-minus" aria-hidden="true" />
                             <span>Remove</span>

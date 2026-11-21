@@ -17,15 +17,34 @@ export function DashboardPage() {
   const totalSize = stats?.total_size_bytes ?? stats?.total_storage_bytes ?? 0;
   const memberCount = stats?.total_members ?? 1;
 
-  const categories = stats?.category_breakdown || {
-    video: 0,
-    images: 0,
-    pdfs: 0,
-    docs: 0,
-    sheets: 0,
-    text: 0,
-    other: 0,
+  const breakdown = stats?.storage_breakdown || {};
+  const getCatData = (key: string) => {
+    if (breakdown[key]) return breakdown[key];
+    const catFallback = stats?.category_breakdown as Record<string, number> | undefined;
+    const count = catFallback?.[key] ?? 0;
+    return { size: 0, count };
   };
+
+  const videoData = getCatData('video');
+  const imageData = getCatData('image');
+  const pdfData = getCatData('pdf');
+  const docData = getCatData('document');
+  const sheetData = getCatData('sheet');
+  const textData = getCatData('text');
+  const otherData = getCatData('other');
+
+  const quotaBytes = stats?.storage_quota_bytes || 15 * 1024 * 1024 * 1024;
+  const usedBytes = totalSize;
+
+  const categorySegments = [
+    { key: 'video', label: 'Videos', color: '#ec4899', ...videoData },
+    { key: 'image', label: 'Images', color: '#3b82f6', ...imageData },
+    { key: 'pdf', label: 'PDFs', color: '#ef4444', ...pdfData },
+    { key: 'document', label: 'Docs', color: '#8b5cf6', ...docData },
+    { key: 'sheet', label: 'Sheets', color: '#10b981', ...sheetData },
+    { key: 'text', label: 'Text', color: '#f59e0b', ...textData },
+    { key: 'other', label: 'Other', color: '#64748b', ...otherData },
+  ];
 
   const recentUploads = stats?.recent_uploads || stats?.recent_files || [];
   const recentActivity = stats?.recent_activity || [];
@@ -189,15 +208,36 @@ export function DashboardPage() {
         </div>
 
         {/* Multi-Segmented Progress Bar */}
-        <div id="category-progress-container" className="breakdown-progress-container">
-          <div
-            id="category-progress-bar"
-            className="progress-bar-fill"
-            style={{
-              width: `${Math.min(100, Math.max(8, totalFiles > 0 ? 100 : 0))}%`,
-              background: 'var(--accent-gradient)',
-            }}
-          />
+        <div id="category-progress-container" className="breakdown-progress-container" style={{ display: 'flex', overflow: 'hidden' }}>
+          {categorySegments.filter((c) => c.size > 0).length > 0 ? (
+            categorySegments
+              .filter((c) => c.size > 0)
+              .map((c) => {
+                const segPercent = Math.max(1, (c.size / quotaBytes) * 100);
+                return (
+                  <div
+                    key={c.key}
+                    className="storage-progress-segment"
+                    style={{
+                      width: `${segPercent}%`,
+                      height: '100%',
+                      backgroundColor: c.color,
+                      transition: 'width 0.4s ease',
+                    }}
+                    title={`${c.label}: ${api.helpers.formatBytes(c.size)} (${c.count} files)`}
+                  />
+                );
+              })
+          ) : (
+            <div
+              id="category-progress-bar"
+              className="progress-bar-fill"
+              style={{
+                width: `${Math.min(100, Math.max(4, totalFiles > 0 ? (usedBytes / quotaBytes) * 100 : 0))}%`,
+                background: 'var(--accent-gradient)',
+              }}
+            />
+          )}
         </div>
 
         {/* Category Legend Chips Grid */}
@@ -206,7 +246,7 @@ export function DashboardPage() {
             <div className="chip-color-dot dot-video" />
             <div className="chip-info">
               <span className="chip-label">Videos</span>
-              <span id="meta-cat-video" className="chip-meta">{categories.video} items</span>
+              <span id="meta-cat-video" className="chip-meta">{api.helpers.formatBytes(videoData.size)} ({videoData.count})</span>
             </div>
           </div>
 
@@ -214,7 +254,7 @@ export function DashboardPage() {
             <div className="chip-color-dot dot-image" />
             <div className="chip-info">
               <span className="chip-label">Images</span>
-              <span id="meta-cat-image" className="chip-meta">{categories.images} items</span>
+              <span id="meta-cat-image" className="chip-meta">{api.helpers.formatBytes(imageData.size)} ({imageData.count})</span>
             </div>
           </div>
 
@@ -222,7 +262,7 @@ export function DashboardPage() {
             <div className="chip-color-dot dot-pdf" />
             <div className="chip-info">
               <span className="chip-label">PDFs</span>
-              <span id="meta-cat-pdf" className="chip-meta">{categories.pdfs} items</span>
+              <span id="meta-cat-pdf" className="chip-meta">{api.helpers.formatBytes(pdfData.size)} ({pdfData.count})</span>
             </div>
           </div>
 
@@ -230,7 +270,7 @@ export function DashboardPage() {
             <div className="chip-color-dot dot-document" />
             <div className="chip-info">
               <span className="chip-label">Docs</span>
-              <span id="meta-cat-doc" className="chip-meta">{categories.docs} items</span>
+              <span id="meta-cat-doc" className="chip-meta">{api.helpers.formatBytes(docData.size)} ({docData.count})</span>
             </div>
           </div>
 
@@ -238,7 +278,7 @@ export function DashboardPage() {
             <div className="chip-color-dot dot-sheet" />
             <div className="chip-info">
               <span className="chip-label">Sheets</span>
-              <span id="meta-cat-sheet" className="chip-meta">{categories.sheets} items</span>
+              <span id="meta-cat-sheet" className="chip-meta">{api.helpers.formatBytes(sheetData.size)} ({sheetData.count})</span>
             </div>
           </div>
 
@@ -246,7 +286,7 @@ export function DashboardPage() {
             <div className="chip-color-dot dot-text" />
             <div className="chip-info">
               <span className="chip-label">Text</span>
-              <span id="meta-cat-text" className="chip-meta">{categories.text} items</span>
+              <span id="meta-cat-text" className="chip-meta">{api.helpers.formatBytes(textData.size)} ({textData.count})</span>
             </div>
           </div>
 
@@ -254,7 +294,7 @@ export function DashboardPage() {
             <div className="chip-color-dot dot-other" />
             <div className="chip-info">
               <span className="chip-label">Other</span>
-              <span id="meta-cat-other" className="chip-meta">{categories.other} items</span>
+              <span id="meta-cat-other" className="chip-meta">{api.helpers.formatBytes(otherData.size)} ({otherData.count})</span>
             </div>
           </div>
         </div>

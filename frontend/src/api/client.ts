@@ -296,9 +296,10 @@ export const api = {
       return performRequest<FamilyDetails>('/api/family/details');
     },
 
-    async regenerateCode(): Promise<{ secret_code: string }> {
-      return performRequest<{ secret_code: string }>('/api/family/secret-code/regenerate', {
+    async regenerateCode(name = 'Family Vault', maxMembers = 10): Promise<{ secret_code: string }> {
+      return performRequest<{ secret_code: string }>('/api/family/regenerate-code', {
         method: 'POST',
+        body: JSON.stringify({ name, max_members: maxMembers }),
       });
     },
   },
@@ -313,7 +314,7 @@ export const api = {
     },
 
     async getGoogleAuthUrl(clientId?: string, clientSecret?: string, action = 'connect'): Promise<{ url: string }> {
-      return performRequest<{ url: string }>('/api/storage/google/auth-url', {
+      return performRequest<{ url: string }>('/api/storage/oauth/url', {
         method: 'POST',
         body: JSON.stringify({ client_id: clientId, client_secret: clientSecret, action }),
       });
@@ -321,7 +322,7 @@ export const api = {
 
     async updateAccount(accountId: number, payload: Partial<StorageAccount>): Promise<StorageAccount> {
       return performRequest<StorageAccount>(`/api/storage/accounts/${accountId}`, {
-        method: 'PUT',
+        method: 'PATCH',
         body: JSON.stringify(payload),
       });
     },
@@ -339,8 +340,8 @@ export const api = {
     },
 
     async updateMode(storageProvider: string): Promise<StorageConfig> {
-      return performRequest<StorageConfig>('/api/storage/mode', {
-        method: 'PUT',
+      return performRequest<StorageConfig>('/api/storage/config/mode', {
+        method: 'POST',
         body: JSON.stringify({ storage_provider: storageProvider }),
       });
     },
@@ -348,11 +349,11 @@ export const api = {
 
   folders: {
     async getFolders(): Promise<Folder[]> {
-      return performRequest<Folder[]>('/api/folders/');
+      return performRequest<Folder[]>('/api/folders');
     },
 
     async create(name: string, parentId: number | null = null): Promise<Folder> {
-      return performRequest<Folder>('/api/folders/', {
+      return performRequest<Folder>('/api/folders', {
         method: 'POST',
         body: JSON.stringify({ name, parent_id: parentId }),
       });
@@ -367,7 +368,7 @@ export const api = {
 
     async move(folderId: number, parentId: number | null): Promise<Folder> {
       return performRequest<Folder>(`/api/folders/${folderId}/move`, {
-        method: 'PUT',
+        method: 'PATCH',
         body: JSON.stringify({ parent_id: parentId }),
       });
     },
@@ -382,7 +383,7 @@ export const api = {
   files: {
     async getFiles(folderId: number | null = null): Promise<FileItem[]> {
       const q = folderId !== null ? `?folder_id=${folderId}` : '';
-      return performRequest<FileItem[]>(`/api/files/${q}`);
+      return performRequest<FileItem[]>(`/api/files${q}`);
     },
 
     async rename(fileId: number, filename: string): Promise<FileItem> {
@@ -394,7 +395,7 @@ export const api = {
 
     async move(fileId: number, folderId: number | null): Promise<FileItem> {
       return performRequest<FileItem>(`/api/files/${fileId}/move`, {
-        method: 'PUT',
+        method: 'PATCH',
         body: JSON.stringify({ folder_id: folderId }),
       });
     },
@@ -420,20 +421,64 @@ export const api = {
 
   trash: {
     async get(): Promise<TrashItem[]> {
-      return performRequest<TrashItem[]>('/api/trash/');
+      const res = await performRequest<{
+        files?: Array<{
+          id: number;
+          filename: string;
+          file_type?: string;
+          size_bytes?: number;
+          uploader_id?: number;
+          folder_id?: number | null;
+          upload_date?: string;
+          deleted_at: string;
+        }>;
+        folders?: Array<{
+          id: number;
+          name: string;
+          parent_id?: number | null;
+          created_at?: string;
+          deleted_at: string;
+        }>;
+      }>('/api/recycle-bin');
+
+      const items: TrashItem[] = [];
+      if (res.folders && Array.isArray(res.folders)) {
+        for (const fo of res.folders) {
+          items.push({
+            id: fo.id,
+            item_type: 'folder',
+            name: fo.name,
+            original_folder_id: fo.parent_id,
+            deleted_at: fo.deleted_at,
+          });
+        }
+      }
+      if (res.files && Array.isArray(res.files)) {
+        for (const fi of res.files) {
+          items.push({
+            id: fi.id,
+            item_type: 'file',
+            name: fi.filename,
+            filename: fi.filename,
+            size: fi.size_bytes,
+            size_bytes: fi.size_bytes,
+            original_folder_id: fi.folder_id,
+            deleted_at: fi.deleted_at,
+          });
+        }
+      }
+      return items;
     },
 
     async restore(itemType: 'file' | 'folder', itemId: number): Promise<{ message: string }> {
-      return performRequest('/api/trash/restore', {
+      return performRequest<{ message: string }>(`/api/recycle-bin/${itemType}/${itemId}/restore`, {
         method: 'POST',
-        body: JSON.stringify({ item_type: itemType, item_id: itemId }),
       });
     },
 
     async purge(itemType: 'file' | 'folder', itemId: number): Promise<{ message: string }> {
-      return performRequest('/api/trash/purge', {
-        method: 'POST',
-        body: JSON.stringify({ item_type: itemType, item_id: itemId }),
+      return performRequest<{ message: string }>(`/api/recycle-bin/${itemType}/${itemId}/purge`, {
+        method: 'DELETE',
       });
     },
   },
@@ -446,7 +491,7 @@ export const api = {
       if (params.folder_id !== undefined && params.folder_id !== null) {
         queryParams.set('folder_id', String(params.folder_id));
       }
-      return performRequest<FileItem[]>(`/api/search/?${queryParams.toString()}`);
+      return performRequest<FileItem[]>(`/api/search?${queryParams.toString()}`);
     },
   },
 

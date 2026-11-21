@@ -5,8 +5,10 @@ import {
   useFiles,
   useCreateFolder,
   useRenameFolder,
+  useMoveFolder,
   useDeleteFolder,
   useRenameFile,
+  useMoveFile,
   useDeleteFile,
 } from '../api/hooks';
 import { api } from '../api/client';
@@ -15,7 +17,7 @@ import { uploadService } from '../services/uploadManager';
 import type { FileItem, Folder } from '../api/types';
 
 export function VaultPage() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const {
     currentFolderId,
     setCurrentFolderId,
@@ -41,17 +43,23 @@ export function VaultPage() {
   const [newFolderName, setNewFolderName] = useState('');
   const [renamingItem, setRenamingItem] = useState<{ id: number; name: string; type: 'file' | 'folder' } | null>(null);
   const [renameValue, setRenameValue] = useState('');
+  const [movingItem, setMovingItem] = useState<{ id: number; name: string; type: 'file' | 'folder' } | null>(null);
+  const [destinationFolderId, setDestinationFolderId] = useState<number | null>(null);
+  const [isBulkMoveOpen, setIsBulkMoveOpen] = useState(false);
+  const [bulkDestinationFolderId, setBulkDestinationFolderId] = useState<number | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const [mobileFabOpen, setMobileFabOpen] = useState(false);
 
   // Queries & Mutations
-  const { data: allFolders = [] } = useFolders();
-  const { data: allFiles = [] } = useFiles(currentFolderId);
+  const { data: allFolders = [], refetch: refetchFolders } = useFolders();
+  const { data: allFiles = [], refetch: refetchFiles } = useFiles(currentFolderId);
   const createFolderMut = useCreateFolder();
   const renameFolderMut = useRenameFolder();
+  const moveFolderMut = useMoveFolder();
   const deleteFolderMut = useDeleteFolder();
   const renameFileMut = useRenameFile();
+  const moveFileMut = useMoveFile();
   const deleteFileMut = useDeleteFile();
 
   // Close active menu when clicking outside
@@ -148,6 +156,50 @@ export function VaultPage() {
     setIsDragOver(false);
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       uploadService.addFiles(e.dataTransfer.files, currentFolderId);
+    }
+  };
+
+  useEffect(() => {
+    const handleUploadCompleted = () => {
+      refetchFiles();
+      refetchFolders();
+    };
+    window.addEventListener('famdoc:upload-completed', handleUploadCompleted);
+    return () => window.removeEventListener('famdoc:upload-completed', handleUploadCompleted);
+  }, [refetchFiles, refetchFolders]);
+
+  const handleMoveSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!movingItem) return;
+    try {
+      if (movingItem.type === 'folder') {
+        await moveFolderMut.mutateAsync({ folderId: movingItem.id, parentId: destinationFolderId });
+      } else {
+        await moveFileMut.mutateAsync({ fileId: movingItem.id, folderId: destinationFolderId });
+      }
+      setMovingItem(null);
+      refetchFolders();
+      refetchFiles();
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Failed to move item.');
+    }
+  };
+
+  const handleBulkMoveSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      for (const folderId of selectedFolderIds) {
+        await moveFolderMut.mutateAsync({ folderId, parentId: bulkDestinationFolderId });
+      }
+      for (const fileId of selectedFileIds) {
+        await moveFileMut.mutateAsync({ fileId, folderId: bulkDestinationFolderId });
+      }
+      handleClearSelection();
+      setIsBulkMoveOpen(false);
+      refetchFolders();
+      refetchFiles();
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Failed to move selected items.');
     }
   };
 
@@ -447,6 +499,17 @@ export function VaultPage() {
                       </button>
                       <button
                         type="button"
+                        className="dropdown-item"
+                        onClick={() => {
+                          setMovingItem({ id: folder.id, name: folder.name, type: 'folder' });
+                          setDestinationFolderId(null);
+                          setActiveMenuId(null);
+                        }}
+                      >
+                        <i className="fas fa-arrows-alt" aria-hidden="true" /> Move
+                      </button>
+                      <button
+                        type="button"
                         className="dropdown-item danger"
                         onClick={async () => {
                           if (confirm(`Delete folder "${folder.name}"?`)) {
@@ -522,6 +585,17 @@ export function VaultPage() {
                         }}
                       >
                         <i className="fas fa-edit" aria-hidden="true" /> Rename
+                      </button>
+                      <button
+                        type="button"
+                        className="dropdown-item"
+                        onClick={() => {
+                          setMovingItem({ id: folder.id, name: folder.name, type: 'folder' });
+                          setDestinationFolderId(null);
+                          setActiveMenuId(null);
+                        }}
+                      >
+                        <i className="fas fa-arrows-alt" aria-hidden="true" /> Move
                       </button>
                       <button
                         type="button"
@@ -627,6 +701,17 @@ export function VaultPage() {
                       </button>
                       <button
                         type="button"
+                        className="dropdown-item"
+                        onClick={() => {
+                          setMovingItem({ id: file.id, name: file.filename, type: 'file' });
+                          setDestinationFolderId(currentFolderId);
+                          setActiveMenuId(null);
+                        }}
+                      >
+                        <i className="fas fa-arrows-alt" aria-hidden="true" /> Move
+                      </button>
+                      <button
+                        type="button"
                         className="dropdown-item danger"
                         onClick={async () => {
                           if (confirm(`Move "${file.filename}" to trash?`)) {
@@ -722,6 +807,17 @@ export function VaultPage() {
                       </button>
                       <button
                         type="button"
+                        className="dropdown-item"
+                        onClick={() => {
+                          setMovingItem({ id: file.id, name: file.filename, type: 'file' });
+                          setDestinationFolderId(currentFolderId);
+                          setActiveMenuId(null);
+                        }}
+                      >
+                        <i className="fas fa-arrows-alt" aria-hidden="true" /> Move
+                      </button>
+                      <button
+                        type="button"
                         className="dropdown-item danger"
                         onClick={async () => {
                           if (confirm(`Move "${file.filename}" to trash?`)) {
@@ -752,6 +848,17 @@ export function VaultPage() {
         <div className="bulk-action-buttons">
           <button type="button" className="btn btn-secondary" id="bulk-clear-btn" onClick={handleClearSelection}>
             <i className="fas fa-times" aria-hidden="true" /> Cancel
+          </button>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            id="bulk-move-btn"
+            onClick={() => {
+              setBulkDestinationFolderId(null);
+              setIsBulkMoveOpen(true);
+            }}
+          >
+            <i className="fas fa-arrows-alt" aria-hidden="true" /> Move
           </button>
           <button
             type="button"
@@ -898,6 +1005,122 @@ export function VaultPage() {
                 </button>
                 <button type="submit" className="btn btn-primary">
                   Rename
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Move Item Dialog Modal */}
+      {movingItem && (
+        <div id="modal-move" className="modal-overlay show" onClick={() => setMovingItem(null)}>
+          <div className="famdoc-modal fd-pop-in" style={{ maxWidth: '440px' }} onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">Move {movingItem.type === 'folder' ? 'Folder' : 'File'}</h3>
+              <button
+                type="button"
+                className="modal-close"
+                aria-label="Close modal"
+                onClick={() => setMovingItem(null)}
+              >
+                <i className="fas fa-times" aria-hidden="true" />
+              </button>
+            </div>
+            <form onSubmit={handleMoveSubmit}>
+              <div className="modal-body" style={{ padding: '1.25rem' }}>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-ink-muted)', marginBottom: '1rem' }}>
+                  Select destination directory for <strong>{movingItem.name}</strong>:
+                </p>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label htmlFor="move-destination-select" className="form-label">
+                    Target Folder
+                  </label>
+                  <select
+                    id="move-destination-select"
+                    className="form-control"
+                    value={destinationFolderId === null ? '' : String(destinationFolderId)}
+                    onChange={(e) => setDestinationFolderId(e.target.value ? Number(e.target.value) : null)}
+                  >
+                    <option value="">📁 Root Vault (Home)</option>
+                    {allFolders
+                      .filter((f) => movingItem.type !== 'folder' || f.id !== movingItem.id)
+                      .map((f) => (
+                        <option key={f.id} value={f.id}>
+                          📁 {f.name}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn btn-secondary modal-close-btn"
+                  onClick={() => setMovingItem(null)}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary">
+                  Move Here
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Move Dialog Modal */}
+      {isBulkMoveOpen && (
+        <div id="modal-bulk-move" className="modal-overlay show" onClick={() => setIsBulkMoveOpen(false)}>
+          <div className="famdoc-modal fd-pop-in" style={{ maxWidth: '440px' }} onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">Move Selected Items</h3>
+              <button
+                type="button"
+                className="modal-close"
+                aria-label="Close modal"
+                onClick={() => setIsBulkMoveOpen(false)}
+              >
+                <i className="fas fa-times" aria-hidden="true" />
+              </button>
+            </div>
+            <form onSubmit={handleBulkMoveSubmit}>
+              <div className="modal-body" style={{ padding: '1.25rem' }}>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-ink-muted)', marginBottom: '1rem' }}>
+                  Move <strong>{totalSelectedCount}</strong> selected items to:
+                </p>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label htmlFor="bulk-move-destination-select" className="form-label">
+                    Target Folder
+                  </label>
+                  <select
+                    id="bulk-move-destination-select"
+                    className="form-control"
+                    value={bulkDestinationFolderId === null ? '' : String(bulkDestinationFolderId)}
+                    onChange={(e) => setBulkDestinationFolderId(e.target.value ? Number(e.target.value) : null)}
+                  >
+                    <option value="">📁 Root Vault (Home)</option>
+                    {allFolders
+                      .filter((f) => !selectedFolderIds.includes(f.id))
+                      .map((f) => (
+                        <option key={f.id} value={f.id}>
+                          📁 {f.name}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn btn-secondary modal-close-btn"
+                  onClick={() => setIsBulkMoveOpen(false)}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary">
+                  Move All
                 </button>
               </div>
             </form>
