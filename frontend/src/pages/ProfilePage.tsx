@@ -207,7 +207,7 @@ export function ProfilePage() {
           <h2 className="text-sm font-bold text-[var(--text-ink)]">Custom API Base URL</h2>
         </div>
         <p className="text-xs text-[var(--text-ink-muted)] mb-4">
-          Default connects to Cloudflare backend at <code>https://api.famdoc.com</code>.
+          Default connects to Railway backend at <code>https://famdoc-api-production-4260f70c.up.railway.app</code>.
         </p>
 
         <form onSubmit={handleSaveApiUrl} className="flex gap-2">
@@ -215,7 +215,7 @@ export function ProfilePage() {
             type="text"
             value={customApiUrl}
             onChange={(e) => setCustomApiUrl(e.target.value)}
-            placeholder="https://api.famdoc.com or /api"
+            placeholder="https://famdoc-api-production-4260f70c.up.railway.app or /api"
             className="flex-1 px-4 py-2 rounded-xl border border-[var(--border-paper)] bg-[var(--surface-paper-tint)]/40 text-xs font-mono text-[var(--text-ink)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
           />
           <button

@@ -23,15 +23,13 @@ export function resolveApiBaseUrl(): string {
 
   if (typeof window !== 'undefined' && window.location) {
     const host = window.location.hostname;
-    // On production static hosts, connect directly to Cloudflare edge backend
+    // On production hosts (e.g. Vercel), connect directly to Railway backend
     if (
       host &&
       host !== 'localhost' &&
-      host !== '127.0.0.1' &&
-      !host.includes('workers.dev') &&
-      !host.includes('famdoc.com')
+      host !== '127.0.0.1'
     ) {
-      return 'https://api.famdoc.com';
+      return 'https://famdoc-api-production-4260f70c.up.railway.app';
     }
   }
   return '';
@@ -85,7 +83,8 @@ async function performRequest<T>(path: string, options: RequestInit = {}): Promi
     throw new ApiError('You appear to be offline. Please check your network connection.', 0);
   }
 
-  const url = `${API_BASE_URL}${path}`;
+  const baseUrl = resolveApiBaseUrl();
+  const url = `${baseUrl}${path}`;
   const headers = new Headers(options.headers || {});
 
   if (!(options.body instanceof FormData) && !headers.has('Content-Type')) {
@@ -408,12 +407,14 @@ export const api = {
 
     getDownloadUrl(fileId: number): string {
       const token = typeof window !== 'undefined' ? localStorage.getItem('famdoc_token') : null;
-      return `${API_BASE_URL}/api/files/${fileId}/download${token ? `?token=${encodeURIComponent(token)}` : ''}`;
+      const base = resolveApiBaseUrl();
+      return `${base}/api/files/${fileId}/download${token ? `?token=${encodeURIComponent(token)}` : ''}`;
     },
 
     getPreviewUrl(fileId: number): string {
       const token = typeof window !== 'undefined' ? localStorage.getItem('famdoc_token') : null;
-      return `${API_BASE_URL}/api/files/${fileId}/preview${token ? `?token=${encodeURIComponent(token)}` : ''}`;
+      const base = resolveApiBaseUrl();
+      return `${base}/api/files/${fileId}/preview${token ? `?token=${encodeURIComponent(token)}` : ''}`;
     },
   },
 
@@ -488,7 +489,8 @@ export const api = {
     },
 
     async downloadPublic(token: string, password: string | null = null): Promise<Blob> {
-      const url = `${API_BASE_URL}/api/share/public/${token}/download`;
+      const base = resolveApiBaseUrl();
+      const url = `${base}/api/share/public/${token}/download`;
       const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

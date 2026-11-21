@@ -50,6 +50,7 @@ node_modules/
 *.tsbuildinfo
 dist/
 frontend/dist/
+dist-worker/
 
 # Testing & Code Quality
 test-results/
