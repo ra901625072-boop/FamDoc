@@ -40,8 +40,8 @@
   - Role-based access control (Admin & Family Member profiles).
   - Single-session JWT authentication with SHA-256 vault codes.
   - Fernet symmetric encryption for OAuth credentials and sensitive metadata.
-- ⚡ **Zero-Overhead Web SPA:** Lightweight, ultra-fast Vanilla JS frontend with responsive design tokens, drag-and-drop file upload queue, and full-screen document previewers.
-- ☁️ **Production Deployable:** Ready for deployment on **Cloudflare** (Workers Edge Router + Cloudflare Containers for FastAPI backend, R2 for vault storage, Hyperdrive for Supabase connection pooling) and **Vercel** (Frontend SPA).
+- ⚡ **Modern React 19 + Vite 6 SPA:** Ultra-fast modern frontend with TypeScript, TanStack Query v5 caching, Zustand state, Tailwind CSS design tokens, IndexedDB background upload queue, and full-screen document previewers, targeting Cloudflare Pages.
+- ☁️ **Production Deployable:** Ready for deployment on **Cloudflare** (Cloudflare Pages for React SPA, Workers Edge Router + Cloudflare Containers for FastAPI backend, R2 for vault storage, Hyperdrive for Supabase connection pooling).
 
 ---
 
@@ -51,7 +51,7 @@
 flowchart TD
     subgraph Clients["Clients Layer"]
         A["📱 Android App (Jetpack Compose)"]
-        B["💻 Web SPA (Vanilla JS)"]
+        B["💻 Web SPA (React 19 + Vite 6 on Cloudflare Pages)"]
     end
 
     subgraph Backend["FastAPI Backend Engine"]
@@ -93,11 +93,13 @@ FamDoc/
 │   │   └── services/          # Google Drive pooling, storage failover, queues
 │   ├── requirements.txt       # Python dependencies
 │   └── main.py                # Server entry point
-├── frontend/                  # Web Single Page Application (SPA)
-│   ├── index.html             # Main web dashboard
-│   ├── assets/                # CSS styling, icons, JavaScript modules
-│   └── vercel.json            # Vercel deployment configuration
-├── docs/                      # Technical specifications & API contracts
+├── frontend/                  # Modern Web SPA (React 19 + TypeScript + Vite 6)
+│   ├── src/                   # Components, pages, hooks, stores, API client
+│   ├── public/                # Static assets, Android APK download, _redirects, _headers
+│   └── vite.config.ts         # Vite bundler configuration
+├── frontend-legacy/           # Preserved legacy Vanilla JS frontend
+├── docs/                      # Technical specifications, migration audits & cutover runbook
+├── tests/e2e/                 # Playwright E2E parity test suite
 ├── build_apk.bat              # One-click Android APK build script
 ├── install_debug.bat          # ADB debug install script
 └── wrangler.toml              # Cloudflare Workers & Containers deployment configuration
@@ -117,6 +119,16 @@ pip install -r requirements.txt
 python main.py
 ```
 Backend will start on `http://localhost:8000` with Swagger docs available at `http://localhost:8000/docs`.
+
+### 2. Frontend Setup (React 19 + Vite 6)
+
+```bash
+cd frontend
+npm install
+npm run dev                    # Starts Vite dev server with proxy to backend
+npm run build                  # Builds production bundle to dist/
+npm test                       # Runs Vitest unit tests
+```
 
 ### 2. Cloudflare Deployment (Edge Router + Containers)
 
