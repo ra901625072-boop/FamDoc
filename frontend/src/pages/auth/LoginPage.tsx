@@ -55,15 +55,6 @@ export function LoginPage() {
           </div>
         )}
 
-        <GoogleSignInButton
-          label="Continue with Google"
-          onError={(msg) => setError(msg)}
-        />
-
-        <div className="auth-divider">
-          <span>or continue with email</span>
-        </div>
-
         <form id="login-form" onSubmit={handleSubmit}>
           <div className="form-group" style={{ marginBottom: '1.25rem' }}>
             <label htmlFor="email" className="form-label" style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 600, fontSize: '0.85rem' }}>
@@ -124,7 +115,7 @@ export function LoginPage() {
           </button>
         </form>
 
-        <div className="auth-footer" style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginTop: '2rem', textAlign: 'center', fontSize: '0.9rem' }}>
+        <div className="auth-footer" style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginTop: '1.75rem', textAlign: 'center', fontSize: '0.9rem' }}>
           <div>
             New to FamDoc?{' '}
             <Link to="/register" style={{ color: 'var(--color-primary)', fontWeight: 700 }}>
@@ -138,6 +129,15 @@ export function LoginPage() {
             </Link>
           </div>
         </div>
+
+        <div className="auth-divider" style={{ margin: '1.75rem 0 1.25rem 0' }}>
+          <span>or continue with</span>
+        </div>
+
+        <GoogleSignInButton
+          label="Continue with Google"
+          onError={(msg) => setError(msg)}
+        />
       </div>
     </div>
   );

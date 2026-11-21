@@ -16,7 +16,13 @@ test.describe('Google OAuth SSO Integration', () => {
     // Check divider
     const divider = page.locator('.auth-divider');
     await expect(divider).toBeVisible();
-    await expect(divider).toContainText(/or continue with email/i);
+    await expect(divider).toContainText(/or continue with/i);
+
+    // Verify Google button is placed at bottom below the form
+    const form = page.locator('#login-form');
+    const formBox = await form.boundingBox();
+    const btnBox = await googleBtn.boundingBox();
+    expect(btnBox && formBox && btnBox.y > formBox.y + formBox.height).toBeTruthy();
   });
 
   test('TC-G02: Google Sign-Up Button on Register Page', async ({ page }) => {
@@ -34,7 +40,13 @@ test.describe('Google OAuth SSO Integration', () => {
     // Check divider
     const divider = page.locator('.auth-divider');
     await expect(divider).toBeVisible();
-    await expect(divider).toContainText(/or register with email/i);
+    await expect(divider).toContainText(/or register with/i);
+
+    // Verify Google button is placed at bottom below the form
+    const form = page.locator('#register-form');
+    const formBox = await form.boundingBox();
+    const btnBox = await googleBtn.boundingBox();
+    expect(btnBox && formBox && btnBox.y > formBox.y + formBox.height).toBeTruthy();
   });
 
   test('TC-G03: Backend Google Verify API Contract', async ({ request }) => {

@@ -56,15 +56,6 @@ export function RegisterPage() {
           </div>
         )}
 
-        <GoogleSignInButton
-          label="Sign up with Google"
-          onError={(msg) => setError(msg)}
-        />
-
-        <div className="auth-divider">
-          <span>or register with email</span>
-        </div>
-
         <form id="register-form" onSubmit={handleSubmit}>
           <div className="form-group" style={{ marginBottom: '1.25rem' }}>
             <label htmlFor="username" className="form-label" style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 600, fontSize: '0.85rem' }}>
@@ -139,7 +130,7 @@ export function RegisterPage() {
           </button>
         </form>
 
-        <div className="auth-footer" style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginTop: '2rem', textAlign: 'center', fontSize: '0.9rem' }}>
+        <div className="auth-footer" style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginTop: '1.75rem', textAlign: 'center', fontSize: '0.9rem' }}>
           <div>
             Already have a vault?{' '}
             <Link to="/login" style={{ color: 'var(--color-primary)', fontWeight: 700 }}>
@@ -153,6 +144,15 @@ export function RegisterPage() {
             </Link>
           </div>
         </div>
+
+        <div className="auth-divider" style={{ margin: '1.75rem 0 1.25rem 0' }}>
+          <span>or register with</span>
+        </div>
+
+        <GoogleSignInButton
+          label="Sign up with Google"
+          onError={(msg) => setError(msg)}
+        />
       </div>
     </div>
   );

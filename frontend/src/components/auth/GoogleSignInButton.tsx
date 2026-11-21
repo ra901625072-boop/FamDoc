@@ -130,8 +130,19 @@ export function GoogleSignInButton({
     };
   }, [clientId, label, inviteCode]);
 
+  const isIpAddress = typeof window !== 'undefined' && window.location.hostname === '127.0.0.1';
+
   const handleCustomButtonClick = () => {
     if (disabled || loading) return;
+
+    // Google OAuth 2.0 policy strictly disallows IP addresses like 127.0.0.1.
+    // If accessed via 127.0.0.1, automatically redirect to localhost so Google origin check passes.
+    if (typeof window !== 'undefined' && window.location.hostname === '127.0.0.1') {
+      const targetUrl = new URL(window.location.href);
+      targetUrl.hostname = 'localhost';
+      window.location.href = targetUrl.toString();
+      return;
+    }
 
     if (hiddenGisRef.current) {
       // Find the rendered Google iframe button and trigger click
@@ -162,7 +173,7 @@ export function GoogleSignInButton({
           width: '100%',
           height: '100%',
           opacity: 0.001,
-          pointerEvents: gisReady ? 'auto' : 'none',
+          pointerEvents: gisReady && !isIpAddress ? 'auto' : 'none',
           zIndex: 2,
           overflow: 'hidden',
         }}
