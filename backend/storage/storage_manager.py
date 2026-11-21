@@ -27,10 +27,12 @@ class StorageManager:
     def __init__(self):
         from storage.google_drive_provider import GoogleDriveProvider
         from storage.local import LocalStorageProvider
+        from storage.r2_provider import R2StorageProvider
 
         self.providers = {
             "google": GoogleDriveProvider(),
             "local":  LocalStorageProvider(),
+            "r2":     R2StorageProvider(),
         }
 
     def check_availability(self, config: dict, cache_ttl: int = 30, db = None) -> dict:
@@ -70,9 +72,14 @@ class StorageManager:
         local_config: dict,
     ) -> dict:
         """Writes file content to local storage."""
+        from config import DEFAULT_STORAGE_TIER
+        tier = DEFAULT_STORAGE_TIER
+        if tier == "r2" and self.providers["r2"]._get_client() is None:
+            tier = "local"
+
         try:
             vault_folder_id = local_config.get("vault_folder_id")
-            result = self.providers["local"].upload_file(
+            result = self.providers[tier].upload_file(
                 config=local_config,
                 vault_folder_id=vault_folder_id,
                 filename=filename,
@@ -82,7 +89,7 @@ class StorageManager:
             return {
                 "operation":      "write",
                 "status":         "success",
-                "tier":           "local",
+                "tier":           tier,
                 "file_id":        result["cloud_file_id"],
                 "pending_sync":   True,
                 "timestamp":      datetime.now(timezone.utc).isoformat(),
@@ -359,6 +366,9 @@ class StorageManager:
                 if p_name == "local":
                     cfg = family_config.get("local", {})
                     f_id = file.local_file_id or (file._file_id if file.storage_provider == "local" or not file.storage_provider else None)
+                elif p_name == "r2":
+                    cfg = family_config.get("r2", {})
+                    f_id = file.cloud_file_id or file.local_file_id or file._file_id
                 elif p_name == "google":
                     cfg = self._resolve_account_config(file, db) if db else family_config.get("google", {})
                     f_id = file.google_drive_file_id or (file.cloud_file_id if file.storage_provider == "google" else None) or (file._file_id if file.storage_provider == "google" else None)
@@ -391,6 +401,9 @@ class StorageManager:
                 if p_name == "local":
                     cfg = family_config.get("local", {})
                     f_id = file.local_file_id or (file._file_id if file.storage_provider == "local" or not file.storage_provider else None)
+                elif p_name == "r2":
+                    cfg = family_config.get("r2", {})
+                    f_id = file.cloud_file_id or file.local_file_id or file._file_id
                 elif p_name == "google":
                     cfg = self._resolve_account_config(file, db) if db else family_config.get("google", {})
                     f_id = file.google_drive_file_id or (file.cloud_file_id if file.storage_provider == "google" else None) or (file._file_id if file.storage_provider == "google" else None)
@@ -465,7 +478,7 @@ class StorageManager:
         return None
 
     def _cascade_from(self, provider: str) -> list:
-        full_order = ["google", "local"]
+        full_order = ["google", "r2", "local"]
         if provider not in full_order:
             return ["local"]
         idx = full_order.index(provider)

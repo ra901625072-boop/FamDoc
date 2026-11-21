@@ -41,6 +41,14 @@ GOOGLE_FOLDER_ID = os.getenv("GOOGLE_FOLDER_ID", "")
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "")
 
+# Cloudflare R2 Storage Settings
+R2_ACCOUNT_ID = os.getenv("R2_ACCOUNT_ID", "")
+R2_ACCESS_KEY_ID = os.getenv("R2_ACCESS_KEY_ID", "")
+R2_SECRET_ACCESS_KEY = os.getenv("R2_SECRET_ACCESS_KEY", "")
+R2_BUCKET_NAME = os.getenv("R2_BUCKET_NAME", "famdoc-vault")
+R2_ENDPOINT_URL = os.getenv("R2_ENDPOINT_URL", f"https://{R2_ACCOUNT_ID}.r2.cloudflarestorage.com" if R2_ACCOUNT_ID else "")
+R2_PUBLIC_DOMAIN = os.getenv("R2_PUBLIC_DOMAIN", "")
+DEFAULT_STORAGE_TIER = os.getenv("DEFAULT_STORAGE_TIER", "r2" if R2_ACCESS_KEY_ID else "local")
 
 # VirusTotal Scanner Settings
 VIRUSTOTAL_API_KEY = os.getenv("VIRUSTOTAL_API_KEY", "")
