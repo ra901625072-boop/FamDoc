@@ -199,24 +199,28 @@ else:
 
 if SERVE_FRONTEND:
     # Mount Frontend Static Files
-    # Path to the frontend directory relative to this file
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    dist_path = os.path.abspath(os.path.join(BASE_DIR, "..", "frontend", "dist"))
     frontend_path = os.path.abspath(os.path.join(BASE_DIR, "..", "frontend"))
+    target_path = dist_path if os.path.exists(dist_path) else frontend_path
 
-    # Ensure the frontend folder exists
-    if not os.path.exists(frontend_path):
-        os.makedirs(frontend_path)
-        os.makedirs(os.path.join(frontend_path, "css"), exist_ok=True)
-        os.makedirs(os.path.join(frontend_path, "js"), exist_ok=True)
+    # Mount Vite build assets if present
+    assets_dir = os.path.join(target_path, "assets")
+    if os.path.exists(assets_dir):
+        app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
 
-    # Register static files mounting last so that API routes take precedence
-    # Mount /css, /js, and other folders
-    app.mount("/css", StaticFiles(directory=os.path.join(frontend_path, "css")), name="css")
-    app.mount("/js", StaticFiles(directory=os.path.join(frontend_path, "js")), name="js")
+    # Mount legacy /css and /js folders if present
+    css_dir = os.path.join(target_path, "css")
+    if os.path.exists(css_dir):
+        app.mount("/css", StaticFiles(directory=css_dir), name="css")
 
-    # Mount the entire frontend directory at the root to serve all HTML files (login.html, dashboard.html, etc.)
-    # This must be the last route registered so API routes take precedence.
-    app.mount("/", StaticFiles(directory=frontend_path, html=True), name="frontend")
+    js_dir = os.path.join(target_path, "js")
+    if os.path.exists(js_dir):
+        app.mount("/js", StaticFiles(directory=js_dir), name="js")
+
+    # Mount the target frontend directory at the root to serve HTML
+    if os.path.exists(target_path):
+        app.mount("/", StaticFiles(directory=target_path, html=True), name="frontend")
 
 
 if __name__ == "__main__":
