@@ -429,20 +429,100 @@
     }
   }
 
-  // 4. XHR File Uploader
+  // 4. XHR File Uploader & Direct Presigned R2 Uploader
+  async function uploadFilePresigned(item, onProgress, apiBaseUrl, token) {
+    const urlRes = await fetch(apiBaseUrl + "/api/files/upload-url", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { "Authorization": `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify({
+        filename: item.name,
+        content_type: item.file.type || "application/octet-stream",
+        size_bytes: item.file.size,
+        folder_id: (item.folderId !== null && item.folderId !== undefined && item.folderId !== "root" && item.folderId !== "") ? parseInt(item.folderId, 10) : null
+      })
+    });
+    if (!urlRes.ok) {
+      const errText = await urlRes.text();
+      throw new Error(`Failed to initialize direct upload (${urlRes.status}): ${errText}`);
+    }
+    const presignedData = await urlRes.json();
+    
+    await new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      activeXhr = xhr;
+      xhr.open("PUT", presignedData.upload_url, true);
+      xhr.setRequestHeader("Content-Type", item.file.type || "application/octet-stream");
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) {
+          const percent = Math.round((e.loaded / e.total) * 100);
+          onProgress(percent);
+        }
+      };
+      xhr.onload = () => {
+        activeXhr = null;
+        if (xhr.status >= 200 && xhr.status < 300) {
+          resolve();
+        } else {
+          reject(new Error(`Direct storage upload failed with status ${xhr.status}`));
+        }
+      };
+      xhr.onerror = () => {
+        activeXhr = null;
+        reject(new Error("Network error during direct storage upload."));
+      };
+      xhr.onabort = () => {
+        activeXhr = null;
+        reject(new Error("Upload aborted"));
+      };
+      xhr.send(item.file);
+    });
+
+    const completeRes = await fetch(apiBaseUrl + "/api/files/upload-complete", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { "Authorization": `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify({
+        filename: item.name,
+        cloud_file_id: presignedData.cloud_file_id,
+        size_bytes: item.file.size,
+        file_type: item.file.type || "application/octet-stream",
+        folder_id: (item.folderId !== null && item.folderId !== undefined && item.folderId !== "root" && item.folderId !== "") ? parseInt(item.folderId, 10) : null
+      })
+    });
+    if (!completeRes.ok) {
+      const errText = await completeRes.text();
+      throw new Error(`Failed to complete file record: ${errText}`);
+    }
+    return await completeRes.json();
+  }
+
   function uploadFileXHR(item, onProgress) {
     return new Promise((resolve, reject) => {
       const token = localStorage.getItem("famdoc_token");
-      const xhr = new XMLHttpRequest();
-      activeXhr = xhr;
       
       let API_BASE_URL = window.FamDocAPI_BaseURL || localStorage.getItem("famdoc_api_base_url") || "";
       if (!API_BASE_URL && typeof window !== "undefined" && window.location) {
         const host = window.location.hostname;
-        if (host && host !== "localhost" && host !== "127.0.0.1" && !host.includes("onrender.com")) {
-          API_BASE_URL = "https://famdoc-backend.onrender.com";
+        if (host && host !== "localhost" && host !== "127.0.0.1" && !host.includes("onrender.com") && !host.includes("workers.dev") && !host.includes("famdoc.com")) {
+          API_BASE_URL = "https://api.famdoc.com";
         }
       }
+
+      // If file exceeds 50MB, use direct presigned R2 upload to bypass edge limits
+      if (item.file && item.file.size > 50 * 1024 * 1024) {
+        uploadFilePresigned(item, onProgress, API_BASE_URL, token)
+          .then(resolve)
+          .catch(reject);
+        return;
+      }
+
+      const xhr = new XMLHttpRequest();
+      activeXhr = xhr;
       const uploadUrl = API_BASE_URL + "/api/files/upload";
       
       xhr.open("POST", uploadUrl, true);

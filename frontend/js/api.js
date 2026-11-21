@@ -9,10 +9,10 @@ function resolveApiBaseUrl() {
   if (custom) return custom.trim().replace(/\/+$/, "");
   if (typeof window !== "undefined" && window.location) {
     const host = window.location.hostname;
-    // On hosted static frontends (e.g. Vercel, Netlify, custom domain), route directly to the Render backend
+    // On hosted static frontends (e.g. Vercel, Netlify, custom domain), route directly to Cloudflare
     // to bypass serverless proxy 4.5MB request body limits for video and large file uploads!
-    if (host && host !== "localhost" && host !== "127.0.0.1" && !host.includes("onrender.com")) {
-      return "https://famdoc-backend.onrender.com";
+    if (host && host !== "localhost" && host !== "127.0.0.1" && !host.includes("onrender.com") && !host.includes("workers.dev") && !host.includes("famdoc.com")) {
+      return "https://api.famdoc.com";
     }
   }
   return "";

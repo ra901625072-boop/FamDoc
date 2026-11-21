@@ -20,9 +20,9 @@ android {
             useSupportLibrary = true
         }
 
-        // Default Render Backend URL for production builds
+        // Default Cloudflare API URL for production builds
         // Can be overridden at runtime via developer settings or environment variables
-        buildConfigField("String", "DEFAULT_API_BASE_URL", "\"https://famdoc-backend.onrender.com\"")
+        buildConfigField("String", "DEFAULT_API_BASE_URL", "\"https://api.famdoc.com\"")
         buildConfigField("String", "APP_NAME", "\"FamDoc\"")
         buildConfigField("String", "APP_VERSION", "\"1.0.0\"")
     }
@@ -40,7 +40,7 @@ android {
         debug {
             applicationIdSuffix = ".debug"
             isDebuggable = true
-            buildConfigField("String", "DEFAULT_API_BASE_URL", "\"https://famdoc-backend.onrender.com\"")
+            buildConfigField("String", "DEFAULT_API_BASE_URL", "\"https://api.famdoc.com\"")
         }
     }
 
