@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../../api/client';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { ThemeToggle } from '../../components/common/ThemeToggle';
-import { AlertCircle, Lock, Mail, Eye, EyeOff } from 'lucide-react';
+import { AlertCircle, Eye, EyeOff } from 'lucide-react';
 
 export function LoginPage() {
   const [email, setEmail] = useState('');
@@ -32,67 +32,55 @@ export function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-[var(--bg-linen)]">
-      <div className="w-full max-w-md bg-[var(--surface-card)] rounded-3xl p-8 border border-[var(--border-paper)] shadow-xl relative">
-        <div className="absolute top-6 right-6">
-          <ThemeToggle />
-        </div>
+    <div className="guest-wrapper">
+      <div className="landing-ambient-glow" aria-hidden="true" />
+      <div className="guest-theme-toggle">
+        <ThemeToggle />
+      </div>
 
-        <div className="text-center mb-8">
-          <Link to="/" className="inline-flex items-center gap-2 mb-4 no-underline">
-            <img src="/img/logo.svg" alt="FamDoc Logo" className="w-12 h-12" />
+      <div id="auth-card" className="famdoc-card auth-card fd-pop-in" style={{ position: 'relative', zIndex: 1 }}>
+        <div className="auth-header">
+          <Link to="/" className="auth-crest-container" title="Back to home">
+            <img src="/img/logo.svg" alt="FamDoc Crest" className="auth-crest-img" />
           </Link>
-          <h1 className="auth-title text-2xl font-extrabold text-[var(--text-ink)] tracking-tight">
-            Welcome Back
-          </h1>
-          <p className="auth-subtitle text-xs text-[var(--text-ink-muted)] mt-1.5">
-            Enter your credentials to access your family keepsake vault
-          </p>
+          <h1 className="auth-title">Welcome Back</h1>
+          <p className="auth-subtitle">Enter your family keepsake vault</p>
         </div>
 
         {error && (
-          <div
-            id="error-alert"
-            className="famdoc-alert warning mb-6 p-3.5 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs flex items-center gap-2.5 fd-shake"
-          >
-            <AlertCircle className="w-4 h-4 shrink-0" />
+          <div id="error-alert" className="famdoc-alert warning fd-shake" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '1.25rem' }}>
+            <AlertCircle style={{ width: '1rem', height: '1rem', flexShrink: 0 }} />
             <div id="error-message">{error}</div>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="form-group space-y-1.5">
-            <label htmlFor="email" className="block text-xs font-semibold text-[var(--text-ink)]">
+        <form id="login-form" onSubmit={handleSubmit}>
+          <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+            <label htmlFor="email" className="form-label" style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 600, fontSize: '0.85rem' }}>
               Email Address
             </label>
-            <div className="relative">
-              <Mail className="w-4 h-4 text-[var(--text-ink-muted)] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
-                required
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[var(--border-paper)] bg-[var(--surface-paper-tint)]/40 text-[var(--text-ink)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] transition-all"
-              />
-            </div>
+            <input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              required
+              className="form-control"
+              style={{ width: '100%', boxSizing: 'border-box' }}
+            />
           </div>
 
-          <div className="form-group space-y-1.5">
-            <div className="flex items-center justify-between">
-              <label htmlFor="password" className="block text-xs font-semibold text-[var(--text-ink)]">
+          <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+              <label htmlFor="password" className="form-label" style={{ marginBottom: 0, fontWeight: 600, fontSize: '0.85rem' }}>
                 Password
               </label>
-              <Link
-                to="/forgot-password"
-                className="text-xs font-medium text-[var(--color-primary)] hover:underline"
-              >
-                Forgot password?
+              <Link to="/forgot-password" style={{ fontSize: '0.8rem', color: 'var(--color-primary)', fontWeight: 600 }}>
+                Forgot Password?
               </Link>
             </div>
-            <div className="relative">
-              <Lock className="w-4 h-4 text-[var(--text-ink-muted)] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <div className="password-input-wrapper">
               <input
                 id="password"
                 type={showPassword ? 'text' : 'password'}
@@ -100,40 +88,43 @@ export function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
                 required
-                className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-[var(--border-paper)] bg-[var(--surface-paper-tint)]/40 text-[var(--text-ink)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] transition-all"
+                className="form-control"
+                style={{ width: '100%', boxSizing: 'border-box' }}
               />
               <button
                 type="button"
-                className="password-toggle-btn absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-ink-muted)] hover:text-[var(--text-ink)] cursor-pointer"
+                className="password-toggle-btn"
+                aria-label="Toggle password visibility"
                 onClick={() => setShowPassword(!showPassword)}
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
               >
-                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                {showPassword ? <EyeOff style={{ width: '1rem', height: '1rem' }} /> : <Eye style={{ width: '1rem', height: '1rem' }} />}
               </button>
             </div>
           </div>
 
           <button
-            id="btn-submit"
             type="submit"
+            id="btn-submit"
             disabled={loading}
-            className="w-full py-3 px-4 rounded-xl bg-[var(--color-primary)] hover:bg-[var(--color-primary-dark)] text-white font-semibold text-sm shadow-md transition-all duration-200 disabled:opacity-50 cursor-pointer"
+            className="btn btn-primary"
+            style={{ width: '100%', marginTop: '0.5rem' }}
           >
-            {loading ? 'Signing in...' : 'Sign In'}
+            <i className="fas fa-sign-in-alt" aria-hidden="true" />
+            <span>{loading ? 'Authenticating...' : 'Enter Vault'}</span>
           </button>
         </form>
 
-        <div className="mt-8 pt-6 border-t border-[var(--border-paper)] text-center text-xs text-[var(--text-ink-muted)] space-y-2">
+        <div className="auth-footer" style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginTop: '2rem', textAlign: 'center', fontSize: '0.9rem' }}>
           <div>
-            Need a new family vault?{' '}
-            <Link to="/register" className="font-semibold text-[var(--color-primary)] hover:underline">
-              Create Vault
+            New to FamDoc?{' '}
+            <Link to="/register" style={{ color: 'var(--color-primary)', fontWeight: 700 }}>
+              Create a Vault
             </Link>
           </div>
           <div>
             Have an invite code?{' '}
-            <Link to="/join" className="font-semibold text-[var(--color-primary)] hover:underline">
-              Join Family
+            <Link to="/join" style={{ color: 'var(--brand-accent)', fontWeight: 700 }}>
+              Join Family Vault
             </Link>
           </div>
         </div>

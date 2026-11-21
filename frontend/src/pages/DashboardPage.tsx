@@ -1,17 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useDashboardStats, useFamilyDetails } from '../api/hooks';
 import { api } from '../api/client';
-import {
-  FileText,
-  Folder,
-  Database,
-  Users,
-  Upload,
-  FolderPlus,
-  UserPlus,
-  Cloud,
-  PieChart,
-} from 'lucide-react';
 
 export function DashboardPage() {
   const { data: stats, isLoading: statsLoading } = useDashboardStats();
@@ -33,215 +22,175 @@ export function DashboardPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="dashboard-page-container">
       {/* Header Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-3xl bg-gradient-to-r from-emerald-800 to-teal-900 text-white shadow-lg">
+      <div
+        className="dashboard-header-banner"
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '1.5rem 1.75rem',
+          borderRadius: 'var(--radius-xl, 20px)',
+          background: 'var(--appbar-bg)',
+          color: '#FFFFFF',
+          marginBottom: '1.75rem',
+          boxShadow: 'var(--shadow-md)',
+        }}
+      >
         <div>
-          <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight">Family Vault Dashboard</h1>
-          <p className="text-xs sm:text-sm text-emerald-200 mt-1">
-            {family?.name ? `${family.name}'s Unified Cloud Vault` : 'Welcome to your family document space'}
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0, color: '#FFFFFF' }}>
+            {family?.name ? `${family.name}'s Keepsake Vault` : 'Family Keepsake Vault'}
+          </h1>
+          <p style={{ margin: '0.35rem 0 0', fontSize: '0.88rem', opacity: 0.9 }}>
+            Multi-Account Pooled Storage &bull; End-to-End Encrypted &bull; Failover Protected
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Link
-            to="/vault"
-            className="px-4 py-2 rounded-xl bg-white/20 hover:bg-white/30 text-white font-semibold text-xs transition-colors no-underline"
-          >
-            Open Vault
-          </Link>
-        </div>
+        <Link
+          to="/vault"
+          className="btn btn-secondary btn-compact"
+          style={{
+            background: 'rgba(255, 255, 255, 0.2)',
+            color: '#FFFFFF',
+            borderColor: 'rgba(255, 255, 255, 0.4)',
+            backdropFilter: 'blur(8px)',
+          }}
+        >
+          <i className="fas fa-folder-open" aria-hidden="true" />
+          <span>Open Vault</span>
+        </Link>
       </div>
 
-      {/* Quick Action Toolbar */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <Link
-          to="/vault?action=upload"
-          id="btn-quick-upload"
-          className="quick-action-btn flex items-center gap-3 p-3.5 rounded-2xl bg-[var(--surface-card)] border border-[var(--border-paper)] hover:border-[var(--color-primary)] hover:shadow-xs transition-all text-[var(--text-ink)] no-underline group"
-        >
-          <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
-            <Upload className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="text-xs font-bold">Upload Files</div>
-            <div className="text-[10px] text-[var(--text-ink-muted)]">Add to vault</div>
-          </div>
+      {/* Quick Actions Toolbar */}
+      <div className="quick-actions-bar">
+        <Link to="/vault?action=upload" id="btn-quick-upload" className="quick-action-btn primary">
+          <i className="fas fa-cloud-upload-alt" aria-hidden="true" />
+          <span>Upload Document</span>
         </Link>
-
-        <Link
-          to="/vault?action=new-folder"
-          id="btn-quick-folder"
-          className="quick-action-btn flex items-center gap-3 p-3.5 rounded-2xl bg-[var(--surface-card)] border border-[var(--border-paper)] hover:border-[var(--color-primary)] hover:shadow-xs transition-all text-[var(--text-ink)] no-underline group"
-        >
-          <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
-            <FolderPlus className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="text-xs font-bold">New Folder</div>
-            <div className="text-[10px] text-[var(--text-ink-muted)]">Create subfolder</div>
-          </div>
+        <Link to="/vault?action=new-folder" id="btn-quick-folder" className="quick-action-btn">
+          <i className="fas fa-folder-plus" aria-hidden="true" />
+          <span>New Folder</span>
         </Link>
-
-        <Link
-          to="/profile?invite=true"
-          id="btn-quick-invite"
-          className="quick-action-btn flex items-center gap-3 p-3.5 rounded-2xl bg-[var(--surface-card)] border border-[var(--border-paper)] hover:border-[var(--color-primary)] hover:shadow-xs transition-all text-[var(--text-ink)] no-underline group"
-        >
-          <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition-colors">
-            <UserPlus className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="text-xs font-bold">Invite Member</div>
-            <div className="text-[10px] text-[var(--text-ink-muted)]">Share secret code</div>
-          </div>
+        <Link to="/profile?invite=true" id="btn-quick-invite" className="quick-action-btn">
+          <i className="fas fa-user-plus" aria-hidden="true" />
+          <span>Invite Member</span>
         </Link>
-
-        <Link
-          to="/storage"
-          id="btn-quick-storage"
-          className="quick-action-btn flex items-center gap-3 p-3.5 rounded-2xl bg-[var(--surface-card)] border border-[var(--border-paper)] hover:border-[var(--color-primary)] hover:shadow-xs transition-all text-[var(--text-ink)] no-underline group"
-        >
-          <div className="p-2.5 rounded-xl bg-purple-500/10 text-purple-600 group-hover:bg-purple-600 group-hover:text-white transition-colors">
-            <Cloud className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="text-xs font-bold">Storage Pool</div>
-            <div className="text-[10px] text-[var(--text-ink-muted)]">Manage accounts</div>
-          </div>
+        <Link to="/storage" id="btn-quick-storage" className="quick-action-btn">
+          <i className="fas fa-hdd" aria-hidden="true" />
+          <span>Storage Pool</span>
         </Link>
       </div>
 
       {/* Dashboard Statistics Grid (4 Cards) */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 dashboard-grid">
-        <div
-          id="card-stat-files"
-          className="stat-card p-4 rounded-2xl bg-[var(--surface-card)] border border-[var(--border-paper)] shadow-xs flex flex-col justify-between"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-medium text-[var(--text-ink-muted)] stat-label">Total Files</span>
-            <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 stat-icon">
-              <FileText className="w-4 h-4" />
-            </div>
+      <div className="dashboard-grid">
+        <Link to="/vault" id="card-stat-files" className="stat-card" style={{ textDecoration: 'none' }}>
+          <div className="stat-icon">
+            <i className="fas fa-file-alt" aria-hidden="true" />
           </div>
-          <div id="stat-files" className="stat-val text-2xl font-extrabold text-[var(--text-ink)]">
+          <span className="stat-label">Total Files</span>
+          <div id="stat-files" className="stat-val">
             {statsLoading ? '...' : totalFiles}
           </div>
-        </div>
+        </Link>
 
-        <div
-          id="card-stat-folders"
-          className="stat-card p-4 rounded-2xl bg-[var(--surface-card)] border border-[var(--border-paper)] shadow-xs flex flex-col justify-between"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-medium text-[var(--text-ink-muted)] stat-label">Folders</span>
-            <div className="p-2 rounded-xl bg-blue-500/10 text-blue-600 stat-icon">
-              <Folder className="w-4 h-4" />
-            </div>
+        <Link to="/vault" id="card-stat-folders" className="stat-card" style={{ textDecoration: 'none' }}>
+          <div className="stat-icon">
+            <i className="fas fa-folder" aria-hidden="true" />
           </div>
-          <div id="stat-folders" className="stat-val text-2xl font-extrabold text-[var(--text-ink)]">
+          <span className="stat-label">Total Folders</span>
+          <div id="stat-folders" className="stat-val">
             {statsLoading ? '...' : totalFolders}
           </div>
-        </div>
+        </Link>
 
-        <div
-          id="card-stat-size"
-          className="stat-card p-4 rounded-2xl bg-[var(--surface-card)] border border-[var(--border-paper)] shadow-xs flex flex-col justify-between"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-medium text-[var(--text-ink-muted)] stat-label">Space Occupied</span>
-            <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600 stat-icon">
-              <Database className="w-4 h-4" />
-            </div>
+        <Link to="/storage" id="card-stat-size" className="stat-card" style={{ textDecoration: 'none' }}>
+          <div className="stat-icon">
+            <i className="fas fa-database" aria-hidden="true" />
           </div>
-          <div id="stat-size" className="stat-val text-2xl font-extrabold text-[var(--text-ink)]">
+          <span className="stat-label">Space Occupied</span>
+          <div id="stat-size" className="stat-val">
             {statsLoading ? '...' : api.helpers.formatBytes(totalSize)}
           </div>
-        </div>
-
-        <div
-          id="card-stat-members"
-          className="stat-card p-4 rounded-2xl bg-[var(--surface-card)] border border-[var(--border-paper)] shadow-xs flex flex-col justify-between"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-medium text-[var(--text-ink-muted)] stat-label">Family Members</span>
-            <div className="p-2 rounded-xl bg-purple-500/10 text-purple-600 stat-icon">
-              <Users className="w-4 h-4" />
-            </div>
+          <div className="stat-card-bottom-progress">
+            <div
+              className="progress-bar-fill"
+              style={{
+                width: `${Math.min(100, Math.max(5, (totalSize / (15 * 1024 * 1024 * 1024)) * 100))}%`,
+                background: 'var(--color-primary)',
+              }}
+            />
           </div>
-          <div id="stat-members" className="stat-val text-2xl font-extrabold text-[var(--text-ink)]">
+        </Link>
+
+        <Link to="/family" id="card-stat-members" className="stat-card" style={{ textDecoration: 'none' }}>
+          <div className="stat-icon">
+            <i className="fas fa-users" aria-hidden="true" />
+          </div>
+          <span className="stat-label">Family Members</span>
+          <div id="stat-members" className="stat-val">
             {statsLoading ? '...' : memberCount}
           </div>
-        </div>
+        </Link>
       </div>
 
-      {/* Storage Category Distribution Card */}
-      <div
-        id="dashboard-storage-card"
-        className="storage-breakdown-card p-6 rounded-3xl bg-[var(--surface-card)] border border-[var(--border-paper)] shadow-xs space-y-4"
-      >
-        <div className="flex items-center justify-between breakdown-header">
-          <div className="flex items-center gap-2">
-            <PieChart className="w-5 h-5 text-[var(--color-primary)]" />
-            <h2 className="breakdown-title text-base font-bold text-[var(--text-ink)]">
+      {/* Storage Category Distribution Breakdown Card */}
+      <div id="dashboard-storage-card" className="storage-breakdown-card">
+        <div className="breakdown-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+            <i className="fas fa-chart-pie" style={{ color: 'var(--color-primary)', fontSize: '1.2rem' }} aria-hidden="true" />
+            <h2 className="breakdown-title" style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0 }}>
               Storage Category Distribution
             </h2>
           </div>
-          <span id="breakdown-pooled-info" className="breakdown-subtitle text-xs text-[var(--text-ink-muted)]">
-            Pooled Cloud Storage
+          <span id="breakdown-pooled-info" className="breakdown-subtitle" style={{ fontSize: '0.8rem', color: 'var(--text-ink-muted)' }}>
+            Pooled Google Drive Accounts
           </span>
         </div>
 
-        {/* Progress Bar */}
-        <div
-          id="category-progress-container"
-          className="breakdown-progress-container w-full h-3 bg-[var(--surface-paper-tint)] rounded-full overflow-hidden flex"
-        >
+        {/* Multi-Segmented Progress Bar */}
+        <div id="category-progress-container" className="breakdown-progress-container" style={{ width: '100%', height: '10px', backgroundColor: 'var(--surface-paper-tint)', borderRadius: '9999px', overflow: 'hidden', display: 'flex', marginBottom: '1.25rem' }}>
           <div
             id="category-progress-bar"
-            className="h-full bg-[var(--color-primary)] rounded-full transition-all duration-500"
-            style={{ width: `${Math.min(100, Math.max(5, totalFiles > 0 ? 100 : 0))}%` }}
+            style={{
+              width: `${Math.min(100, Math.max(8, totalFiles > 0 ? 100 : 0))}%`,
+              background: 'var(--accent-gradient)',
+              borderRadius: '9999px',
+              transition: 'width 0.5s ease',
+            }}
           />
         </div>
 
-        {/* Category Chips Grid */}
-        <div id="breakdown-legend-grid" className="breakdown-legend-grid grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
-          <div className="breakdown-legend-chip flex items-center gap-2.5 p-2 rounded-xl bg-[var(--surface-paper-tint)]/40 text-xs">
-            <span className="w-3 h-3 rounded-full bg-pink-500 shrink-0" />
-            <div className="chip-info truncate">
-              <div className="chip-label font-medium text-[var(--text-ink)]">Videos</div>
-              <div id="meta-cat-video" className="chip-meta text-[10px] text-[var(--text-ink-muted)]">
-                {categories.video} items
-              </div>
+        {/* Category Legend Chips Grid */}
+        <div id="breakdown-legend-grid" className="breakdown-legend-grid">
+          <div className="breakdown-legend-chip">
+            <span className="chip-dot" style={{ backgroundColor: 'var(--cat-video, #EC4899)' }} />
+            <div className="chip-info">
+              <div className="chip-label">Videos</div>
+              <div id="meta-cat-video" className="chip-meta">{categories.video} items</div>
             </div>
           </div>
 
-          <div className="breakdown-legend-chip flex items-center gap-2.5 p-2 rounded-xl bg-[var(--surface-paper-tint)]/40 text-xs">
-            <span className="w-3 h-3 rounded-full bg-blue-500 shrink-0" />
-            <div className="chip-info truncate">
-              <div className="chip-label font-medium text-[var(--text-ink)]">Images</div>
-              <div id="meta-cat-image" className="chip-meta text-[10px] text-[var(--text-ink-muted)]">
-                {categories.images} items
-              </div>
+          <div className="breakdown-legend-chip">
+            <span className="chip-dot" style={{ backgroundColor: 'var(--cat-images, #3B82F6)' }} />
+            <div className="chip-info">
+              <div className="chip-label">Photos &amp; Images</div>
+              <div id="meta-cat-image" className="chip-meta">{categories.images} items</div>
             </div>
           </div>
 
-          <div className="breakdown-legend-chip flex items-center gap-2.5 p-2 rounded-xl bg-[var(--surface-paper-tint)]/40 text-xs">
-            <span className="w-3 h-3 rounded-full bg-red-500 shrink-0" />
-            <div className="chip-info truncate">
-              <div className="chip-label font-medium text-[var(--text-ink)]">PDFs</div>
-              <div id="meta-cat-pdf" className="chip-meta text-[10px] text-[var(--text-ink-muted)]">
-                {categories.pdfs} items
-              </div>
+          <div className="breakdown-legend-chip">
+            <span className="chip-dot" style={{ backgroundColor: 'var(--cat-pdfs, #EF4444)' }} />
+            <div className="chip-info">
+              <div className="chip-label">PDF Documents</div>
+              <div id="meta-cat-pdf" className="chip-meta">{categories.pdfs} items</div>
             </div>
           </div>
 
-          <div className="breakdown-legend-chip flex items-center gap-2.5 p-2 rounded-xl bg-[var(--surface-paper-tint)]/40 text-xs">
-            <span className="w-3 h-3 rounded-full bg-purple-500 shrink-0" />
-            <div className="chip-info truncate">
-              <div className="chip-label font-medium text-[var(--text-ink)]">Documents</div>
-              <div id="meta-cat-doc" className="chip-meta text-[10px] text-[var(--text-ink-muted)]">
-                {categories.docs} items
-              </div>
+          <div className="breakdown-legend-chip">
+            <span className="chip-dot" style={{ backgroundColor: 'var(--cat-docs, #8B5CF6)' }} />
+            <div className="chip-info">
+              <div className="chip-label">Office &amp; Word</div>
+              <div id="meta-cat-doc" className="chip-meta">{categories.docs} items</div>
             </div>
           </div>
         </div>

@@ -80,7 +80,7 @@ export function AppLayout() {
       )}
 
       {/* Sidebar Navigation Drawer */}
-      <aside
+      <nav
         id="sidebarMenu"
         className={`sidebar fixed inset-y-0 left-0 z-50 w-64 bg-[var(--surface-card)] border-r border-[var(--border-paper)] flex flex-col transition-transform duration-300 ease-in-out md:static md:translate-x-0 ${
           mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
@@ -175,7 +175,7 @@ export function AppLayout() {
             <span>Sign Out</span>
           </button>
         </div>
-      </aside>
+      </nav>
 
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col min-w-0 pb-20 md:pb-6">

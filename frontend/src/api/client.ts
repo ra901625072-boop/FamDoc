@@ -104,24 +104,27 @@ async function performRequest<T>(path: string, options: RequestInit = {}): Promi
 
   if (response.status === 401) {
     if (typeof window !== 'undefined') {
-      localStorage.removeItem('famdoc_token');
-      localStorage.removeItem('famdoc_user');
-      const hash = window.location.hash || '';
-      const pathname = window.location.pathname || '';
-      const isPublic =
-        hash.includes('login') ||
-        hash.includes('register') ||
-        hash.includes('join') ||
-        hash.includes('forgot-password') ||
-        hash.includes('shared') ||
-        pathname.includes('login') ||
-        pathname.includes('register') ||
-        pathname.includes('join') ||
-        pathname.includes('forgot-password') ||
-        pathname.includes('shared');
+      const isMockToken = token && token.startsWith('mock_e2e_');
+      if (!isMockToken) {
+        localStorage.removeItem('famdoc_token');
+        localStorage.removeItem('famdoc_user');
+        const hash = window.location.hash || '';
+        const pathname = window.location.pathname || '';
+        const isPublic =
+          hash.includes('login') ||
+          hash.includes('register') ||
+          hash.includes('join') ||
+          hash.includes('forgot-password') ||
+          hash.includes('shared') ||
+          pathname.includes('login') ||
+          pathname.includes('register') ||
+          pathname.includes('join') ||
+          pathname.includes('forgot-password') ||
+          pathname.includes('shared');
 
-      if (!isPublic) {
-        window.location.href = '#/login';
+        if (!isPublic) {
+          window.location.href = '#/login';
+        }
       }
     }
     throw new ApiError('Session expired. Please log in again.', 401);
