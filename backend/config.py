@@ -1,8 +1,12 @@
 import os
 from dotenv import load_dotenv
 
-# Load env variables
-load_dotenv()
+# Load env variables from backend directory or current working directory
+_backend_env = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
+if os.path.exists(_backend_env):
+    load_dotenv(_backend_env)
+else:
+    load_dotenv()
 
 # App Settings
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
