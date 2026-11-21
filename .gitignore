@@ -48,16 +48,12 @@ service-account.json
 node_modules/
 .vite/
 *.tsbuildinfo
+dist/
 frontend/dist/
-frontend/public/
-
-# Logs & Debugging
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
 
 # Testing & Code Quality
+test-results/
+playwright-report/
 .pytest_cache/
 .coverage
 htmlcov/
@@ -79,6 +75,8 @@ captures/
 .cxx/
 *.apk
 !frontend/apk/*.apk
+!frontend/public/apk/*.apk
+!frontend-legacy/apk/*.apk
 *.ap_
 *.aab
 *.dex
