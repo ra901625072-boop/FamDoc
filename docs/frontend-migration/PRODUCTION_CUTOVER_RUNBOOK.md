@@ -1,6 +1,10 @@
-# FamDoc Frontend Modernization: Production Cutover Runbook
+# FamDoc Production Cutover Runbook
 
-This document defines the formal deployment, verification, and rollback procedures for cutting over the FamDoc frontend from the legacy vanilla HTML/JS implementation to the modern **React 19 + TypeScript + Vite 6 SPA** on **Cloudflare Pages**.
+This document defines the formal deployment, verification, and rollback procedures for the FamDoc multi-cloud production architecture:
+- **Frontend**: **Vercel** (Global Edge CDN running modern **React 19 + TypeScript + Vite 6 SPA**)
+- **Backend**: **Cloudflare** (Cloudflare Edge Worker / Containers running FastAPI on `https://api.famdoc.com`)
+- **Database**: **Supabase** (Managed PostgreSQL with PgBouncer connection pooling & Hyperdrive)
+- **Object Storage**: **Google Drive Multi-Account Pooling** + **Cloudflare R2** for media >50MB
 
 ---
 
@@ -8,16 +12,18 @@ This document defines the formal deployment, verification, and rollback procedur
 
 ```mermaid
 flowchart TD
-    User["Family User (Mobile / Desktop)"] -->|HTTPS (famdoc.com)| CFPages["Cloudflare Pages (Global Edge CDN)"]
-    CFPages -->|"SPA Fallback (/* /index.html 200)"| ReactApp["React 19 + Vite 6 Client"]
-    CFPages -->|"/apk/FamDoc.apk"| AndroidDownload["Android APK Distribution"]
-    ReactApp -->|"REST API (/api/*)"| CFWorker["Cloudflare Edge Worker / Containers (api.famdoc.com)"]
+    User["Family User (Mobile / Desktop)"] -->|HTTPS (famdoc.com)| VercelEdge["Vercel Global Edge Network"]
+    VercelEdge -->|"SPA Rewrite (/(.*) -> /index.html)"| ReactApp["React 19 + Vite 6 Client"]
+    VercelEdge -->|"/apk/FamDoc.apk"| AndroidDownload["Android APK Distribution"]
+    ReactApp -->|"REST API (api.famdoc.com)"| CFWorker["Cloudflare Edge Worker / Containers (FastAPI)"]
     CFWorker -->|"Encrypted Vault Chunks"| GoogleDrive["Multi-Account Google Drive Pool"]
     CFWorker -->|"Large Media Direct PUT (>50MB)"| CloudflareR2["Cloudflare R2 Storage"]
+    CFWorker -->|"PostgreSQL Pooler (Session / Transaction)"| Supabase[("Supabase PostgreSQL DB")]
 ```
 
-- **Target Hosting Platform**: Cloudflare Pages (`famdoc-frontend`)
-- **Backend API**: Cloudflare Containers / Hyperdrive (`https://api.famdoc.com`)
+- **Target Frontend Host**: Vercel (`famdoc.com` / `famdoc-frontend.vercel.app`)
+- **Target Backend Host**: Cloudflare Edge Containers / Hyperdrive (`https://api.famdoc.com`)
+- **Target Database Host**: Supabase PostgreSQL (`aws-0-[region].pooler.supabase.com:6543`)
 - **API Contracts**: Zero changes (`[VERIFIED]`: 43 endpoints called with exact legacy signatures)
 - **Legacy Fallback Directory**: `frontend-legacy/` preserved and committed in git
 
@@ -31,80 +37,72 @@ flowchart TD
 | **TypeScript Typecheck** | Zero errors with strict mode enabled | `tsc -b` exited 0 | **PASSED** |
 | **Vite Production Build** | Zero rollup warnings, clean sourcemap generation | `vite build` exited 0 | **PASSED** |
 | **Initial Gzip Bundle Budget** | Total Initial JS + CSS < 250 KB | **~151 KB** total gzip | **PASSED** |
-| **Cloudflare SPA Redirects** | `_redirects` file present with `/* /index.html 200` | Present in `dist/_redirects` | **PASSED** |
-| **Security Headers** | `_headers` file with X-Frame-Options, nosniff, cache rules | Present in `dist/_headers` | **PASSED** |
+| **Vercel SPA Rewrites** | `vercel.json` rewrite `/(.*) -> /index.html` configured | Present at root & `frontend/` | **PASSED** |
+| **Backend CORS Whitelist** | Whitelist `https://.*\.vercel\.app` and `https://.*\.famdoc\.com` | Configured in `backend/main.py` | **PASSED** |
+| **Supabase DB Connection** | Connection pooler URL configured in `DATABASE_URL` | Configured in `backend/config.py` | **PASSED** |
+| **Security Headers** | X-Frame-Options, nosniff, cache-control headers | Configured in `vercel.json` & `_headers` | **PASSED** |
 | **Android APK Direct Link** | `public/apk/FamDoc.apk` present for mobile download | Present (21.0 MB) | **PASSED** |
 
 ---
 
 ## 3. Step-by-Step Cutover Procedure
 
-### Step 3.1: Staging Preview Deployment
+### Step 3.1: Frontend Deployment on Vercel
 
-Run from repository root:
+#### Option A: GitHub Integration (Recommended)
+1. Push branch `feat/frontend-modernization` or merge into `main`.
+2. Connect repository in [Vercel Dashboard](https://vercel.com/new).
+3. Vercel auto-detects `vercel.json`:
+   - **Framework Preset**: Vite
+   - **Build Command**: `cd frontend && npm install && npm run build`
+   - **Output Directory**: `frontend/dist`
+4. Set Environment Variables in Vercel:
+   - `VITE_API_BASE_URL`: `https://api.famdoc.com`
+5. Deploy. Preview URL is generated automatically (e.g. `famdoc-frontend-*.vercel.app`).
 
+#### Option B: Vercel CLI
 ```powershell
-# 1. Build the production bundle
-cd frontend
-npm ci
-npm run build
-cd ..
-
-# 2. Deploy preview/staging to Cloudflare Pages
-npx wrangler pages deploy frontend/dist --project-name=famdoc-frontend --branch=staging
+# From repository root
+npx vercel
+# Follow prompts to link project, then deploy to production:
+npx vercel --prod
 ```
 
-Verify output URL (e.g., `https://staging.famdoc-frontend.pages.dev`).
+### Step 3.2: Custom Domain Mapping on Vercel
+1. In Vercel Project -> **Settings** -> **Domains**.
+2. Add `famdoc.com` (and `www.famdoc.com`).
+3. Set DNS records (A record to `76.76.21.21` or CNAME `cname.vercel-dns.com`).
+4. Vercel automatically provisions SSL/TLS certificate.
 
-### Step 3.2: Staging Smoke Verification
-
-Perform the following manual smoke tests on the staging URL:
-1. **Public Showcase**: Open homepage; toggle between category tabs (Deeds, Health, Finance, Memories); verify demo modal opens and closes.
-2. **Authentication**: Navigate to `/#/login`; verify password toggle works; enter test credentials.
-3. **Forgot Password**: Click "Forgot password?"; verify 3-stage OTP wizard transitions.
-4. **Vault Explorer**: Log in; navigate to `/#/vault`; create test folder; drag-and-drop file to test upload manager.
-5. **Dark Mode**: Click theme toggle; verify seamless transition to AMOLED pitch black theme.
-6. **Mobile Responsive**: Open Chrome DevTools in iPhone/Android emulation mode; verify floating bottom nav and mobile top appbar.
-
----
-
-### Step 3.3: Production Deployment
-
-When staging smoke test passes and explicit sign-off is granted:
-
+### Step 3.3: Backend Deployment on Cloudflare
 ```powershell
-# Deploy directly to production environment
-npx wrangler pages deploy frontend/dist --project-name=famdoc-frontend --branch=main
+# Deploy Cloudflare Edge backend
+npx wrangler deploy --env production
 ```
 
-### Step 3.4: Custom Domain & DNS Mapping
-
-1. In the **Cloudflare Dashboard**, navigate to **Workers & Pages** -> **famdoc-frontend** -> **Custom domains**.
-2. Click **Set up a custom domain**.
-3. Enter `famdoc.com` (and `www.famdoc.com`).
-4. Cloudflare automatically configures the CNAME DNS records and issues the universal SSL/TLS certificate.
-5. In **SSL/TLS -> Edge Certificates**, verify **Always Use HTTPS** is enabled.
+### Step 3.4: Supabase Database Migrations
+Verify database schema and run any pending migrations:
+```powershell
+cd backend
+python -c "from database import run_migrations; run_migrations()"
+```
 
 ---
 
 ## 4. Rollback Plan
 
-### Level 1: Instant Cloudflare Pages Rollback (< 10 seconds)
-If any critical regression occurs post-deployment:
-1. In Cloudflare Dashboard -> **Workers & Pages** -> **famdoc-frontend** -> **Deployments**.
-2. Locate the previous working deployment.
-3. Click the three dots (`...`) -> **Rollback to this deployment**.
-4. Traffic instantly shifts back to the previous deployment globally with 0 cache delay.
+### Level 1: Instant Vercel Instant Rollback (< 5 seconds)
+1. In Vercel Project -> **Deployments**.
+2. Select previous deployment -> Click three dots (`...`) -> **Promote to Production** (or **Instant Rollback**).
+3. Traffic instantly shifts back globally.
 
 ### Level 2: Git Rollback to Legacy Frontend
-The legacy frontend is safely preserved in `frontend-legacy/`.
-To restore the legacy frontend in git:
+The legacy vanilla frontend is tracked in `frontend-legacy/`.
 ```powershell
-# Restore legacy frontend into frontend/
 Remove-Item -Recurse -Force frontend/*
 Copy-Item -Recurse frontend-legacy/* frontend/
 git add frontend/
-git commit -m "rollback: revert to legacy frontend"
+git commit -m "rollback: revert to legacy vanilla frontend"
 git push origin feat/frontend-modernization
 ```
 
