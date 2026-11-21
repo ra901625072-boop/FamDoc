@@ -1,27 +1,18 @@
 import { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import {
-  LayoutDashboard,
-  FolderLock,
-  Users,
-  Cloud,
-  Trash2,
-  Shield,
-  LogOut,
-  Menu,
-  X,
-  Smartphone,
-} from 'lucide-react';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useCurrentUser } from '../../api/hooks';
-import { ThemeToggle } from '../common/ThemeToggle';
+import { useThemeStore } from '../../stores/useThemeStore';
+import { SegmentedThemeSelector } from '../common/SegmentedThemeSelector';
 import { ConnectionPill } from '../common/ConnectionPill';
 import { UploadCard } from '../common/UploadCard';
 
 export function AppLayout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const { logout } = useAuthStore();
   const { data: user } = useCurrentUser();
+  const { theme, toggleTheme } = useThemeStore();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -30,196 +21,222 @@ export function AppLayout() {
   };
 
   const navItems = [
-    { label: 'Dashboard', to: '/dashboard', icon: LayoutDashboard },
-    { label: 'Shared Vault', to: '/vault', icon: FolderLock },
-    { label: 'Family Group', to: '/family', icon: Users },
-    { label: 'Cloud Storage', to: '/storage', icon: Cloud, id: 'sidebar-storage-link' },
-    { label: 'Recycle Bin', to: '/trash', icon: Trash2 },
-    { label: 'Profile & Security', to: '/profile', icon: Shield },
+    { label: 'Dashboard', to: '/dashboard', iconClass: 'fas fa-th-large' },
+    { label: 'Shared Vault', to: '/vault', iconClass: 'fas fa-folder' },
+    { label: 'Family Group', to: '/family', iconClass: 'fas fa-users' },
+    { label: 'Cloud Storage & Quotas', to: '/storage', iconClass: 'fas fa-cloud', id: 'sidebar-storage-link' },
+    { label: 'Recycle Bin', to: '/trash', iconClass: 'fas fa-trash-alt' },
+    { label: 'Profile & Security', to: '/profile', iconClass: 'fas fa-user-shield' },
   ];
 
   const userInitials = user?.username ? user.username.substring(0, 2).toUpperCase() : 'FD';
   const roleTitle = user?.role === 'admin' ? 'Vault Administrator' : 'Family Member';
 
   return (
-    <div className="layout-wrapper min-h-screen flex flex-col md:flex-row bg-[var(--bg-linen)] text-[var(--text-ink)]">
-      {/* Mobile Top App Bar */}
-      <header className="mobile-header md:hidden flex items-center justify-between px-4 py-3 bg-[var(--appbar-bg)] text-white sticky top-0 z-40 shadow-md">
-        <div className="flex items-center gap-3">
+    <div className={`layout-wrapper ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+      {/* Floating Desktop Menu Toggle (re-opens sidebar when collapsed on desktop) */}
+      {sidebarCollapsed && (
+        <button
+          className="desktop-menu-toggle"
+          id="desktopMenuToggle"
+          type="button"
+          onClick={() => setSidebarCollapsed(false)}
+          title="Open navigation menu"
+          aria-label="Open navigation menu"
+        >
+          <i className="fas fa-bars" aria-hidden="true" />
+          <span>Menu</span>
+        </button>
+      )}
+
+      {/* Mobile Top Header (Matches Android App & Old Web UI) */}
+      <header className="mobile-header">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
           <button
             type="button"
+            className="hamburger"
             id="hamburgerToggle"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="hamburger p-1 rounded-lg hover:bg-white/10 text-white"
             aria-label="Toggle navigation menu"
           >
-            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            <i className={mobileMenuOpen ? 'fas fa-times' : 'fas fa-bars'} aria-hidden="true" />
           </button>
-          <NavLink to="/dashboard" className="flex items-center gap-2 text-white no-underline">
-            <img src="/img/logo.svg" alt="FamDoc Logo" className="h-7 w-7" />
-            <div className="flex flex-col">
-              <span className="font-extrabold text-lg leading-tight tracking-tight">
-                Fam<span className="text-emerald-300">Doc</span>
+          <NavLink
+            to="/dashboard"
+            className="mobile-brand-title"
+            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none' }}
+          >
+            <img src="/img/logo.svg" alt="FamDoc Logo" className="famdoc-logo-img" style={{ height: '28px', width: '28px' }} />
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <span className="brand-text" style={{ color: '#FFFFFF', fontSize: '1.15rem', lineHeight: 1.1, fontWeight: 800 }}>
+                Fam<span style={{ color: '#6EE7B7' }}>Doc</span>
               </span>
-              <span className="text-[10px] text-white/80 leading-none">Keepsake Vault</span>
+              <span style={{ fontSize: '0.68rem', color: 'rgba(255, 255, 255, 0.8)', fontWeight: 400 }}>
+                Keepsake Vault
+              </span>
             </div>
           </NavLink>
         </div>
-        <div className="flex items-center gap-2">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <ConnectionPill />
-          <ThemeToggle />
+          <button
+            type="button"
+            className="theme-toggle-btn"
+            id="mobileThemeToggle"
+            onClick={toggleTheme}
+            aria-label="Toggle theme"
+          >
+            <i className={theme === 'dark' ? 'fas fa-sun' : 'fas fa-moon'} aria-hidden="true" />
+          </button>
         </div>
       </header>
 
-      {/* Sidebar Overlay (Mobile) */}
+      {/* Sidebar Drawer Backdrop (Mobile) */}
       {mobileMenuOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-40 md:hidden backdrop-blur-xs"
+          className="drawer-backdrop show"
+          id="drawerBackdrop"
           onClick={() => setMobileMenuOpen(false)}
         />
       )}
 
-      {/* Sidebar Navigation Drawer */}
+      {/* Sidebar Drawer (Matches FamDocDrawer.kt & Old Web UI exactly) */}
       <nav
         id="sidebarMenu"
-        className={`sidebar fixed inset-y-0 left-0 z-50 w-72 bg-[var(--surface-card)] border-r border-[var(--border-paper)] flex flex-col transition-transform duration-300 ease-in-out md:sticky md:top-0 md:h-screen md:shrink-0 md:translate-x-0 md:z-30 ${
-          mobileMenuOpen ? 'translate-x-0 open' : '-translate-x-full'
-        }`}
+        className={`sidebar fd-fade-in ${mobileMenuOpen ? 'open translate-x-0' : ''}`}
       >
-        {/* Drawer Header Banner */}
-        <div className="p-4 bg-[var(--drawer-header-bg)] text-white border-b border-white/10">
-          <div className="flex items-center justify-between mb-3">
-            <NavLink to="/dashboard" className="flex items-center gap-2 text-white no-underline">
-              <img src="/img/logo.svg" alt="FamDoc" className="h-6 w-6" />
-              <span className="font-bold text-base tracking-tight">
-                Fam<span className="text-emerald-300">Doc</span>
-              </span>
-            </NavLink>
-            <button
-              type="button"
-              onClick={() => setMobileMenuOpen(false)}
-              className="md:hidden text-white/80 hover:text-white p-1"
-              aria-label="Close menu"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-
+        {/* Drawer Header Banner with Ambient Gradient & Pulsing Avatar */}
+        <div className="drawer-header-banner">
           <div
+            className="drawer-profile-info"
             id="sidebar-profile-badge"
+            role="button"
+            tabIndex={0}
+            title="View Profile"
             onClick={() => {
               navigate('/profile');
               setMobileMenuOpen(false);
             }}
-            className="flex items-center gap-3 cursor-pointer p-2.5 rounded-xl bg-white/10 hover:bg-white/15 transition-colors"
           >
-            <div className="w-10 h-10 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-sm shadow-inner ring-2 ring-emerald-300/40 shrink-0">
-              {userInitials}
+            <div className="drawer-avatar-wrapper">
+              <div className="user-avatar drawer-avatar pulsing-aura">
+                {userInitials}
+              </div>
             </div>
-            <div className="flex-1 min-w-0">
-              <div className="font-semibold text-sm truncate text-white">{user?.username || 'User'}</div>
-              <div className="text-[11px] text-emerald-200 truncate">{roleTitle}</div>
+            <div className="drawer-user-meta">
+              <div className="drawer-user-name">{user?.username || 'FamDoc User'}</div>
+              <div className="drawer-role-badge">{roleTitle}</div>
+              <div className="drawer-user-email">{user?.email || ''}</div>
             </div>
           </div>
+          <button
+            className="sidebar-toggle-btn"
+            id="sidebarCollapseBtn"
+            type="button"
+            aria-label="Close or collapse menu"
+            title="Close or collapse menu"
+            onClick={() => {
+              if (window.innerWidth <= 768) {
+                setMobileMenuOpen(false);
+              } else {
+                setSidebarCollapsed(true);
+              }
+            }}
+          >
+            <i className="fas fa-chevron-left desktop-only" aria-hidden="true" />
+            <i className="fas fa-times mobile-only" aria-hidden="true" />
+          </button>
         </div>
 
         {/* Navigation Items List */}
-        <nav className="sidebar-nav flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                id={item.id}
-                data-route={item.to}
-                onClick={() => setMobileMenuOpen(false)}
-                className={({ isActive }) =>
-                  `nav-item flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                    isActive
-                      ? 'active bg-[var(--color-primary)] text-white shadow-sm font-bold'
-                      : 'text-[var(--text-ink)] hover:bg-[var(--surface-paper-hover)] text-[var(--text-ink-muted)] hover:text-[var(--text-ink)]'
-                  }`
-                }
-              >
-                <Icon className="w-5 h-5" />
-                <span>{item.label}</span>
-              </NavLink>
-            );
-          })}
-        </nav>
+        <div className="sidebar-nav">
+          {navItems.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              id={item.id}
+              data-route={item.to}
+              onClick={() => setMobileMenuOpen(false)}
+              className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+            >
+              <i className={item.iconClass} aria-hidden="true" />
+              <span>{item.label}</span>
+            </NavLink>
+          ))}
+        </div>
 
-        {/* Sidebar Footer */}
-        <div className="sidebar-footer p-3 border-t border-[var(--border-paper)] space-y-2 bg-[var(--surface-paper-tint)]/40">
-          <div className="flex items-center justify-between px-2">
-            <span className="text-xs font-semibold text-[var(--text-ink-muted)]">APPEARANCE</span>
-            <ThemeToggle />
+        {/* Sidebar Footer with Appearance Segmented Control & Sign Out */}
+        <div className="sidebar-footer">
+          <div className="drawer-section-label">APPEARANCE</div>
+          <div className="theme-selector-container">
+            <SegmentedThemeSelector idPrefix="sidebar" />
           </div>
 
-          <a
-            href="/apk/FamDoc.apk"
-            download
-            className="btn-apk-download flex items-center justify-center gap-2 w-full py-2 px-3 rounded-xl text-xs font-medium bg-[var(--surface-card)] hover:bg-[var(--surface-paper-hover)] border border-[var(--border-paper)] text-[var(--text-ink)] transition-colors no-underline shadow-xs"
-          >
-            <Smartphone className="w-4 h-4 text-emerald-600" />
+          <a href="/apk/FamDoc.apk" download className="btn-apk-download" title="Download Android APK">
+            <i className="fab fa-android" aria-hidden="true" />
             <span>Get Android App</span>
           </a>
 
+          <div className="sidebar-footer-divider" />
+
           <button
+            id="logoutBtn"
             type="button"
-            id="btn-sidebar-logout"
+            className="btn btn-logout"
+            style={{ width: '100%', justifyContent: 'center', gap: '0.6rem' }}
             onClick={handleLogout}
-            className="flex items-center justify-center gap-2 w-full py-2 px-3 rounded-xl text-xs font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
           >
-            <LogOut className="w-4 h-4" />
+            <i className="fas fa-sign-out-alt" aria-hidden="true" />
             <span>Sign Out</span>
           </button>
         </div>
       </nav>
 
+      {/* Mobile Floating Bottom Nav (Matches FamDocBottomNav.kt & Old Web UI) */}
+      <nav className="bottom-nav" id="bottomNav">
+        <NavLink to="/dashboard" className={({ isActive }) => `nav-btn ${isActive ? 'active' : ''}`}>
+          <i className="fas fa-th-large" aria-hidden="true" />
+          <span>Dashboard</span>
+        </NavLink>
+        <NavLink to="/vault" className={({ isActive }) => `nav-btn ${isActive ? 'active' : ''}`}>
+          <i className="fas fa-folder" aria-hidden="true" />
+          <span>Vault</span>
+        </NavLink>
+        <NavLink to="/family" className={({ isActive }) => `nav-btn ${isActive ? 'active' : ''}`}>
+          <i className="fas fa-users" aria-hidden="true" />
+          <span>Family</span>
+        </NavLink>
+        <NavLink to="/trash" className={({ isActive }) => `nav-btn ${isActive ? 'active' : ''}`}>
+          <i className="fas fa-trash-alt" aria-hidden="true" />
+          <span>Trash</span>
+        </NavLink>
+        <NavLink to="/profile" className={({ isActive }) => `nav-btn ${isActive ? 'active' : ''}`}>
+          <i className="fas fa-user" aria-hidden="true" />
+          <span>Profile</span>
+        </NavLink>
+      </nav>
+
       {/* Main Content Area */}
-      <main className="main-content flex-1 flex flex-col min-w-0 pb-20 md:pb-6">
-        <div className="hidden md:flex items-center justify-between px-8 py-3.5 border-b border-[var(--border-paper)] bg-[var(--surface-card)]/80 backdrop-blur-md sticky top-0 z-20">
-          <div className="flex items-center gap-3">
-            <h1 className="text-base font-bold text-[var(--text-ink)] tracking-tight">FamDoc Cloud Vault</h1>
+      <main className="main-content" id="mainContent">
+        {/* Desktop Top Status Bar */}
+        <div className="hidden md:flex items-center justify-between pb-4 mb-4 border-b border-[var(--border-paper)]">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-[var(--text-ink-muted)] uppercase tracking-wider">
+              Cloud Vault
+            </span>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <ConnectionPill />
-            <ThemeToggle />
           </div>
         </div>
 
-        <div className="flex-1 p-4 md:p-8 max-w-7xl w-full mx-auto">
+        <div id="view-mount-point" className="flex-1 w-full max-w-7xl mx-auto">
           <Outlet />
         </div>
       </main>
 
       {/* Floating Upload Queue Status Card */}
       <UploadCard />
-
-      {/* Mobile Floating Bottom Nav */}
-      <nav className="md:hidden fixed bottom-3 left-4 right-4 z-40 bg-[var(--surface-card)]/90 backdrop-blur-md border border-[var(--border-paper)] rounded-2xl shadow-xl flex items-center justify-around py-2 px-1">
-        {navItems.slice(0, 5).map((item) => {
-          const Icon = item.icon;
-          return (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              data-route={item.to}
-              className={({ isActive }) =>
-                `flex flex-col items-center gap-0.5 p-1.5 rounded-xl text-[10px] font-medium transition-colors ${
-                  isActive
-                    ? 'text-[var(--color-primary)] font-bold'
-                    : 'text-[var(--text-ink-muted)] hover:text-[var(--text-ink)]'
-                }`
-              }
-            >
-              <Icon className="w-5 h-5" />
-              <span>{item.label.split(' ')[0]}</span>
-            </NavLink>
-          );
-        })}
-      </nav>
     </div>
   );
 }

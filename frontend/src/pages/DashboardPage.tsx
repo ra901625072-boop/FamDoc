@@ -1,15 +1,21 @@
-import { Link } from 'react-router-dom';
-import { useDashboardStats, useFamilyDetails } from '../api/hooks';
+import { useRef, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useDashboardStats, useCurrentUser } from '../api/hooks';
 import { api } from '../api/client';
+import { uploadService } from '../services/uploadManager';
 
 export function DashboardPage() {
-  const { data: stats, isLoading: statsLoading } = useDashboardStats();
-  const { data: family } = useFamilyDetails();
+  const { data: stats, isLoading: statsLoading, refetch } = useDashboardStats();
+  const { data: user } = useCurrentUser();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   const totalFiles = stats?.total_files ?? 0;
   const totalFolders = stats?.total_folders ?? 0;
-  const totalSize = stats?.total_storage_bytes ?? 0;
-  const memberCount = family?.member_count ?? 1;
+  const totalSize = stats?.total_size_bytes ?? stats?.total_storage_bytes ?? 0;
+  const memberCount = stats?.total_members ?? 1;
 
   const categories = stats?.category_breakdown || {
     video: 0,
@@ -21,70 +27,107 @@ export function DashboardPage() {
     other: 0,
   };
 
+  const recentUploads = stats?.recent_uploads || stats?.recent_files || [];
+  const recentActivity = stats?.recent_activity || [];
+
+  // Compute friendly time-of-day greeting matching old UI
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 18) return 'Good afternoon';
+    return 'Good evening';
+  };
+
+  const handleQuickUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    setToastMessage(`Adding ${file.name} to upload queue...`);
+    try {
+      await uploadService.addFiles([file]);
+      setToastMessage(`Upload queued: ${file.name}`);
+      setTimeout(() => setToastMessage(null), 3500);
+      refetch();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Upload failed';
+      setToastMessage(`Failed to queue upload: ${msg}`);
+      setTimeout(() => setToastMessage(null), 4000);
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const getActivityIcon = (action = '') => {
+    const a = action.toLowerCase();
+    if (a.includes('upload') || a.includes('file')) return 'fas fa-cloud-upload-alt';
+    if (a.includes('folder')) return 'fas fa-folder-plus';
+    if (a.includes('member') || a.includes('invite')) return 'fas fa-user-plus';
+    if (a.includes('login') || a.includes('auth')) return 'fas fa-sign-in-alt';
+    if (a.includes('delete') || a.includes('trash')) return 'fas fa-trash-alt';
+    return 'fas fa-history';
+  };
+
   return (
     <div className="dashboard-page-container">
-      {/* Header Banner */}
-      <div
-        className="dashboard-header-banner"
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          padding: '1.5rem 1.75rem',
-          borderRadius: 'var(--radius-xl, 20px)',
-          background: 'var(--appbar-bg)',
-          color: '#FFFFFF',
-          marginBottom: '1.75rem',
-          boxShadow: 'var(--shadow-md)',
-        }}
-      >
-        <div>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0, color: '#FFFFFF' }}>
-            {family?.name ? `${family.name}'s Keepsake Vault` : 'Family Keepsake Vault'}
-          </h1>
-          <p style={{ margin: '0.35rem 0 0', fontSize: '0.88rem', opacity: 0.9 }}>
-            Multi-Account Pooled Storage &bull; End-to-End Encrypted &bull; Failover Protected
-          </p>
-        </div>
-        <Link
-          to="/vault"
-          className="btn btn-secondary btn-compact"
-          style={{
-            background: 'rgba(255, 255, 255, 0.2)',
-            color: '#FFFFFF',
-            borderColor: 'rgba(255, 255, 255, 0.4)',
-            backdropFilter: 'blur(8px)',
-          }}
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div
+          className="fixed top-6 right-6 z-50 px-4 py-3 rounded-2xl bg-[var(--surface-card)] border border-[var(--color-primary)] text-sm font-semibold shadow-xl flex items-center gap-2.5 transition-all"
+          style={{ animation: 'fadeInDown 0.3s ease' }}
         >
-          <i className="fas fa-folder-open" aria-hidden="true" />
-          <span>Open Vault</span>
-        </Link>
+          <i className="fas fa-check-circle text-emerald-500" aria-hidden="true" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
+      {/* Content Header (Matches Old UI) */}
+      <div className="content-header fd-fade-in">
+        <div>
+          <h1 className="page-title" id="welcome-message">
+            {getGreeting()}, {user?.username || 'FamDoc User'} 👋
+          </h1>
+          <p className="page-subtitle">Here is the latest from your family vault.</p>
+        </div>
       </div>
 
       {/* Quick Actions Toolbar */}
-      <div className="quick-actions-bar">
-        <Link to="/vault?action=upload" id="btn-quick-upload" className="quick-action-btn primary">
-          <i className="fas fa-cloud-upload-alt" aria-hidden="true" />
-          <span>Upload Document</span>
-        </Link>
-        <Link to="/vault?action=new-folder" id="btn-quick-folder" className="quick-action-btn">
+      <div className="quick-actions-bar fd-fade-in">
+        <input
+          type="file"
+          ref={fileInputRef}
+          style={{ display: 'none' }}
+          onChange={handleQuickUpload}
+        />
+        <button
+          type="button"
+          className="quick-action-btn primary"
+          id="btn-quick-upload"
+          disabled={isUploading}
+          onClick={() => fileInputRef.current?.click()}
+        >
+          <i className={isUploading ? 'fas fa-spinner fa-spin' : 'fas fa-cloud-upload-alt'} aria-hidden="true" />
+          <span>{isUploading ? 'Uploading...' : 'Upload File'}</span>
+        </button>
+        <Link to="/vault?action=new-folder" className="quick-action-btn" id="btn-quick-folder">
           <i className="fas fa-folder-plus" aria-hidden="true" />
           <span>New Folder</span>
         </Link>
-        <Link to="/profile?invite=true" id="btn-quick-invite" className="quick-action-btn">
-          <i className="fas fa-user-plus" aria-hidden="true" />
+        <Link to="/profile?invite=true" className="quick-action-btn" id="btn-quick-invite">
+          <i className="fas fa-ticket-alt" aria-hidden="true" />
           <span>Invite Member</span>
         </Link>
-        <Link to="/storage" id="btn-quick-storage" className="quick-action-btn">
+        <Link to="/storage" className="quick-action-btn" id="btn-quick-storage">
           <i className="fas fa-hdd" aria-hidden="true" />
-          <span>Storage Pool</span>
+          <span>Cloud Storage Pool</span>
         </Link>
       </div>
 
-      {/* Dashboard Statistics Grid (4 Cards) */}
+      {/* Dashboard Statistics Grid (4 Cards with Colored Glow Borders & Pastel Badges) */}
       <div className="dashboard-grid">
-        <Link to="/vault" id="card-stat-files" className="stat-card" style={{ textDecoration: 'none' }}>
-          <div className="stat-icon">
+        <Link to="/vault" id="card-stat-files" className="stat-card fd-fade-up fd-stagger" style={{ textDecoration: 'none' }}>
+          <div className="icon-chip stat-icon">
             <i className="fas fa-file-alt" aria-hidden="true" />
           </div>
           <span className="stat-label">Total Files</span>
@@ -93,18 +136,18 @@ export function DashboardPage() {
           </div>
         </Link>
 
-        <Link to="/vault" id="card-stat-folders" className="stat-card" style={{ textDecoration: 'none' }}>
-          <div className="stat-icon">
+        <Link to="/vault" id="card-stat-folders" className="stat-card fd-fade-up fd-stagger" style={{ textDecoration: 'none' }}>
+          <div className="icon-chip stat-icon">
             <i className="fas fa-folder" aria-hidden="true" />
           </div>
-          <span className="stat-label">Total Folders</span>
+          <span className="stat-label">Folders</span>
           <div id="stat-folders" className="stat-val">
             {statsLoading ? '...' : totalFolders}
           </div>
         </Link>
 
-        <Link to="/storage" id="card-stat-size" className="stat-card" style={{ textDecoration: 'none' }}>
-          <div className="stat-icon">
+        <Link to="/storage" id="card-stat-size" className="stat-card fd-fade-up fd-stagger" style={{ textDecoration: 'none' }}>
+          <div className="icon-chip stat-icon">
             <i className="fas fa-database" aria-hidden="true" />
           </div>
           <span className="stat-label">Space Occupied</span>
@@ -115,15 +158,15 @@ export function DashboardPage() {
             <div
               className="progress-bar-fill"
               style={{
-                width: `${Math.min(100, Math.max(5, (totalSize / (15 * 1024 * 1024 * 1024)) * 100))}%`,
+                width: `${Math.min(100, Math.max(4, (totalSize / (15 * 1024 * 1024 * 1024)) * 100))}%`,
                 background: 'var(--color-primary)',
               }}
             />
           </div>
         </Link>
 
-        <Link to="/family" id="card-stat-members" className="stat-card" style={{ textDecoration: 'none' }}>
-          <div className="stat-icon">
+        <Link to="/family" id="card-stat-members" className="stat-card fd-fade-up fd-stagger" style={{ textDecoration: 'none' }}>
+          <div className="icon-chip stat-icon">
             <i className="fas fa-users" aria-hidden="true" />
           </div>
           <span className="stat-label">Family Members</span>
@@ -134,28 +177,25 @@ export function DashboardPage() {
       </div>
 
       {/* Storage Category Distribution Breakdown Card */}
-      <div id="dashboard-storage-card" className="storage-breakdown-card">
-        <div className="breakdown-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-            <i className="fas fa-chart-pie" style={{ color: 'var(--color-primary)', fontSize: '1.2rem' }} aria-hidden="true" />
-            <h2 className="breakdown-title" style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0 }}>
-              Storage Category Distribution
-            </h2>
+      <div id="dashboard-storage-card" className="storage-breakdown-card fd-fade-up">
+        <div className="breakdown-header">
+          <h2 className="breakdown-title">
+            <i className="fas fa-chart-pie" style={{ color: 'var(--accent-brand)' }} aria-hidden="true" />
+            <span>Storage Category Distribution</span>
+          </h2>
+          <div id="breakdown-pooled-info" className="breakdown-subtitle">
+            Pooled Cloud Storage
           </div>
-          <span id="breakdown-pooled-info" className="breakdown-subtitle" style={{ fontSize: '0.8rem', color: 'var(--text-ink-muted)' }}>
-            Pooled Google Drive Accounts
-          </span>
         </div>
 
         {/* Multi-Segmented Progress Bar */}
-        <div id="category-progress-container" className="breakdown-progress-container" style={{ width: '100%', height: '10px', backgroundColor: 'var(--surface-paper-tint)', borderRadius: '9999px', overflow: 'hidden', display: 'flex', marginBottom: '1.25rem' }}>
+        <div id="category-progress-container" className="breakdown-progress-container">
           <div
             id="category-progress-bar"
+            className="progress-bar-fill"
             style={{
               width: `${Math.min(100, Math.max(8, totalFiles > 0 ? 100 : 0))}%`,
               background: 'var(--accent-gradient)',
-              borderRadius: '9999px',
-              transition: 'width 0.5s ease',
             }}
           />
         </div>
@@ -163,35 +203,162 @@ export function DashboardPage() {
         {/* Category Legend Chips Grid */}
         <div id="breakdown-legend-grid" className="breakdown-legend-grid">
           <div className="breakdown-legend-chip">
-            <span className="chip-dot" style={{ backgroundColor: 'var(--cat-video, #EC4899)' }} />
+            <div className="chip-color-dot dot-video" />
             <div className="chip-info">
-              <div className="chip-label">Videos</div>
-              <div id="meta-cat-video" className="chip-meta">{categories.video} items</div>
+              <span className="chip-label">Videos</span>
+              <span id="meta-cat-video" className="chip-meta">{categories.video} items</span>
             </div>
           </div>
 
           <div className="breakdown-legend-chip">
-            <span className="chip-dot" style={{ backgroundColor: 'var(--cat-images, #3B82F6)' }} />
+            <div className="chip-color-dot dot-image" />
             <div className="chip-info">
-              <div className="chip-label">Photos &amp; Images</div>
-              <div id="meta-cat-image" className="chip-meta">{categories.images} items</div>
+              <span className="chip-label">Images</span>
+              <span id="meta-cat-image" className="chip-meta">{categories.images} items</span>
             </div>
           </div>
 
           <div className="breakdown-legend-chip">
-            <span className="chip-dot" style={{ backgroundColor: 'var(--cat-pdfs, #EF4444)' }} />
+            <div className="chip-color-dot dot-pdf" />
             <div className="chip-info">
-              <div className="chip-label">PDF Documents</div>
-              <div id="meta-cat-pdf" className="chip-meta">{categories.pdfs} items</div>
+              <span className="chip-label">PDFs</span>
+              <span id="meta-cat-pdf" className="chip-meta">{categories.pdfs} items</span>
             </div>
           </div>
 
           <div className="breakdown-legend-chip">
-            <span className="chip-dot" style={{ backgroundColor: 'var(--cat-docs, #8B5CF6)' }} />
+            <div className="chip-color-dot dot-document" />
             <div className="chip-info">
-              <div className="chip-label">Office &amp; Word</div>
-              <div id="meta-cat-doc" className="chip-meta">{categories.docs} items</div>
+              <span className="chip-label">Docs</span>
+              <span id="meta-cat-doc" className="chip-meta">{categories.docs} items</span>
             </div>
+          </div>
+
+          <div className="breakdown-legend-chip">
+            <div className="chip-color-dot dot-sheet" />
+            <div className="chip-info">
+              <span className="chip-label">Sheets</span>
+              <span id="meta-cat-sheet" className="chip-meta">{categories.sheets} items</span>
+            </div>
+          </div>
+
+          <div className="breakdown-legend-chip">
+            <div className="chip-color-dot dot-text" />
+            <div className="chip-info">
+              <span className="chip-label">Text</span>
+              <span id="meta-cat-text" className="chip-meta">{categories.text} items</span>
+            </div>
+          </div>
+
+          <div className="breakdown-legend-chip">
+            <div className="chip-color-dot dot-other" />
+            <div className="chip-info">
+              <span className="chip-label">Other</span>
+              <span id="meta-cat-other" className="chip-meta">{categories.other} items</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Double Sections: Recent Vault Uploads & Activity Feed (Matches Old UI) */}
+      <div className="dashboard-sections fd-fade-up">
+        {/* Recent Uploads Card */}
+        <div className="famdoc-card">
+          <div className="famdoc-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h2 className="famdoc-card-title">
+              <i className="fas fa-clock" style={{ color: 'var(--accent-brand)', marginRight: '0.5rem' }} aria-hidden="true" />
+              Recent Vault Uploads
+            </h2>
+            <Link to="/vault" style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--accent-brand)', textDecoration: 'none' }}>
+              Browse All <i className="fas fa-chevron-right" style={{ fontSize: '0.75rem' }} aria-hidden="true" />
+            </Link>
+          </div>
+
+          <div id="recent-uploads-list" className="items-list scrollable-dashboard-list">
+            {recentUploads.length === 0 ? (
+              <div style={{ padding: '2.5rem 1rem', textAlign: 'center', color: 'var(--text-ink-muted)' }}>
+                <i className="fas fa-cloud-upload-alt" style={{ fontSize: '2.2rem', opacity: 0.4, marginBottom: '0.75rem', display: 'block' }} aria-hidden="true" />
+                <p style={{ fontSize: '0.88rem', margin: 0 }}>No recent uploads found.</p>
+                <p style={{ fontSize: '0.78rem', margin: '0.35rem 0 0', opacity: 0.8 }}>Click &quot;Upload File&quot; above to store keepsakes!</p>
+              </div>
+            ) : (
+              recentUploads.slice(0, 5).map((file) => (
+                <div
+                  key={file.id}
+                  className="vault-item"
+                  style={{
+                    padding: '0.75rem 1rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.85rem',
+                    borderBottom: '1px solid var(--border-paper)',
+                    cursor: 'pointer',
+                  }}
+                  onClick={() => navigate(`/vault?preview=${file.id}`)}
+                >
+                  <i className={`item-icon ${api.helpers.getFileIconClass(file.filename, file.file_type)}`} style={{ fontSize: '1.4rem' }} aria-hidden="true" />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 600, fontSize: '0.88rem', color: 'var(--text-ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {file.filename}
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-ink-muted)', marginTop: '0.15rem' }}>
+                      {api.helpers.formatBytes(file.file_size ?? file.size_bytes ?? 0)} &bull; {api.helpers.getRelativeTime(file.created_at ?? file.upload_date)}
+                    </div>
+                  </div>
+                  <i className="fas fa-chevron-right" style={{ fontSize: '0.75rem', color: 'var(--text-ink-muted)' }} aria-hidden="true" />
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Vault Activity Card */}
+        <div className="famdoc-card">
+          <div className="famdoc-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h2 className="famdoc-card-title">
+              <i className="fas fa-history" style={{ color: 'var(--accent-brand)', marginRight: '0.5rem' }} aria-hidden="true" />
+              Vault Activity
+            </h2>
+            <span
+              className="badge badge-primary"
+              style={{
+                fontSize: '0.72rem',
+                padding: '0.2rem 0.6rem',
+                fontWeight: 600,
+                display: 'inline-flex',
+                alignItems: 'center',
+              }}
+            >
+              <i className="fas fa-circle" style={{ fontSize: '0.45rem', marginRight: '0.35rem', color: 'var(--color-primary-light)' }} aria-hidden="true" />
+              Live Stream
+            </span>
+          </div>
+
+          <div id="activity-feed-list" className="activity-feed scrollable-dashboard-list" style={{ padding: '0.5rem 0' }}>
+            {recentActivity.length === 0 ? (
+              <div style={{ padding: '2.5rem 1rem', textAlign: 'center', color: 'var(--text-ink-muted)' }}>
+                <i className="fas fa-shield-alt" style={{ fontSize: '2.2rem', opacity: 0.4, marginBottom: '0.75rem', display: 'block' }} aria-hidden="true" />
+                <p style={{ fontSize: '0.88rem', margin: 0 }}>Vault is secure and operational.</p>
+                <p style={{ fontSize: '0.78rem', margin: '0.35rem 0 0', opacity: 0.8 }}>File uploads, folder creations, and shares appear here in real time.</p>
+              </div>
+            ) : (
+              recentActivity.slice(0, 6).map((act) => (
+                <div key={act.id} className="activity-item">
+                  <div className="activity-icon">
+                    <i className={getActivityIcon(act.action)} aria-hidden="true" />
+                  </div>
+                  <div className="activity-details">
+                    <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-ink)' }}>
+                      {act.action}
+                    </div>
+                    <div style={{ fontSize: '0.74rem', color: 'var(--text-ink-muted)', marginTop: '0.15rem' }}>
+                      {act.username || act.actor_username ? `By ${act.username || act.actor_username} • ` : ''}
+                      {api.helpers.getRelativeTime(act.timestamp)}
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>

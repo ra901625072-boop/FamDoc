@@ -1,47 +1,70 @@
 import { create } from 'zustand';
 
+export type ThemeMode = 'system' | 'light' | 'dark';
 export type Theme = 'light' | 'dark';
 
 interface ThemeState {
+  mode: ThemeMode;
   theme: Theme;
+  setMode: (mode: ThemeMode) => void;
   toggleTheme: () => void;
-  setTheme: (theme: Theme) => void;
 }
 
-function getInitialTheme(): Theme {
-  if (typeof window === 'undefined') return 'light';
-  const stored = localStorage.getItem('famdoc_theme') as Theme | null;
-  if (stored === 'dark' || stored === 'light') return stored;
-  if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-    return 'dark';
+function getStoredMode(): ThemeMode {
+  if (typeof window === 'undefined') return 'system';
+  const stored = (localStorage.getItem('famdoc-theme-mode') ||
+    localStorage.getItem('famdoc_theme') ||
+    localStorage.getItem('famdoc-theme')) as ThemeMode | null;
+  if (stored === 'dark' || stored === 'light' || stored === 'system') return stored;
+  return 'system';
+}
+
+function resolveEffectiveTheme(mode: ThemeMode): Theme {
+  if (mode === 'dark') return 'dark';
+  if (mode === 'light') return 'light';
+  if (typeof window !== 'undefined' && window.matchMedia) {
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   }
   return 'light';
 }
 
-function applyTheme(theme: Theme) {
-  if (typeof document !== 'undefined') {
-    document.documentElement.setAttribute('data-theme', theme);
-    document.documentElement.classList.toggle('dark', theme === 'dark');
-    localStorage.setItem('famdoc_theme', theme);
-  }
+function applyThemeToDOM(effectiveTheme: Theme, mode: ThemeMode) {
+  if (typeof document === 'undefined') return;
+  document.documentElement.setAttribute('data-theme', effectiveTheme);
+  document.documentElement.classList.toggle('dark', effectiveTheme === 'dark');
+  localStorage.setItem('famdoc-theme-mode', mode);
+  localStorage.setItem('famdoc_theme', effectiveTheme);
 }
 
-export const useThemeStore = create<ThemeState>((set, get) => {
-  const initial = getInitialTheme();
-  applyTheme(initial);
+const initialMode = getStoredMode();
+const initialTheme = resolveEffectiveTheme(initialMode);
+applyThemeToDOM(initialTheme, initialMode);
 
-  return {
-    theme: initial,
+// Setup system color scheme listener
+if (typeof window !== 'undefined' && window.matchMedia) {
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+    const currentMode = getStoredMode();
+    if (currentMode === 'system') {
+      const nextEffective = e.matches ? 'dark' : 'light';
+      applyThemeToDOM(nextEffective, 'system');
+      useThemeStore.setState({ theme: nextEffective });
+    }
+  });
+}
 
-    toggleTheme: () => {
-      const next = get().theme === 'light' ? 'dark' : 'light';
-      applyTheme(next);
-      set({ theme: next });
-    },
+export const useThemeStore = create<ThemeState>((set, get) => ({
+  mode: initialMode,
+  theme: initialTheme,
 
-    setTheme: (theme: Theme) => {
-      applyTheme(theme);
-      set({ theme });
-    },
-  };
-});
+  setMode: (mode: ThemeMode) => {
+    const effective = resolveEffectiveTheme(mode);
+    applyThemeToDOM(effective, mode);
+    set({ mode, theme: effective });
+  },
+
+  toggleTheme: () => {
+    const nextTheme = get().theme === 'dark' ? 'light' : 'dark';
+    applyThemeToDOM(nextTheme, nextTheme);
+    set({ mode: nextTheme, theme: nextTheme });
+  },
+}));

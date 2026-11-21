@@ -33,11 +33,13 @@ export interface FileItem {
   original_name?: string;
   file_type: string;
   file_size: number;
+  size_bytes?: number;
   folder_id?: number | null;
   category?: 'video' | 'images' | 'pdfs' | 'docs' | 'sheets' | 'text' | 'other';
   storage_provider?: string;
   download_count?: number;
   created_at: string;
+  upload_date?: string;
   updated_at?: string;
   uploader_username?: string;
 }
@@ -55,16 +57,23 @@ export interface CategoryBreakdown {
 export interface DashboardStats {
   total_files: number;
   total_folders: number;
-  total_storage_bytes: number;
+  total_storage_bytes?: number;
+  total_size_bytes?: number;
+  total_members?: number;
   used_storage_bytes?: number;
+  storage_provider?: string;
   category_breakdown?: CategoryBreakdown;
   recent_files?: FileItem[];
+  recent_uploads?: FileItem[];
   recent_activity?: Array<{
     id: number;
     action: string;
-    target_name: string;
+    target_name?: string;
     timestamp: string;
     actor_username?: string;
+    username?: string;
+    details?: string;
+    user_email?: string;
   }>;
 }
 

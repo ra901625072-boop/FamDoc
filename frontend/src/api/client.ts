@@ -533,5 +533,49 @@ export const api = {
         return dateStr;
       }
     },
+
+    getRelativeTime(dateStr?: string): string {
+      if (!dateStr) return '—';
+      try {
+        const d = new Date(dateStr);
+        const now = new Date();
+        const diffSec = Math.floor((now.getTime() - d.getTime()) / 1000);
+        if (diffSec < 60) return 'Just now';
+        const diffMin = Math.floor(diffSec / 60);
+        if (diffMin < 60) return `${diffMin}m ago`;
+        const diffHours = Math.floor(diffMin / 60);
+        if (diffHours < 24) return `${diffHours}h ago`;
+        const diffDays = Math.floor(diffHours / 24);
+        if (diffDays < 7) return `${diffDays}d ago`;
+        return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      } catch {
+        return dateStr;
+      }
+    },
+
+    getFileIconClass(filename = '', fileType = ''): string {
+      const ext = filename.split('.').pop()?.toLowerCase() || '';
+      const mime = fileType.toLowerCase();
+
+      if (mime.includes('video') || ['mp4', 'm4v', 'webm', 'mkv', 'mov', 'avi'].includes(ext)) {
+        return 'file-video fas fa-file-video';
+      }
+      if (mime.includes('pdf') || ext === 'pdf') {
+        return 'file-pdf fas fa-file-pdf';
+      }
+      if (mime.includes('image') || ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext)) {
+        return 'file-image fas fa-file-image';
+      }
+      if (mime.includes('word') || mime.includes('officedocument.word') || ['doc', 'docx'].includes(ext)) {
+        return 'file-doc fas fa-file-word';
+      }
+      if (mime.includes('sheet') || mime.includes('excel') || mime.includes('spreadsheet') || ['xls', 'xlsx', 'csv'].includes(ext)) {
+        return 'file-sheet fas fa-file-excel';
+      }
+      if (mime.includes('text') || ext === 'txt') {
+        return 'file-text fas fa-file-alt';
+      }
+      return 'file-generic fas fa-file';
+    },
   },
 };
