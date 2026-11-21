@@ -23,7 +23,15 @@ cors_origins_raw = os.getenv("CORS_ORIGINS", "")
 if cors_origins_raw:
     CORS_ORIGINS = [origin.strip() for origin in cors_origins_raw.split(",") if origin.strip()]
 else:
-    CORS_ORIGINS = [FRONTEND_URL, "http://localhost:8000", "http://127.0.0.1:8000", "http://localhost:5173", "http://127.0.0.1:5173"]
+    CORS_ORIGINS = [
+        FRONTEND_URL,
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000"
+    ]
 
 # Database Settings
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./family_documents.db")
