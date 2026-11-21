@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FamDoc — Ad Video</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&family=DM+Serif+Display&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    /* Brand-derived palette: forest emerald + warm gold + deep charcoal */
+    --emerald-900: #064e3b;
+    --emerald-700: #047857;
+    --emerald-500: #10b981;
+    --emerald-400: #34d399;
+    --emerald-300: #6ee7b7;
+    --gold-500: #d4a843;
+    --gold-400: #e5c16e;
+    --gold-300: #f0d78a;
+
+    --surface-0: #050706;
+    --surface-1: #0a0f0d;
+    --surface-2: #111916;
+    --surface-3: #1a2520;
+    --text-primary: #f0fdf4;
+    --text-secondary: rgba(240,253,244,0.65);
+    --text-muted: rgba(240,253,244,0.35);
+    --red-500: #ef4444;
+    --red-900: rgba(127,29,29,0.5);
+
+    /* Motion tokens */
+    --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+    --ease-in-quart: cubic-bezier(0.5, 0, 0.75, 0);
+    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --dur-micro: 120ms;
+    --dur-small: 250ms;
+    --dur-medium: 500ms;
+    --dur-major: 800ms;
+    --dur-spatial: 1200ms;
+  }
+
+  body {
+    background: var(--surface-0);
+    color: var(--text-primary);
+    font-family: 'DM Sans', system-ui, sans-serif;
+    overflow: hidden;
+    width: 100vw;
+    height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  #ad { position: relative; width: 100vw; height: 100vh; overflow: hidden; }
+
+  /* ===== GLOBAL SCENE SYSTEM ===== */
+  .s {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; visibility: hidden;
+    z-index: 1;
+  }
+  .s.on {
+    opacity: 1; visibility: visible; z-index: 10;
+    transition: opacity 0.6s var(--ease-out-quart);
+  }
+  .s.exit {
+    opacity: 0; visibility: visible; z-index: 5;
+    transition: opacity 0.4s var(--ease-in-quart);
+  }
+
+  /* ===== CANVAS GRAIN OVERLAY ===== */
+  #grain {
+    position: fixed; inset: 0; z-index: 90; pointer-events: none;
+    opacity: 0.04;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 200px;
+  }
+
+  /* ===== LETTERBOX BARS ===== */
+  .letterbox {
+    position: fixed; left: 0; right: 0; height: 36px;
+    background: #000; z-index: 85; pointer-events: none;
+  }
+  .letterbox.top { top: 0; }
+  .letterbox.bot { bottom: 0; }
+
+  /* ===== PROGRESS ===== */
+  #prog {
+    position: fixed; bottom: 36px; left: 0; height: 2px; z-index: 95;
+    background: linear-gradient(90deg, var(--emerald-700), var(--emerald-400), var(--gold-500));
+    box-shadow: 0 0 12px rgba(52,211,153,0.4);
+    transition: width 80ms linear;
+  }
+
+  /* ===== SUBTITLE BAR ===== */
+  #sub {
+    position: fixed; bottom: 56px; left: 50%; transform: translateX(-50%);
+    z-index: 88; max-width: 640px; text-align: center;
+    padding: 10px 28px; border-radius: 8px;
+    background: rgba(5,7,6,0.8); backdrop-filter: blur(16px);
+    border: 1px solid rgba(52,211,153,0.08);
+    font-size: 14px; font-weight: 400; color: var(--text-secondary);
+    line-height: 1.55; letter-spacing: 0.2px;
+    opacity: 0; transition: opacity 0.35s ease;
+  }
+  #sub.on { opacity: 1; }
+
+  /* ===== AMBIENT GLOW ===== */
+  .ambient {
+    position: absolute; border-radius: 50%; filter: blur(120px);
+    pointer-events: none; z-index: 0;
+  }
+
+  /* ======================================================================
+     SCENE 0 — COLD OPEN
+     Motion: Clip-reveal per line (not generic translateY), then dissolve
+  ====================================================================== */
+  #s0 { background: var(--surface-0); flex-direction: column; gap: 8px; }
+  .s0-line {
+    overflow: hidden; /* clip container */
+  }
+  .s0-text {
+    font-family: 'DM Serif Display', serif;
+    font-size: 42px; font-weight: 400; color: var(--text-primary);
+    letter-spacing: -0.5px; line-height: 1.25;
+    transform: translateY(110%);
+    transition: transform 0.9s var(--ease-out-expo);
+  }
+  .s0-text.on { transform: translateY(0); }
+  .s0-text em { font-style: italic; color: var(--emerald-400); }
+
+  /* ======================================================================
+     SCENE 1 — THE PROBLEM
+     Motion: Cards scale-in from center with stagger, then the
+     "STORAGE FULL" slam — a single impactful typographic beat
+  ====================================================================== */
+  #s1 { background: var(--surface-0); flex-direction: column; gap: 32px; }
+  .p-grid {
+    display: grid; grid-template-columns: repeat(3, 140px); gap: 14px;
+  }
+  .p-card {
+    background: rgba(127,29,29,0.06);
+    border: 1px solid rgba(239,68,68,0.15);
+    border-radius: 14px; padding: 22px 12px;
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+    opacity: 0; transform: scale(0.7) translateY(12px);
+  }
+  .p-card.on {
+    opacity: 1; transform: scale(1) translateY(0);
+    transition: all 0.55s var(--ease-spring);
+  }
+  .p-icon { font-size: 34px; }
+  .p-label {
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 1.8px; color: var(--red-500); text-align: center;
+    line-height: 1.45;
+  }
+  /* Storage Full slam */
+  .slam {
+    font-family: 'DM Sans', sans-serif; font-size: 72px; font-weight: 800;
+    letter-spacing: -2px; color: var(--red-500);
+    text-transform: uppercase;
+    opacity: 0; transform: scale(2.5);
+    text-shadow: 0 0 80px rgba(239,68,68,0.35);
+  }
+  .slam.on {
+    opacity: 1; transform: scale(1);
+    transition: all 0.3s var(--ease-out-expo);
+  }
+
+  /* ======================================================================
+     SCENE 2 — THE QUESTION
+     Motion: typewriter-style reveal using clip-path
+  ====================================================================== */
+  #s2 { background: var(--surface-0); flex-direction: column; gap: 0; }
+  #s2 .ambient { width: 500px; height: 500px; background: var(--emerald-900); top: 50%; left: 50%; transform: translate(-50%,-50%); opacity: 0.4; }
+  .q-text {
+    font-family: 'DM Serif Display', serif;
+    font-size: 52px; font-weight: 400; text-align: center;
+    line-height: 1.25; max-width: 620px;
+    clip-path: inset(0 100% 0 0);
+    transition: clip-path 1.4s var(--ease-out-expo);
+  }
+  .q-text.on { clip-path: inset(0 0% 0 0); }
+  .q-text .hl { color: var(--emerald-400); }
+  .q-cursor {
+    display: inline-block; width: 3px; height: 48px; background: var(--emerald-400);
+    vertical-align: middle; margin-left: 6px;
+    animation: blink 0.7s step-end infinite;
+  }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+  /* ======================================================================
+     SCENE 3 — HERO REVEAL
+     Motion: Image Ken Burns, logo from blur/scale, tagline clip-reveal
+  ====================================================================== */
+  #s3 { background: var(--surface-0); }
+  .hero-img {
+    position: absolute; inset: 0;
+    background-size: cover; background-position: center 40%;
+    opacity: 0; transform: scale(1.15);
+    will-change: transform, opacity;
+  }
+  .hero-img.on {
+    opacity: 1; transform: scale(1);
+    transition: opacity 1.6s ease, transform 12s ease-out;
+  }
+  .hero-grad {
+    position: absolute; inset: 0; z-index: 2;
+    background: linear-gradient(to top,
+      rgba(5,7,6,0.95) 0%,
+      rgba(5,7,6,0.55) 35%,
+      rgba(5,7,6,0.15) 60%,
+      rgba(5,7,6,0.25) 100%
+    );
+  }
+  .hero-inner {
+    position: relative; z-index: 3; width: 100%; height: 100%;
+    display: flex; flex-direction: column; justify-content: flex-end;
+    align-items: center; padding-bottom: 64px; gap: 12px;
+  }
+  .hero-logo {
+    font-family: 'DM Sans', sans-serif; font-size: 80px; font-weight: 800;
+    letter-spacing: -3px;
+    opacity: 0; transform: scale(0.6); filter: blur(12px);
+    will-change: transform, opacity, filter;
+  }
+  .hero-logo.on {
+    opacity: 1; transform: scale(1); filter: blur(0);
+    transition: all 1s var(--ease-out-expo);
+  }
+  .hero-logo .f { color: var(--gold-400); }
+  .hero-logo .d { color: var(--emerald-400); }
+
+  .hero-tag {
+    overflow: hidden;
+  }
+  .hero-tag-inner {
+    font-size: 18px; font-weight: 500; color: var(--text-secondary);
+    letter-spacing: 5px; text-transform: uppercase;
+    transform: translateY(110%);
+    transition: transform 0.7s var(--ease-out-expo) 0.25s;
+  }
+  .hero-tag-inner.on { transform: translateY(0); }
+
+  /* ======================================================================
+     SCENE 4 — FEATURES
+     Motion: Headline mask-reveal, pills stagger from alternating sides
+  ====================================================================== */
+  #s4 { background: var(--surface-0); }
+  .feat-img {
+    position: absolute; inset: 0;
+    background-size: cover; background-position: center;
+    opacity: 0; transform: scale(1.06);
+  }
+  .feat-img.on {
+    opacity: 0.55; transform: scale(1);
+    transition: opacity 1.4s ease, transform 14s ease-out;
+  }
+  .feat-grad {
+    position: absolute; inset: 0; z-index: 2;
+    background: linear-gradient(135deg,
+      rgba(5,7,6,0.92) 0%,
+      rgba(4,120,87,0.08) 50%,
+      rgba(5,7,6,0.92) 100%
+    );
+  }
+  .feat-inner {
+    position: relative; z-index: 3;
+    display: flex; flex-direction: column; align-items: center;
+    gap: 18px; padding: 20px 40px;
+  }
+  .feat-h {
+    font-family: 'DM Serif Display', serif; font-size: 42px;
+    text-align: center; overflow: hidden;
+  }
+  .feat-h-in {
+    transform: translateY(110%);
+    transition: transform 0.8s var(--ease-out-expo);
+  }
+  .feat-h-in.on { transform: translateY(0); }
+  .feat-h-in span { color: var(--emerald-400); }
+
+  .pill {
+    display: flex; align-items: center; gap: 16px;
+    background: rgba(5,7,6,0.65);
+    border: 1px solid rgba(52,211,153,0.12);
+    backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+    border-radius: 16px; padding: 14px 28px;
+    opacity: 0; transform: translateX(-50px);
+  }
+  .pill.r { transform: translateX(50px); }
+  .pill.on {
+    opacity: 1; transform: translateX(0);
+    transition: all 0.65s var(--ease-out-expo);
+  }
+  .pill-icon { font-size: 28px; flex-shrink: 0; }
+  .pill-title { font-size: 17px; font-weight: 700; color: var(--text-primary); letter-spacing: 0.2px; }
+  .pill-sub { font-size: 12px; font-weight: 400; color: var(--text-muted); margin-top: 2px; letter-spacing: 0.3px; }
+
+  /* ======================================================================
+     SCENE 5 — SECURITY
+     Motion: Split-screen reveal — image on left, content on right
+  ====================================================================== */
+  #s5 { background: var(--surface-0); }
+  .sec-img {
+    position: absolute; inset: 0;
+    background-size: cover; background-position: center;
+    opacity: 0; transform: scale(1.1);
+  }
+  .sec-img.on {
+    opacity: 0.45; transform: scale(1);
+    transition: opacity 1.8s ease, transform 10s ease-out;
+  }
+  .sec-grad {
+    position: absolute; inset: 0; z-index: 2;
+    background: radial-gradient(ellipse at 50% 40%,
+      rgba(5,7,6,0.6) 0%,
+      rgba(5,7,6,0.92) 70%
+    );
+  }
+  .sec-inner {
+    position: relative; z-index: 3;
+    display: flex; flex-direction: column; align-items: center; gap: 24px;
+    text-align: center; padding: 40px;
+  }
+  .sec-h {
+    font-family: 'DM Serif Display', serif; font-size: 48px;
+    line-height: 1.15; max-width: 550px;
+    opacity: 0; transform: translateY(24px);
+  }
+  .sec-h.on {
+    opacity: 1; transform: translateY(0);
+    transition: all 0.9s var(--ease-out-expo);
+  }
+  .sec-h em { font-style: italic; color: var(--gold-400); }
+
+  .badges {
+    display: flex; gap: 12px; flex-wrap: wrap; justify-content: center;
+  }
+  .badge {
+    display: flex; align-items: center; gap: 10px;
+    background: rgba(5,7,6,0.5); border: 1px solid rgba(52,211,153,0.12);
+    backdrop-filter: blur(16px); border-radius: 10px;
+    padding: 10px 18px;
+    opacity: 0; transform: translateY(16px);
+  }
+  .badge.on {
+    opacity: 1; transform: translateY(0);
+    transition: all 0.5s var(--ease-out-expo);
+  }
+  .badge-icon { font-size: 22px; }
+  .badge-label { font-size: 12px; font-weight: 700; color: var(--emerald-400); letter-spacing: 1.5px; text-transform: uppercase; }
+
+  .sec-body {
+    font-size: 15px; font-weight: 400; color: var(--text-secondary);
+    max-width: 480px; line-height: 1.65;
+    opacity: 0; transition: opacity 0.8s ease 0.3s;
+  }
+  .sec-body.on { opacity: 1; }
+
+  /* ======================================================================
+     SCENE 6 — CTA
+     Motion: Logo particle convergence (simulated with scale+blur),
+     platform icons cascade, button spring-in, URL fade
+  ====================================================================== */
+  #s6 { background: var(--surface-0); flex-direction: column; }
+  #s6 .ambient.a1 { width: 600px; height: 600px; background: var(--emerald-900); top: 30%; left: 50%; transform: translate(-50%,-50%); opacity: 0.25; }
+  #s6 .ambient.a2 { width: 300px; height: 300px; background: var(--gold-500); top: 65%; left: 55%; transform: translate(-50%,-50%); opacity: 0.08; }
+
+  .cta-img {
+    position: absolute; inset: 0;
+    background-size: cover; background-position: center;
+    opacity: 0;
+  }
+  .cta-img.on {
+    opacity: 0.15;
+    transition: opacity 2.5s ease;
+  }
+
+  .cta-inner {
+    position: relative; z-index: 3;
+    display: flex; flex-direction: column; align-items: center; gap: 20px;
+  }
+  .cta-logo {
+    font-family: 'DM Sans', sans-serif; font-size: 100px; font-weight: 800;
+    letter-spacing: -4px;
+    opacity: 0; transform: scale(0.3); filter: blur(20px);
+  }
+  .cta-logo.on {
+    opacity: 1; transform: scale(1); filter: blur(0);
+    transition: all 1.4s var(--ease-out-expo);
+  }
+  .cta-logo .f { color: var(--gold-400); text-shadow: 0 0 80px rgba(212,168,67,0.3); }
+  .cta-logo .d { color: var(--emerald-400); text-shadow: 0 0 80px rgba(52,211,153,0.3); }
+
+  .cta-tag {
+    font-size: 16px; font-weight: 400; color: var(--text-secondary);
+    letter-spacing: 4px; text-transform: uppercase;
+    opacity: 0; transform: translateY(10px);
+  }
+  .cta-tag.on {
+    opacity: 1; transform: translateY(0);
+    transition: all 0.7s var(--ease-out-expo) 0.3s;
+  }
+
+  .cta-plats {
+    display: flex; gap: 48px; margin-top: 8px;
+  }
+  .cta-p {
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    opacity: 0; transform: translateY(18px);
+  }
+  .cta-p.on {
+    opacity: 1; transform: translateY(0);
+    transition: all 0.55s var(--ease-out-expo);
+  }
+  .cta-p-icon {
+    font-size: 32px;
+    filter: drop-shadow(0 0 8px rgba(52,211,153,0.35));
+  }
+  .cta-p-label {
+    font-size: 10px; font-weight: 600; color: var(--text-muted);
+    letter-spacing: 2.5px; text-transform: uppercase;
+  }
+
+  .cta-btn {
+    margin-top: 12px; padding: 16px 44px;
+    background: linear-gradient(135deg, var(--emerald-700) 0%, var(--emerald-500) 100%);
+    border: none; border-radius: 14px; cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 16px; font-weight: 700; color: white;
+    letter-spacing: 0.5px;
+    box-shadow: 0 8px 32px rgba(16,185,129,0.25), 0 2px 8px rgba(0,0,0,0.4);
+    opacity: 0; transform: translateY(16px) scale(0.95);
+  }
+  .cta-btn.on {
+    opacity: 1; transform: translateY(0) scale(1);
+    transition: all 0.6s var(--ease-spring);
+    animation: pulse 2.5s ease infinite 1.2s;
+  }
+  @keyframes pulse {
+    0%,100% { box-shadow: 0 8px 32px rgba(16,185,129,0.25), 0 2px 8px rgba(0,0,0,0.4); }
+    50% { box-shadow: 0 12px 48px rgba(16,185,129,0.4), 0 2px 12px rgba(0,0,0,0.4); }
+  }
+
+  .cta-url {
+    font-size: 12px; font-weight: 500; color: var(--text-muted);
+    letter-spacing: 4px; text-transform: uppercase; margin-top: 4px;
+    opacity: 0; transition: opacity 0.8s ease 0.8s;
+  }
+  .cta-url.on { opacity: 1; }
+
+  /* ===== WIPE TRANSITION ===== */
+  #wipe {
+    position: fixed; inset: 0; z-index: 60;
+    background: var(--emerald-900);
+    transform: scaleX(0); transform-origin: left;
+    pointer-events: none;
+  }
+  #wipe.in {
+    transform: scaleX(1);
+    transition: transform 0.35s var(--ease-in-quart);
+  }
+  #wipe.out {
+    transform: scaleX(0); transform-origin: right;
+    transition: transform 0.35s var(--ease-out-expo) 0.05s;
+  }
+
+  /* ===== FLOATING PARTICLES (fewer, purposeful) ===== */
+  .dot {
+    position: absolute; border-radius: 50%;
+    background: var(--emerald-500); opacity: 0;
+    pointer-events: none; z-index: 1;
+    animation: rise linear infinite;
+  }
+  @keyframes rise {
+    0% { opacity: 0; transform: translateY(0) scale(0); }
+    15% { opacity: 0.5; }
+    85% { opacity: 0.5; }
+    100% { opacity: 0; transform: translateY(-100vh) scale(0.6); }
+  }
+</style>
+</head>
+<body>
+
+<div id="ad">
+
+  <!-- Cinematic grain -->
+  <div id="grain"></div>
+  <!-- Letterbox -->
+  <div class="letterbox top"></div>
+  <div class="letterbox bot"></div>
+  <!-- Wipe transition -->
+  <div id="wipe"></div>
+
+  <!-- ===== S0: COLD OPEN ===== -->
+  <div class="s on" id="s0">
+    <div class="s0-line"><div class="s0-text" id="c0a">Every family has documents</div></div>
+    <div class="s0-line"><div class="s0-text" id="c0b">that can <em>never</em> be replaced.</div></div>
+  </div>
+
+  <!-- ===== S1: PROBLEM ===== -->
+  <div class="s" id="s1">
+    <div class="p-grid" id="pgrid">
+      <div class="p-card"><span class="p-icon">📧</span><span class="p-label">Buried in<br>Email</span></div>
+      <div class="p-card"><span class="p-icon">💾</span><span class="p-label">Lost on<br>USB Drives</span></div>
+      <div class="p-card"><span class="p-icon">☁️</span><span class="p-label">Storage<br>Full</span></div>
+      <div class="p-card"><span class="p-icon">📱</span><span class="p-label">Wrong<br>Device</span></div>
+      <div class="p-card"><span class="p-icon">📄</span><span class="p-label">Paper in<br>a Drawer</span></div>
+      <div class="p-card"><span class="p-icon">🔓</span><span class="p-label">Zero<br>Security</span></div>
+    </div>
+    <div class="slam" id="slam">STORAGE FULL</div>
+  </div>
+
+  <!-- ===== S2: QUESTION ===== -->
+  <div class="s" id="s2">
+    <div class="ambient"></div>
+    <div class="q-text" id="qtext">
+      What if there was<br><span class="hl">one vault</span> for everything?<span class="q-cursor"></span>
+    </div>
+  </div>
+
+  <!-- ===== S3: HERO ===== -->
+  <div class="s" id="s3">
+    <div class="hero-img" id="heroImg"></div>
+    <div class="hero-grad"></div>
+    <div class="hero-inner">
+      <div class="hero-logo" id="heroLogo"><span class="f">Fam</span><span class="d">Doc</span></div>
+      <div class="hero-tag"><div class="hero-tag-inner" id="heroTag">Your Family's Digital Vault</div></div>
+    </div>
+  </div>
+
+  <!-- ===== S4: FEATURES ===== -->
+  <div class="s" id="s4">
+    <div class="feat-img" id="featImg"></div>
+    <div class="feat-grad"></div>
+    <div class="feat-inner">
+      <div class="feat-h"><div class="feat-h-in" id="featH">One Vault. <span>Every Device.</span></div></div>
+      <div class="pill" id="f1"><span class="pill-icon">📱</span><div><div class="pill-title">Native Android App</div><div class="pill-sub">Kotlin · Jetpack Compose · Material 3</div></div></div>
+      <div class="pill r" id="f2"><span class="pill-icon">☁️</span><div><div class="pill-title">Multi-Account Cloud Pooling</div><div class="pill-sub">Aggregate free Google Drive accounts into one</div></div></div>
+      <div class="pill" id="f3"><span class="pill-icon">🔄</span><div><div class="pill-title">Zero-Loss Auto-Sync</div><div class="pill-sub">Local-first writes · Background cloud promotion</div></div></div>
+      <div class="pill r" id="f4"><span class="pill-icon">🌐</span><div><div class="pill-title">Web Dashboard + REST API</div><div class="pill-sub">Drag & drop · Search · Preview · Analytics</div></div></div>
+    </div>
+  </div>
+
+  <!-- ===== S5: SECURITY ===== -->
+  <div class="s" id="s5">
+    <div class="sec-img" id="secImg"></div>
+    <div class="sec-grad"></div>
+    <div class="sec-inner">
+      <div class="sec-h" id="secH">Your Family's Legacy,<br><em>Secured.</em></div>
+      <div class="badges" id="secBadges">
+        <div class="badge"><span class="badge-icon">🔐</span><span class="badge-label">Fernet Encryption</span></div>
+        <div class="badge"><span class="badge-icon">👆</span><span class="badge-label">Biometric Auth</span></div>
+        <div class="badge"><span class="badge-icon">🛡️</span><span class="badge-label">Single-Session JWT</span></div>
+      </div>
+      <div class="sec-body" id="secBody">Bank-grade encryption for every credential. Biometric fingerprint locks the door. If someone steals your token — they're already locked out.</div>
+    </div>
+  </div>
+
+  <!-- ===== S6: CTA ===== -->
+  <div class="s" id="s6">
+    <div class="ambient a1"></div>
+    <div class="ambient a2"></div>
+    <div class="cta-img" id="ctaImg"></div>
+    <div class="cta-inner">
+      <div class="cta-logo" id="ctaLogo"><span class="f">Fam</span><span class="d">Doc</span></div>
+      <div class="cta-tag" id="ctaTag">Your Family's Legacy — Always Within Reach</div>
+      <div class="cta-plats" id="ctaPlats">
+        <div class="cta-p" id="cp1"><span class="cta-p-icon">📱</span><span class="cta-p-label">Android</span></div>
+        <div class="cta-p" id="cp2"><span class="cta-p-icon">🌐</span><span class="cta-p-label">Web</span></div>
+        <div class="cta-p" id="cp3"><span class="cta-p-icon">☁️</span><span class="cta-p-label">Cloud</span></div>
+      </div>
+      <button class="cta-btn" id="ctaBtn">Start Free — Protect Your Family's Legacy</button>
+      <div class="cta-url" id="ctaUrl">FAMDOC.APP &nbsp;·&nbsp; ANDROID &nbsp;·&nbsp; WEB &nbsp;·&nbsp; CLOUD</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Progress -->
+<div id="prog" style="width:0%"></div>
+<!-- Subtitle -->
+<div id="sub"></div>
+
+<script>
+  // ===== IMAGES =====
+  const I = {
+    hero: '/img/ad/hero_shot_family.jpg',
+    feat: '/img/ad/multi_platform_showcase.jpg',
+    sec:  '/img/ad/security_vault_concept.jpg',
+    cta:  '/img/ad/cta_closing_frame.jpg'
+  };
+  document.getElementById('heroImg').style.backgroundImage = `url('${I.hero}')`;
+  document.getElementById('featImg').style.backgroundImage = `url('${I.feat}')`;
+  document.getElementById('secImg').style.backgroundImage  = `url('${I.sec}')`;
+  document.getElementById('ctaImg').style.backgroundImage  = `url('${I.cta}')`;
+
+  // ===== PARTICLES (restrained — 12 total) =====
+  (function(){
+    const ad = document.getElementById('ad');
+    for(let i=0;i<12;i++){
+      const d = document.createElement('div'); d.className='dot';
+      d.style.left = (10+Math.random()*80)+'%';
+      d.style.bottom = '-10px';
+      d.style.width = d.style.height = (2+Math.random()*2)+'px';
+      d.style.animationDuration = (8+Math.random()*10)+'s';
+      d.style.animationDelay = (Math.random()*12)+'s';
+      if(Math.random()>0.65) d.style.background='var(--gold-400)';
+      ad.appendChild(d);
+    }
+  })();
+
+  // ===== TRANSITION ENGINE =====
+  const wipe = document.getElementById('wipe');
+  const allScenes = document.querySelectorAll('.s');
+
+  function go(id) {
+    // Wipe in
+    wipe.classList.remove('out');
+    wipe.classList.add('in');
+    setTimeout(()=>{
+      allScenes.forEach(s=>{ s.classList.remove('on','exit'); });
+      document.getElementById(id).classList.add('on');
+      // Wipe out
+      wipe.classList.remove('in');
+      wipe.classList.add('out');
+    }, 360);
+  }
+
+  function hardCut(id) {
+    allScenes.forEach(s=>{ s.classList.remove('on','exit'); });
+    document.getElementById(id).classList.add('on');
+  }
+
+  function vo(text) { const s=document.getElementById('sub'); s.textContent=text; s.classList.add('on'); }
+  function voOff() { document.getElementById('sub').classList.remove('on'); }
+
+  // ===== STAGGER HELPER =====
+  function stagger(selector, cls, baseDelay, step) {
+    const els = typeof selector === 'string' ? document.querySelectorAll(selector) : selector;
+    els.forEach((el,i)=>{ setTimeout(()=>el.classList.add(cls), baseDelay + i*step); });
+  }
+
+  // ===== TIMELINE =====
+  const T = 50000; // 50s total
+  const E = [
+    // S0 COLD OPEN
+    { t:400, fn:()=>{ document.getElementById('c0a').classList.add('on'); vo("Every family has documents that can never be replaced."); }},
+    { t:1200, fn:()=> document.getElementById('c0b').classList.add('on') },
+
+    // S1 PROBLEM
+    { t:4200, fn:()=>{
+      go('s1');
+      vo("Scattered across five cloud accounts, three USB drives, and a shoebox under the bed.");
+      setTimeout(()=> stagger('#pgrid .p-card','on',100,140), 450);
+    }},
+    { t:7800, fn:()=>{
+      document.getElementById('slam').classList.add('on');
+    }},
+
+    // S2 QUESTION
+    { t:10200, fn:()=>{
+      go('s2'); voOff();
+      setTimeout(()=> document.getElementById('qtext').classList.add('on'), 500);
+    }},
+
+    // S3 HERO REVEAL
+    { t:14000, fn:()=>{
+      go('s3');
+      vo("Introducing FamDoc — the family vault that never runs out of space.");
+      setTimeout(()=> document.getElementById('heroImg').classList.add('on'), 400);
+      setTimeout(()=> document.getElementById('heroLogo').classList.add('on'), 1400);
+      setTimeout(()=> document.getElementById('heroTag').classList.add('on'), 1800);
+    }},
+    { t:19000, fn:()=> vo("Never loses a file. Never lets anyone in without your fingerprint.") },
+
+    // S4 FEATURES
+    { t:22000, fn:()=>{
+      go('s4');
+      vo("Pool your family's free Google Drive accounts into one unlimited vault.");
+      setTimeout(()=> document.getElementById('featImg').classList.add('on'), 400);
+      setTimeout(()=> document.getElementById('featH').classList.add('on'), 600);
+      setTimeout(()=> document.getElementById('f1').classList.add('on'), 1200);
+      setTimeout(()=> document.getElementById('f2').classList.add('on'), 2400);
+    }},
+    { t:27000, fn:()=>{
+      vo("Upload from your phone — it's there on the web instantly.");
+      setTimeout(()=> document.getElementById('f3').classList.add('on'), 500);
+      setTimeout(()=> document.getElementById('f4').classList.add('on'), 1700);
+    }},
+    { t:31000, fn:()=> vo("Internet goes down? FamDoc saves locally and syncs when you're back. Zero files lost.") },
+
+    // S5 SECURITY
+    { t:34000, fn:()=>{
+      go('s5');
+      vo("Bank-grade Fernet encryption protects every credential.");
+      setTimeout(()=> document.getElementById('secImg').classList.add('on'), 400);
+      setTimeout(()=> document.getElementById('secH').classList.add('on'), 800);
+      setTimeout(()=> stagger('#secBadges .badge','on',1200,220), 0);
+    }},
+    { t:38500, fn:()=>{
+      document.getElementById('secBody').classList.add('on');
+      vo("Biometric fingerprint locks the door. Your family's legacy deserves nothing less.");
+    }},
+
+    // S6 CTA
+    { t:42500, fn:()=>{
+      go('s6'); voOff();
+      setTimeout(()=> document.getElementById('ctaImg').classList.add('on'), 400);
+      setTimeout(()=> document.getElementById('ctaLogo').classList.add('on'), 700);
+      setTimeout(()=> document.getElementById('ctaTag').classList.add('on'), 1500);
+      setTimeout(()=>{
+        ['cp1','cp2','cp3'].forEach((id,i)=>
+          setTimeout(()=>document.getElementById(id).classList.add('on'), i*200)
+        );
+      }, 2200);
+      setTimeout(()=>{
+        document.getElementById('ctaBtn').classList.add('on');
+        vo("FamDoc. Your family's legacy — secured, organized, and always within reach.");
+      }, 3200);
+      setTimeout(()=> document.getElementById('ctaUrl').classList.add('on'), 4200);
+    }},
+    { t:49000, fn:()=> voOff() },
+  ];
+
+  E.sort((a,b)=>a.t-b.t);
+  let ei = 0, t0 = null;
+
+  function tick(now) {
+    if(!t0) t0 = now;
+    const dt = now - t0;
+    document.getElementById('prog').style.width = Math.min(dt/T*100,100)+'%';
+    while(ei<E.length && dt>=E[ei].t){ E[ei].fn(); ei++; }
+    if(dt < T+2000) requestAnimationFrame(tick);
+  }
+  setTimeout(()=> requestAnimationFrame(tick), 600);
+</script>
+</body>
+</html>
+

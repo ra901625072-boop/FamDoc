@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Royal / Electric Blue Brand Gradients from BrandLogo.kt -->
+    <linearGradient id="crestBlueGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0066FF" />
+      <stop offset="100%" stop-color="#0038B8" />
+    </linearGradient>
+    
+    <linearGradient id="folderBlueGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0066FF" />
+      <stop offset="100%" stop-color="#0038B8" />
+    </linearGradient>
+    
+    <!-- Soft Glow Filter -->
+    <filter id="crestGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#0052FF" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#crestGlow)">
+    <!-- 1. House Roof & Enclosure Arch Outline -->
+    <path d="M 62 378 L 62 194 L 256 62 L 450 194 L 450 378" 
+          fill="none" 
+          stroke="url(#crestBlueGrad)" 
+          stroke-width="42" 
+          stroke-linecap="round" 
+          stroke-linejoin="round" />
+
+    <!-- 2. Family Silhouettes Inside House -->
+    <!-- Left Parent -->
+    <circle cx="180" cy="194" r="48" fill="url(#crestBlueGrad)"/>
+    <path d="M 102 384 L 102 280 C 102 245 130 245 180 245 C 230 245 258 245 258 280 L 258 384 Z" 
+          fill="url(#crestBlueGrad)" />
+
+    <!-- Right Parent -->
+    <circle cx="332" cy="194" r="48" fill="url(#crestBlueGrad)"/>
+    <path d="M 254 384 L 254 280 C 254 245 282 245 332 245 C 382 245 410 245 410 280 L 410 384 Z" 
+          fill="url(#crestBlueGrad)" />
+
+    <!-- Center Child -->
+    <circle cx="256" cy="250" r="35" fill="url(#crestBlueGrad)"/>
+    <path d="M 194 384 L 194 320 C 194 286 214 286 256 286 C 298 286 318 286 318 320 L 318 384 Z" 
+          fill="url(#crestBlueGrad)" />
+
+    <!-- 3. White Document Sheet inside Keepsake Folder -->
+    <rect x="246" y="262" width="174" height="86" rx="20" ry="20" fill="#FFFFFF" stroke="#0066FF" stroke-width="12" opacity="0.95"/>
+
+    <!-- 4. Main Foreground Keepsake Folder -->
+    <path d="M 72 296 
+             L 225 296 
+             L 251 316 
+             L 440 316 
+             C 458 316 462 330 458 350
+             L 435 450 
+             C 430 472 415 480 395 480 
+             L 117 480 
+             C 97 480 82 472 77 450 
+             L 54 350 
+             C 50 330 54 296 72 296 Z" 
+          fill="url(#folderBlueGrad)"/>
+
+    <!-- 5. Padlock on Folder -->
+    <!-- Shackle Arch -->
+    <path d="M 224 394 C 224 362 288 362 288 394" 
+          fill="none" 
+          stroke="#FFFFFF" 
+          stroke-width="18" 
+          stroke-linecap="round"/>
+
+    <!-- Lock Body -->
+    <rect x="207" y="394" width="98" height="76" rx="16" ry="16" fill="#FFFFFF"/>
+
+    <!-- Keyhole -->
+    <circle cx="256" cy="424" r="12" fill="#0066FF"/>
+    <path d="M 248 424 L 264 424 L 262 448 L 250 448 Z" fill="#0066FF"/>
+  </g>
+</svg>
