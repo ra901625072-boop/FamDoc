@@ -41,7 +41,7 @@
   - Single-session JWT authentication with SHA-256 vault codes.
   - Fernet symmetric encryption for OAuth credentials and sensitive metadata.
 - ⚡ **Zero-Overhead Web SPA:** Lightweight, ultra-fast Vanilla JS frontend with responsive design tokens, drag-and-drop file upload queue, and full-screen document previewers.
-- ☁️ **Production Deployable:** Ready for deployment on **Cloudflare** (Workers Edge Router + Cloudflare Containers for FastAPI backend, R2 for vault storage, Hyperdrive for Supabase connection pooling), **Vercel** (Frontend SPA), and legacy **Render** (zero-downtime HTTP 308 redirect proxy).
+- ☁️ **Production Deployable:** Ready for deployment on **Cloudflare** (Workers Edge Router + Cloudflare Containers for FastAPI backend, R2 for vault storage, Hyperdrive for Supabase connection pooling) and **Vercel** (Frontend SPA).
 
 ---
 
@@ -100,7 +100,7 @@ FamDoc/
 ├── docs/                      # Technical specifications & API contracts
 ├── build_apk.bat              # One-click Android APK build script
 ├── install_debug.bat          # ADB debug install script
-└── render.yaml                # Render cloud deployment blueprint
+└── wrangler.toml              # Cloudflare Workers & Containers deployment configuration
 ```
 
 ---

@@ -150,11 +150,11 @@ def start_sync_worker():
 app.add_middleware(GZipMiddleware, minimum_size=500)
 
 # CORS Configuration
-# Restricted to CORS_ORIGINS configured in config.py, with regex for Vercel & Render origins
+# Restricted to CORS_ORIGINS configured in config.py, with regex for Vercel, Cloudflare, and local origins
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ORIGINS,
-    allow_origin_regex=r"https://.*\.vercel\.app|https://.*\.onrender\.com|http://localhost:\d+|http://127\.0\.0\.1:\d+",
+    allow_origin_regex=r"https://.*\.vercel\.app|https://.*\.workers\.dev|https://.*\.famdoc\.com|http://localhost:\d+|http://127\.0\.0\.1:\d+",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -189,7 +189,7 @@ def trigger_retention_cleanup(request: Request, db: Session = Depends(get_db)):
 if SERVE_FRONTEND:
     app.include_router(views.router)
 else:
-    # A simple health check response for the root domain on Render
+    # A simple health check response for the root domain on Cloudflare
     @app.get("/")
     def read_root():
         return {

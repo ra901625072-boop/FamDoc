@@ -5,14 +5,13 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # App Settings
-RENDER_EXTERNAL_URL = os.getenv("RENDER_EXTERNAL_URL")
-BACKEND_URL = os.getenv("BACKEND_URL", RENDER_EXTERNAL_URL or "http://localhost:8000")
-FRONTEND_URL = os.getenv("FRONTEND_URL", RENDER_EXTERNAL_URL or "http://localhost:8000")
+BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:8000")
 
-# Serve Frontend settings (useful for decoupling frontend on Vercel and backend on Render)
+# Serve Frontend settings (useful for decoupling frontend on Vercel and backend API on Cloudflare)
 SERVE_FRONTEND = os.getenv("SERVE_FRONTEND", "true").lower() == "true"
-if os.getenv("RENDER") or RENDER_EXTERNAL_URL:
-    # Disable serving frontend by default on Render, unless explicitly set to true
+if os.getenv("CLOUDFLARE") or os.getenv("APP_ENV") in ("production", "staging"):
+    # Disable serving frontend by default on Cloudflare/production, unless explicitly set to true
     SERVE_FRONTEND = os.getenv("SERVE_FRONTEND", "false").lower() == "true"
 
 # CORS Origins Setup
@@ -25,7 +24,7 @@ else:
 # Database Settings
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./family_documents.db")
 
-# Fix Render PostgreSQL URL (SQLAlchemy requires postgresql:// instead of postgres://)
+# Fix legacy PostgreSQL URL prefix (SQLAlchemy requires postgresql:// instead of postgres://)
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 

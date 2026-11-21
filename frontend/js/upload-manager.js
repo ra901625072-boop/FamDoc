@@ -508,7 +508,7 @@
       let API_BASE_URL = window.FamDocAPI_BaseURL || localStorage.getItem("famdoc_api_base_url") || "";
       if (!API_BASE_URL && typeof window !== "undefined" && window.location) {
         const host = window.location.hostname;
-        if (host && host !== "localhost" && host !== "127.0.0.1" && !host.includes("onrender.com") && !host.includes("workers.dev") && !host.includes("famdoc.com")) {
+        if (host && host !== "localhost" && host !== "127.0.0.1" && !host.includes("workers.dev") && !host.includes("famdoc.com")) {
           API_BASE_URL = "https://api.famdoc.com";
         }
       }

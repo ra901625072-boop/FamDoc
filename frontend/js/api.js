@@ -1,9 +1,9 @@
 /**
  * FamDoc API Client Wrapper
  */
-// Configurable base URL for cross-origin hosting (e.g. backend on Render and frontend on Vercel)
+// Configurable base URL for cross-origin hosting (e.g. backend on Cloudflare and frontend on Vercel)
 // - If empty, relative paths are used (Option A: Proxy Rewrite in vercel.json)
-// - Alternatively, set to your Render backend URL (e.g. "https://your-backend.onrender.com")
+// - Alternatively, set to your Cloudflare backend URL (e.g. "https://api.famdoc.com")
 function resolveApiBaseUrl() {
   const custom = localStorage.getItem("famdoc_api_base_url");
   if (custom) return custom.trim().replace(/\/+$/, "");
@@ -11,7 +11,7 @@ function resolveApiBaseUrl() {
     const host = window.location.hostname;
     // On hosted static frontends (e.g. Vercel, Netlify, custom domain), route directly to Cloudflare
     // to bypass serverless proxy 4.5MB request body limits for video and large file uploads!
-    if (host && host !== "localhost" && host !== "127.0.0.1" && !host.includes("onrender.com") && !host.includes("workers.dev") && !host.includes("famdoc.com")) {
+    if (host && host !== "localhost" && host !== "127.0.0.1" && !host.includes("workers.dev") && !host.includes("famdoc.com")) {
       return "https://api.famdoc.com";
     }
   }
