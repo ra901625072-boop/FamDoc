@@ -41,7 +41,7 @@
   - Single-session JWT authentication with SHA-256 vault codes.
   - Fernet symmetric encryption for OAuth credentials and sensitive metadata.
 - ⚡ **Zero-Overhead Web SPA:** Lightweight, ultra-fast Vanilla JS frontend with responsive design tokens, drag-and-drop file upload queue, and full-screen document previewers.
-- ☁️ **Production Deployable:** Ready for deployment on **Render** (FastAPI backend), **Vercel** (Frontend SPA), and **Supabase / PostgreSQL** (Database).
+- ☁️ **Production Deployable:** Ready for deployment on **Cloudflare** (Workers Edge Router + Cloudflare Containers for FastAPI backend, R2 for vault storage, Hyperdrive for Supabase connection pooling), **Vercel** (Frontend SPA), and legacy **Render** (zero-downtime HTTP 308 redirect proxy).
 
 ---
 
@@ -118,7 +118,22 @@ python main.py
 ```
 Backend will start on `http://localhost:8000` with Swagger docs available at `http://localhost:8000/docs`.
 
-### 2. Android App Build
+### 2. Cloudflare Deployment (Edge Router + Containers)
+
+For full migration instructions, see [PRODUCTION_CUTOVER_RUNBOOK.md](file:///d:/FDMS/docs/migration/PRODUCTION_CUTOVER_RUNBOOK.md).
+
+```bash
+# Install dependencies
+npm install
+
+# Deploy to Staging
+npx wrangler deploy --env staging
+
+# Deploy to Production
+npx wrangler deploy --env production
+```
+
+### 3. Android App Build
 
 Ensure Android SDK / Android Studio is installed, then build debug APK:
 ```bash
