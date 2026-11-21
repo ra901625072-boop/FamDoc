@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   useFamilyDetails,
@@ -14,6 +14,7 @@ export function FamilyPage() {
   const { data: family, isLoading: familyLoading, refetch: refetchFamily } = useFamilyDetails();
   const { data: members = [], isLoading: membersLoading, refetch: refetchMembers } = useFamilyMembers();
   const removeMemberMut = useRemoveFamilyMember();
+  const regenCodeMut = useRegenerateSecretCode();
 
   const [copied, setCopied] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -22,20 +23,41 @@ export function FamilyPage() {
   });
   const isAdmin = user?.role === 'admin';
 
+  useEffect(() => {
+    const handleCodeUpdate = (e: Event) => {
+      const custom = e as CustomEvent<string>;
+      if (custom.detail) {
+        setLocalSecretCode(custom.detail);
+      } else {
+        setLocalSecretCode(localStorage.getItem('famdoc_family_secret_code'));
+      }
+    };
+    window.addEventListener('famdoc:secret-code-updated', handleCodeUpdate);
+    return () => window.removeEventListener('famdoc:secret-code-updated', handleCodeUpdate);
+  }, []);
+
   const effectiveCode = family?.secret_code || localSecretCode || 'FAMD-0000-0000';
 
   const handleCopyCode = () => {
-    if (effectiveCode) {
+    if (effectiveCode && effectiveCode !== 'FAMD-0000-0000') {
       navigator.clipboard.writeText(effectiveCode);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+    } else {
+      alert('Please generate a family invitation code first.');
     }
   };
 
   const handleRegenerateCode = async () => {
-    if (confirm('Regenerate family secret code? The old code will immediately stop working for new invites.')) {
+    const promptText = effectiveCode && effectiveCode !== 'FAMD-0000-0000'
+      ? 'Regenerate family secret code? The old code will immediately stop working for new invites.'
+      : 'Generate a new family vault invitation code?';
+    if (confirm(promptText)) {
       try {
-        const res = await api.family.regenerateCode(family?.name, family?.max_members);
+        const res = await regenCodeMut.mutateAsync({
+          name: family?.name || 'Family Vault',
+          maxMembers: family?.max_members || 10,
+        });
         if (res && res.secret_code) {
           localStorage.setItem('famdoc_family_secret_code', res.secret_code);
           setLocalSecretCode(res.secret_code);
@@ -387,7 +409,7 @@ export function FamilyPage() {
                   marginBottom: '1.5rem',
                 }}
               >
-                {family?.secret_code || 'FAMD-0000-0000'}
+                {effectiveCode}
               </div>
 
               <button

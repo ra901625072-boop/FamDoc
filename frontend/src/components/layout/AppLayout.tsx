@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useCurrentUser } from '../../api/hooks';
@@ -9,11 +9,30 @@ import { UploadCard } from '../common/UploadCard';
 
 export function AppLayout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    return typeof window !== 'undefined' ? localStorage.getItem('famdoc_sidebar_collapsed') === 'true' : false;
+  });
   const { logout } = useAuthStore();
   const { data: user } = useCurrentUser();
   const { theme, toggleTheme } = useThemeStore();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    document.body.classList.toggle('sidebar-collapsed', sidebarCollapsed);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('famdoc_sidebar_collapsed', String(sidebarCollapsed));
+    }
+    return () => {
+      document.body.classList.remove('sidebar-collapsed');
+    };
+  }, [sidebarCollapsed]);
+
+  useEffect(() => {
+    document.body.classList.toggle('drawer-open', mobileMenuOpen);
+    return () => {
+      document.body.classList.remove('drawer-open');
+    };
+  }, [mobileMenuOpen]);
 
   const handleLogout = () => {
     logout();
@@ -135,7 +154,8 @@ export function AppLayout() {
             type="button"
             aria-label="Close or collapse menu"
             title="Close or collapse menu"
-            onClick={() => {
+            onClick={(e) => {
+              e.stopPropagation();
               if (window.innerWidth <= 768) {
                 setMobileMenuOpen(false);
               } else {

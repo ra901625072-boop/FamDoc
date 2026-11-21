@@ -214,8 +214,15 @@ export function useRemoveFamilyMember() {
 export function useRegenerateSecretCode() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: () => api.family.regenerateCode(),
-    onSuccess: () => {
+    mutationFn: (vars?: { name?: string; maxMembers?: number }) =>
+      api.family.regenerateCode(vars?.name, vars?.maxMembers),
+    onSuccess: (data) => {
+      if (data?.secret_code) {
+        localStorage.setItem('famdoc_family_secret_code', data.secret_code);
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('famdoc:secret-code-updated', { detail: data.secret_code }));
+        }
+      }
       qc.invalidateQueries({ queryKey: queryKeys.familyDetails });
     },
   });

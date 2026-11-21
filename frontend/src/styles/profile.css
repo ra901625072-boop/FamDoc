@@ -10,9 +10,9 @@
   align-items: start;
 }
 
-/* Make 3rd card (Cloud Storage Contribution) span both columns symmetrically */
+/* Span full row only when explicitly specified or for wide cards */
 #profile-storage-card,
-.profile-grid > .famdoc-card:last-child {
+.profile-grid > .famdoc-card.span-full {
   grid-column: 1 / -1;
 }
 

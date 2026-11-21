@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useCurrentUser, useFamilyDetails, useRegenerateSecretCode } from '../api/hooks';
-import { api, resolveApiBaseUrl } from '../api/client';
+import { api } from '../api/client';
 import { useAuthStore } from '../stores/useAuthStore';
 
 export function ProfilePage() {
@@ -17,17 +17,32 @@ export function ProfilePage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showCurrentPw, setShowCurrentPw] = useState(false);
   const [showNewPw, setShowNewPw] = useState(false);
-  const [customApiUrl, setCustomApiUrl] = useState('');
+  const [localSecretCode, setLocalSecretCode] = useState<string | null>(() => {
+    return typeof window !== 'undefined' ? localStorage.getItem('famdoc_family_secret_code') : null;
+  });
   const [savingProfile, setSavingProfile] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
   const [statusMsg, setStatusMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
   const isAdmin = user?.role === 'admin';
+  const effectiveCode = localSecretCode || family?.secret_code || '';
 
   useEffect(() => {
     if (user?.username) setUsername(user.username);
-    setCustomApiUrl(resolveApiBaseUrl());
   }, [user]);
+
+  useEffect(() => {
+    const handleCodeUpdate = (e: Event) => {
+      const custom = e as CustomEvent<string>;
+      if (custom.detail) {
+        setLocalSecretCode(custom.detail);
+      } else {
+        setLocalSecretCode(localStorage.getItem('famdoc_family_secret_code'));
+      }
+    };
+    window.addEventListener('famdoc:secret-code-updated', handleCodeUpdate);
+    return () => window.removeEventListener('famdoc:secret-code-updated', handleCodeUpdate);
+  }, []);
 
   useEffect(() => {
     if (searchParams.get('invite') === 'true') {
@@ -70,28 +85,40 @@ export function ProfilePage() {
     }
   };
 
-  const handleSaveApiUrl = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (customApiUrl) {
-      localStorage.setItem('famdoc_api_base_url', customApiUrl.trim());
-    } else {
-      localStorage.removeItem('famdoc_api_base_url');
-    }
-    alert('API Base URL saved! Page will reload to apply changes.');
-    window.location.reload();
-  };
-
   const handleCopyCode = () => {
-    if (family?.secret_code) {
-      navigator.clipboard.writeText(family.secret_code);
+    if (effectiveCode) {
+      navigator.clipboard.writeText(effectiveCode);
       setCopiedCode(true);
       setTimeout(() => setCopiedCode(false), 2000);
+    } else {
+      alert('Please generate an invitation code first.');
     }
   };
 
   const handleRegenerateCode = async () => {
-    if (confirm('Regenerate vault invitation code? The old code will stop working.')) {
-      await regenCodeMut.mutateAsync();
+    const promptText = effectiveCode
+      ? 'Regenerate vault invitation code? The old code will stop working for new members.'
+      : 'Generate a new family vault invitation code?';
+    if (confirm(promptText)) {
+      try {
+        const res = await regenCodeMut.mutateAsync({
+          name: family?.name || 'Family Vault',
+          maxMembers: family?.max_members || 10,
+        });
+        if (res && res.secret_code) {
+          localStorage.setItem('famdoc_family_secret_code', res.secret_code);
+          setLocalSecretCode(res.secret_code);
+          setStatusMsg({
+            text: `New family invite code generated: ${res.secret_code}`,
+            type: 'success',
+          });
+        }
+      } catch (err: unknown) {
+        setStatusMsg({
+          text: err instanceof Error ? err.message : 'Failed to generate code.',
+          type: 'error',
+        });
+      }
     }
   };
 
@@ -285,9 +312,16 @@ export function ProfilePage() {
                 id="btn-regen-family-code"
                 style={{ width: 'fit-content' }}
                 onClick={handleRegenerateCode}
+                disabled={regenCodeMut.isPending}
               >
-                <i className="fas fa-sync-alt" aria-hidden="true" />
-                <span>Regenerate Vault Invitation Code</span>
+                <i className={`fas fa-sync-alt ${regenCodeMut.isPending ? 'fa-spin' : ''}`} aria-hidden="true" />
+                <span>
+                  {regenCodeMut.isPending
+                    ? 'Generating...'
+                    : effectiveCode
+                    ? 'Regenerate Vault Invitation Code'
+                    : 'Generate Vault Invitation Code'}
+                </span>
               </button>
             )}
 
@@ -309,7 +343,7 @@ export function ProfilePage() {
                 <div>
                   <div className="ticket-label">Family Invitation</div>
                   <div className="ticket-code" id="revealed-code">
-                    {family?.secret_code || 'FAMD-0000-0000'}
+                    {effectiveCode || (isAdmin ? 'CLICK GENERATE ABOVE' : 'FAMD-0000-0000')}
                   </div>
                 </div>
 
@@ -319,6 +353,7 @@ export function ProfilePage() {
                   id="btn-copy-code"
                   style={{ padding: '0.5rem 1rem' }}
                   onClick={handleCopyCode}
+                  disabled={!effectiveCode}
                 >
                   <i className={`far ${copiedCode ? 'fa-check-circle' : 'fa-copy'}`} aria-hidden="true" />
                   <span>{copiedCode ? 'Copied' : 'Copy'}</span>
@@ -326,40 +361,6 @@ export function ProfilePage() {
               </div>
             </div>
           </div>
-        </div>
-
-        {/* Card 3: Backend API Configuration (Spans full width symmetrically) */}
-        <div
-          className="famdoc-card fd-fade-up"
-          id="profile-storage-card"
-          style={{ '--fd-delay': '0.15s' } as React.CSSProperties}
-        >
-          <div className="famdoc-card-header" style={{ marginBottom: '1.25rem' }}>
-            <h2 className="famdoc-card-title" style={{ fontFamily: 'var(--font-serif)', fontSize: '1.25rem', margin: 0 }}>
-              <i className="fas fa-server" style={{ color: 'var(--accent-brand)', marginRight: '0.5rem' }} aria-hidden="true" />
-              Backend API Configuration
-            </h2>
-          </div>
-
-          <p style={{ fontSize: '0.85rem', color: 'var(--text-ink-muted)', marginBottom: '1rem' }}>
-            Configure your custom backend API server host. Leave blank to use the active production Railway backend at{' '}
-            <code>https://famdoc-api-production-4260f70c.up.railway.app</code>.
-          </p>
-
-          <form onSubmit={handleSaveApiUrl} style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-            <input
-              type="text"
-              value={customApiUrl}
-              onChange={(e) => setCustomApiUrl(e.target.value)}
-              placeholder="https://famdoc-api-production-4260f70c.up.railway.app"
-              className="form-control"
-              style={{ flex: 1, minWidth: '240px', fontFamily: 'var(--font-mono)', fontSize: '0.85rem' }}
-            />
-            <button type="submit" className="btn btn-secondary">
-              <i className="fas fa-save" aria-hidden="true" />
-              <span>Save API URL</span>
-            </button>
-          </form>
         </div>
       </div>
     </div>
