@@ -1,19 +1,41 @@
-import { useState } from 'react';
-import { useStorageConfig, useStorageAccounts, useUpdateStorageMode, useDeleteStorageAccount } from '../api/hooks';
+import { useState, useRef } from 'react';
+import {
+  useStorageConfig,
+  useStorageAccounts,
+  useUpdateStorageMode,
+  useDeleteStorageAccount,
+  useFamilyMembers,
+} from '../api/hooks';
 import { api } from '../api/client';
-import { Cloud, Plus, Trash2, CheckCircle2 } from 'lucide-react';
 
 export function StoragePage() {
-  const { data: config, isLoading: configLoading } = useStorageConfig();
+  const { data: config } = useStorageConfig();
   const { data: accounts = [], isLoading: accountsLoading } = useStorageAccounts();
+  const { data: members = [] } = useFamilyMembers();
   const updateModeMut = useUpdateStorageMode();
   const deleteAccountMut = useDeleteStorageAccount();
 
   const [connecting, setConnecting] = useState(false);
+  const [oauthDrawerOpen, setOauthDrawerOpen] = useState(false);
+  const [clientId, setClientId] = useState('');
+  const [clientSecret, setClientSecret] = useState('');
+  const [showClientId, setShowClientId] = useState(false);
+  const [showClientSecret, setShowClientSecret] = useState(false);
+  const [copiedUri, setCopiedUri] = useState(false);
+  const credFileInputRef = useRef<HTMLInputElement>(null);
 
-  const totalBytes = config?.total_capacity_bytes ?? 15 * 1024 * 1024 * 1024; // 15GB default
+  const totalBytes = config?.total_capacity_bytes ?? 15 * 1024 * 1024 * 1024;
   const usedBytes = config?.used_bytes ?? 0;
+  const freeBytes = Math.max(0, totalBytes - usedBytes);
   const usedPct = totalBytes > 0 ? Math.min(100, Math.round((usedBytes / totalBytes) * 100)) : 0;
+
+  const redirectUri = `${window.location.origin}/api/storage/oauth2callback`;
+
+  const handleCopyRedirectUri = () => {
+    navigator.clipboard.writeText(redirectUri);
+    setCopiedUri(true);
+    setTimeout(() => setCopiedUri(false), 2000);
+  };
 
   const handleConnectGoogleDrive = async () => {
     setConnecting(true);
@@ -29,6 +51,42 @@ export function StoragePage() {
     }
   };
 
+  const handleCredentialsFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const text = event.target?.result as string;
+        const parsed = JSON.parse(text);
+        const web = parsed.web || parsed.installed;
+        if (web) {
+          if (web.client_id) setClientId(web.client_id);
+          if (web.client_secret) setClientSecret(web.client_secret);
+          alert('Credentials successfully parsed from file!');
+        } else {
+          alert('Invalid credentials.json format. Expected "web" or "installed" key.');
+        }
+      } catch {
+        alert('Failed to parse JSON file.');
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const handleSaveCredentials = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const res = await api.storage.getGoogleAuthUrl(clientId, clientSecret);
+      if (res && res.url) {
+        window.location.href = res.url;
+      }
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Failed to save credentials and connect.');
+    }
+  };
+
   const handleDeleteAccount = async (id: number, email: string) => {
     if (confirm(`Disconnect and remove Google Account "${email}" from the pooled vault?`)) {
       await deleteAccountMut.mutateAsync(id);
@@ -36,142 +94,580 @@ export function StoragePage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-3xl bg-[var(--surface-card)] border border-[var(--border-paper)] shadow-xs">
+    <div className="fd-fade-in space-y-6">
+      {/* Header Container */}
+      <div className="storage-header-container fd-fade-in">
         <div>
-          <h1 className="text-xl font-bold text-[var(--text-ink)]">Multi-Account Cloud Storage Pool</h1>
-          <p className="text-xs text-[var(--text-ink-muted)] mt-1">
-            Aggregate free 15 GB Google Drive storage quotas into one seamless, encrypted family drive.
-          </p>
+          <h1 className="page-title">Cloud Storage & Quotas</h1>
+          <p className="page-subtitle">Multi-account Google Drive pooling, family storage quotas, and live capacity.</p>
         </div>
-        <button
-          type="button"
-          onClick={handleConnectGoogleDrive}
-          disabled={connecting}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-[var(--color-primary)] hover:bg-[var(--color-primary-dark)] text-white text-xs font-semibold shadow-md transition-all cursor-pointer disabled:opacity-50"
+        <div className="storage-header-actions" id="storage-header-actions-slot">
+          <button
+            type="button"
+            className="btn btn-primary btn-sm"
+            onClick={handleConnectGoogleDrive}
+            disabled={connecting}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem' }}
+          >
+            <i className="fab fa-google" aria-hidden="true" />
+            <span>{connecting ? 'Connecting...' : 'Connect Drive (+15 GB)'}</span>
+          </button>
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            onClick={() => setOauthDrawerOpen(!oauthDrawerOpen)}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem' }}
+          >
+            <i className="fas fa-cog" style={{ color: '#f59e0b' }} aria-hidden="true" />
+            <span>API Credentials</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Collapsible OAuth Credentials & Setup Drawer */}
+      <div
+        id="oauth-config-drawer"
+        className={`oauth-config-drawer fd-fade-in ${oauthDrawerOpen ? 'open' : ''}`}
+        style={{ display: oauthDrawerOpen ? 'block' : 'none' }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+          <h3
+            style={{
+              fontFamily: 'var(--font-serif)',
+              fontSize: '1.15rem',
+              margin: 0,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+            }}
+          >
+            <i className="fab fa-google" style={{ color: '#4285F4' }} aria-hidden="true" />
+            <span>Google OAuth Setup & Credentials</span>
+          </h3>
+          <button
+            type="button"
+            id="btn-close-oauth-drawer"
+            className="btn btn-secondary btn-sm"
+            style={{ padding: '0.2rem 0.5rem' }}
+            onClick={() => setOauthDrawerOpen(false)}
+          >
+            <i className="fas fa-times" aria-hidden="true" />
+          </button>
+        </div>
+
+        <p style={{ fontSize: '0.84rem', color: 'var(--text-ink-muted)', marginBottom: '1.25rem' }}>
+          Configure Google Cloud OAuth credentials once so all family members can link their Google Drive accounts with 1 click.
+        </p>
+
+        {/* 1. Authorized Redirect URI Copy Box */}
+        <div
+          style={{
+            marginBottom: '1.25rem',
+            background: 'var(--surface-paper-tint)',
+            border: '1px solid var(--border-paper-dark)',
+            borderRadius: 'var(--radius-md)',
+            padding: '1rem',
+          }}
         >
-          <Plus className="w-4 h-4" />
-          <span>{connecting ? 'Connecting...' : 'Connect Google Drive'}</span>
-        </button>
-      </div>
-
-      {/* Aggregate Storage Capacity Bar */}
-      <div className="p-6 rounded-3xl bg-[var(--surface-card)] border border-[var(--border-paper)] shadow-xs space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <Cloud className="w-5 h-5 text-emerald-600" />
-            <h2 className="text-sm font-bold text-[var(--text-ink)]">Aggregated Pool Capacity</h2>
-          </div>
-          <span className="text-xs font-bold text-[var(--color-primary)]">
-            {usedPct}% Used
-          </span>
-        </div>
-
-        <div className="w-full h-3 bg-[var(--surface-paper-tint)] rounded-full overflow-hidden">
           <div
-            className="h-full bg-gradient-to-r from-emerald-600 to-teal-500 rounded-full transition-all duration-500"
-            style={{ width: `${usedPct}%` }}
-          />
-        </div>
-
-        <div className="flex items-center justify-between text-xs text-[var(--text-ink-muted)]">
-          <span>Used: {configLoading ? '...' : api.helpers.formatBytes(usedBytes)}</span>
-          <span>Total Pool: {configLoading ? '...' : api.helpers.formatBytes(totalBytes)}</span>
-        </div>
-      </div>
-
-      {/* Storage Mode Selector */}
-      <div className="p-6 rounded-3xl bg-[var(--surface-card)] border border-[var(--border-paper)] shadow-xs space-y-3">
-        <h2 className="text-sm font-bold text-[var(--text-ink)]">Active Storage Engine</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div
-            onClick={() => updateModeMut.mutate('google_drive')}
-            className={`p-4 rounded-2xl border cursor-pointer transition-all ${
-              config?.active_provider === 'google_drive' || !config?.active_provider
-                ? 'border-[var(--color-primary)] bg-[var(--color-primary-container)]/20 ring-1 ring-[var(--color-primary)]'
-                : 'border-[var(--border-paper)] hover:border-[var(--color-primary)]'
-            }`}
+            style={{
+              fontSize: '0.8rem',
+              fontWeight: 600,
+              color: 'var(--text-ink)',
+              marginBottom: '0.35rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '0.5rem',
+            }}
           >
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-xs font-bold text-[var(--text-ink)]">Google Drive Pooling (Default)</span>
-              {(config?.active_provider === 'google_drive' || !config?.active_provider) && (
-                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-              )}
-            </div>
-            <p className="text-[11px] text-[var(--text-ink-muted)]">
-              Multi-account chunking across connected Google accounts with zero server charges.
-            </p>
+            <span>
+              <i className="fas fa-link" style={{ color: '#3b82f6', marginRight: '0.35rem' }} aria-hidden="true" />
+              Authorized Redirect URI for Google Cloud Console:
+            </span>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-ink-muted)' }}>
+              Add this in OAuth Client Credentials
+            </span>
           </div>
 
           <div
-            onClick={() => updateModeMut.mutate('r2')}
-            className={`p-4 rounded-2xl border cursor-pointer transition-all ${
-              config?.active_provider === 'r2'
-                ? 'border-[var(--color-primary)] bg-[var(--color-primary-container)]/20 ring-1 ring-[var(--color-primary)]'
-                : 'border-[var(--border-paper)] hover:border-[var(--color-primary)]'
-            }`}
+            className="uri-copy-container"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              background: 'var(--surface-card)',
+              padding: '0.5rem 0.75rem',
+              borderRadius: 'var(--radius-sm)',
+              border: '1px solid var(--border-paper)',
+              fontFamily: 'var(--font-mono)',
+              fontSize: '0.8rem',
+            }}
           >
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-xs font-bold text-[var(--text-ink)]">Cloudflare R2 Direct</span>
-              {config?.active_provider === 'r2' && <CheckCircle2 className="w-4 h-4 text-emerald-600" />}
-            </div>
-            <p className="text-[11px] text-[var(--text-ink-muted)]">
-              Zero egress fees and high-speed global CDN delivery.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Connected Google Accounts List */}
-      <div className="rounded-3xl bg-[var(--surface-card)] border border-[var(--border-paper)] overflow-hidden shadow-xs">
-        <div className="p-5 border-b border-[var(--border-paper)] flex items-center justify-between">
-          <h2 className="text-sm font-bold text-[var(--text-ink)]">Connected Storage Accounts</h2>
-          <span className="text-xs text-[var(--text-ink-muted)]">{accounts.length} Accounts Active</span>
-        </div>
-
-        {accountsLoading ? (
-          <div className="p-8 text-center text-xs text-[var(--text-ink-muted)]">Loading accounts...</div>
-        ) : accounts.length === 0 ? (
-          <div className="p-8 text-center text-xs text-[var(--text-ink-muted)] space-y-2">
-            <p>No external Google Drive accounts connected yet.</p>
+            <span id="txt-redirect-uri" style={{ flex: 1, userSelect: 'all', wordBreak: 'break-all' }}>
+              {redirectUri}
+            </span>
             <button
               type="button"
-              onClick={handleConnectGoogleDrive}
-              className="text-xs font-semibold text-[var(--color-primary)] hover:underline"
+              id="btn-copy-redirect-uri"
+              className="btn btn-secondary btn-sm"
+              onClick={handleCopyRedirectUri}
+              style={{
+                padding: '0.25rem 0.65rem',
+                fontSize: '0.75rem',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+                flexShrink: 0,
+              }}
             >
-              Connect your first Google account
+              <i className={`fas ${copiedUri ? 'fa-check' : 'fa-copy'}`} aria-hidden="true" />
+              <span>{copiedUri ? 'Copied' : 'Copy URI'}</span>
             </button>
           </div>
-        ) : (
-          <div className="divide-y divide-[var(--border-paper)]">
-            {accounts.map((acc) => (
-              <div key={acc.id} className="flex items-center justify-between p-4 px-6 hover:bg-[var(--surface-paper-hover)] transition-colors">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-blue-500/10 text-blue-600 flex items-center justify-center font-bold text-xs">
-                    G
+        </div>
+
+        {/* 2. Drag & Drop credentials.json zone */}
+        <div
+          className="credentials-dropzone"
+          id="credentials-dropzone"
+          onClick={() => credFileInputRef.current?.click()}
+          style={{
+            border: '2px dashed var(--border-paper-dark)',
+            borderRadius: 'var(--radius-md)',
+            padding: '1.5rem',
+            textAlign: 'center',
+            cursor: 'pointer',
+            backgroundColor: 'var(--surface-paper-tint)',
+            marginBottom: '1.25rem',
+          }}
+        >
+          <input
+            type="file"
+            id="file-credentials-input"
+            ref={credFileInputRef}
+            accept=".json"
+            style={{ display: 'none' }}
+            onChange={handleCredentialsFile}
+          />
+          <div style={{ fontSize: '2rem', color: 'var(--accent-brand)', marginBottom: '0.5rem' }}>
+            <i className="fas fa-file-import" aria-hidden="true" />
+          </div>
+          <div style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-ink)' }}>
+            Drag & drop your <code>credentials.json</code> file here
+          </div>
+          <p style={{ fontSize: '0.78rem', color: 'var(--text-ink-muted)', margin: '0.25rem 0 0 0' }}>
+            Or click to browse and auto-fill Client ID & Secret from Google Cloud Console download.
+          </p>
+        </div>
+
+        {/* 3. Form fields */}
+        <form id="google-credentials-form" onSubmit={handleSaveCredentials}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
+            <div className="form-group">
+              <label className="form-label" htmlFor="google-client-id">
+                Google Client ID
+              </label>
+              <div className="password-input-wrapper">
+                <input
+                  type={showClientId ? 'text' : 'password'}
+                  id="google-client-id"
+                  className="form-control"
+                  placeholder="e.g. 12345-abc.apps.googleusercontent.com"
+                  value={clientId}
+                  onChange={(e) => setClientId(e.target.value)}
+                  required
+                  style={{ width: '100%', boxSizing: 'border-box' }}
+                />
+                <button
+                  type="button"
+                  className="password-toggle-btn"
+                  aria-label="Toggle visibility"
+                  onClick={() => setShowClientId(!showClientId)}
+                >
+                  <i className={`fas ${showClientId ? 'fa-eye-slash' : 'fa-eye'}`} aria-hidden="true" />
+                </button>
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label" htmlFor="google-client-secret">
+                Google Client Secret
+              </label>
+              <div className="password-input-wrapper">
+                <input
+                  type={showClientSecret ? 'text' : 'password'}
+                  id="google-client-secret"
+                  className="form-control"
+                  placeholder="e.g. GOCSPX-xxxxxxxxxxxxxx"
+                  value={clientSecret}
+                  onChange={(e) => setClientSecret(e.target.value)}
+                  required
+                  style={{ width: '100%', boxSizing: 'border-box' }}
+                />
+                <button
+                  type="button"
+                  className="password-toggle-btn"
+                  aria-label="Toggle visibility"
+                  onClick={() => setShowClientSecret(!showClientSecret)}
+                >
+                  <i className={`fas ${showClientSecret ? 'fa-eye-slash' : 'fa-eye'}`} aria-hidden="true" />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div
+            style={{
+              display: 'flex',
+              gap: '0.75rem',
+              marginTop: '1rem',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+            }}
+          >
+            <a
+              href="https://console.cloud.google.com/apis/credentials"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                fontSize: '0.8rem',
+                color: 'var(--accent-brand)',
+                textDecoration: 'none',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+              }}
+            >
+              <i className="fas fa-external-link-alt" aria-hidden="true" />
+              <span>Open Google Cloud Console</span>
+            </a>
+            <button type="submit" id="btn-save-credentials-action" className="btn btn-primary btn-sm">
+              <i className="fas fa-save" aria-hidden="true" />
+              <span>Save & Connect Account</span>
+            </button>
+          </div>
+        </form>
+      </div>
+
+      {/* 1. HERO STORAGE POOL SUMMARY CARD */}
+      <div className="storage-hero-card fd-fade-up">
+        <div className="storage-hero-header">
+          <div className="storage-hero-title-group">
+            <span id="hero-status-pill" className="badge badge-primary" style={{ fontSize: '0.8rem', padding: '0.3rem 0.65rem' }}>
+              <i className="fas fa-check-circle" style={{ marginRight: '0.35rem' }} aria-hidden="true" />
+              Active Pool
+            </span>
+            <h2 className="storage-hero-title">Family Storage Capacity</h2>
+          </div>
+          <div className="storage-hero-metrics">
+            <div className="hero-metric-item">
+              <span className="hero-metric-label">Total Pool</span>
+              <span className="hero-metric-value" id="hero-total-cap">
+                {api.helpers.formatBytes(totalBytes)}
+              </span>
+            </div>
+            <div className="hero-metric-item">
+              <span className="hero-metric-label">Used Space</span>
+              <span className="hero-metric-value accent" id="hero-used-space">
+                {api.helpers.formatBytes(usedBytes)} ({usedPct}%)
+              </span>
+            </div>
+            <div className="hero-metric-item">
+              <span className="hero-metric-label">Free Space</span>
+              <span className="hero-metric-value" id="hero-free-space">
+                {api.helpers.formatBytes(freeBytes)}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Progress Bar & Breakdown */}
+        <div className="hero-progress-wrapper">
+          <div className="hero-progress-bar-container" id="hero-progress-bar">
+            <div
+              className="storage-progress-segment"
+              style={{
+                width: `${usedPct}%`,
+                background: 'linear-gradient(90deg, #10B981 0%, #059669 100%)',
+              }}
+            />
+          </div>
+
+          <div className="hero-legend-row" id="hero-legend-row">
+            <div className="hero-legend-item">
+              <span className="hero-legend-dot" style={{ backgroundColor: '#ec4899', width: '8px', height: '8px', borderRadius: '50%' }} />
+              <span>Videos</span>
+            </div>
+            <div className="hero-legend-item">
+              <span className="hero-legend-dot" style={{ backgroundColor: '#3b82f6', width: '8px', height: '8px', borderRadius: '50%' }} />
+              <span>Images</span>
+            </div>
+            <div className="hero-legend-item">
+              <span className="hero-legend-dot" style={{ backgroundColor: '#ef4444', width: '8px', height: '8px', borderRadius: '50%' }} />
+              <span>PDF Documents</span>
+            </div>
+            <div className="hero-legend-item">
+              <span className="hero-legend-dot" style={{ backgroundColor: '#8b5cf6', width: '8px', height: '8px', borderRadius: '50%' }} />
+              <span>Word Docs</span>
+            </div>
+            <div className="hero-legend-item">
+              <span className="hero-legend-dot" style={{ backgroundColor: '#10b981', width: '8px', height: '8px', borderRadius: '50%' }} />
+              <span>Spreadsheets</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Hero Footer: Mode Switcher */}
+        <div className="storage-hero-footer" style={{ borderTop: '1px solid var(--border-paper)', paddingTop: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-ink-muted)' }}>
+              Active Storage Mode:
+            </span>
+            <div className="mode-segmented-control" style={{ display: 'flex', border: '1px solid var(--border-paper)', borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>
+              <button
+                type="button"
+                className={`mode-segment-btn ${config?.active_provider === 'google_drive' || !config?.active_provider ? 'active' : ''}`}
+                onClick={() => updateModeMut.mutate('google_drive')}
+                style={{
+                  padding: '0.4rem 0.85rem',
+                  fontSize: '0.8rem',
+                  border: 'none',
+                  cursor: 'pointer',
+                  backgroundColor:
+                    config?.active_provider === 'google_drive' || !config?.active_provider
+                      ? 'var(--color-primary-container)'
+                      : 'var(--surface-paper-tint)',
+                  color:
+                    config?.active_provider === 'google_drive' || !config?.active_provider
+                      ? 'var(--color-primary)'
+                      : 'var(--text-ink-muted)',
+                  fontWeight: 600,
+                }}
+              >
+                <i className="fab fa-google" style={{ color: '#4285F4', marginRight: '0.35rem' }} aria-hidden="true" />
+                Google Drive Pool
+              </button>
+              <button
+                type="button"
+                className={`mode-segment-btn ${config?.active_provider === 'r2' ? 'active' : ''}`}
+                onClick={() => updateModeMut.mutate('r2')}
+                style={{
+                  padding: '0.4rem 0.85rem',
+                  fontSize: '0.8rem',
+                  border: 'none',
+                  cursor: 'pointer',
+                  backgroundColor:
+                    config?.active_provider === 'r2'
+                      ? 'var(--color-primary-container)'
+                      : 'var(--surface-paper-tint)',
+                  color:
+                    config?.active_provider === 'r2'
+                      ? 'var(--color-primary)'
+                      : 'var(--text-ink-muted)',
+                  fontWeight: 600,
+                }}
+              >
+                <i className="fas fa-hdd" style={{ marginRight: '0.35rem' }} aria-hidden="true" />
+                Cloudflare R2 Direct
+              </button>
+            </div>
+          </div>
+          <div id="hero-mode-note" style={{ fontSize: '0.8rem', color: 'var(--text-ink-muted)', fontStyle: 'italic' }}>
+            Uploads route automatically to the drive with most free space.
+          </div>
+        </div>
+      </div>
+
+      {/* 2. TWO-COLUMN DASHBOARD GRID */}
+      <div className="storage-dashboard-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
+        {/* LEFT COLUMN: Connected Google Drives */}
+        <div className="famdoc-card fd-fade-up">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+            <div>
+              <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.15rem', margin: '0 0 0.25rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <i className="fab fa-google" style={{ color: '#4285F4' }} aria-hidden="true" />
+                <span>Connected Google Drives</span>
+              </h3>
+              <span id="drives-count-badge" style={{ fontSize: '0.76rem', color: 'var(--text-ink-muted)', fontWeight: 500 }}>
+                {accounts.length} Active Drive{accounts.length !== 1 ? 's' : ''}
+              </span>
+            </div>
+            <button
+              type="button"
+              className="btn btn-primary btn-sm"
+              onClick={handleConnectGoogleDrive}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.78rem' }}
+            >
+              <i className="fas fa-plus" aria-hidden="true" />
+              <span>Connect Drive</span>
+            </button>
+          </div>
+
+          {/* Drives List */}
+          <div className="account-cards-list" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            {accountsLoading ? (
+              <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-ink-muted)' }}>
+                <i className="fas fa-spinner fa-spin" style={{ marginRight: '0.5rem' }} aria-hidden="true" />
+                Loading accounts...
+              </div>
+            ) : accounts.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-ink-muted)', background: 'var(--surface-paper-tint)', borderRadius: 'var(--radius-md)' }}>
+                <p style={{ margin: '0 0 0.5rem 0' }}>No external Google Drive accounts connected yet.</p>
+                <button
+                  type="button"
+                  onClick={handleConnectGoogleDrive}
+                  className="btn btn-secondary btn-sm"
+                >
+                  <i className="fab fa-google" style={{ color: '#4285F4' }} aria-hidden="true" />
+                  <span>Connect your first Google account</span>
+                </button>
+              </div>
+            ) : (
+              accounts.map((acc) => {
+                const limit = acc.storage_limit_bytes || 15 * 1024 * 1024 * 1024;
+                const used = acc.storage_used_bytes || 0;
+                const pct = limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : 0;
+
+                return (
+                  <div
+                    key={acc.id}
+                    style={{
+                      background: 'var(--surface-paper-tint)',
+                      border: '1px solid var(--border-paper)',
+                      borderRadius: 'var(--radius-md)',
+                      padding: '1rem 1.25rem',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.65rem',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                        <div
+                          style={{
+                            width: '32px',
+                            height: '32px',
+                            borderRadius: '50%',
+                            backgroundColor: '#e8f0fe',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          <i className="fab fa-google" style={{ color: '#4285F4' }} aria-hidden="true" />
+                        </div>
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text-ink)' }}>
+                            {acc.account_email}
+                          </div>
+                          <div style={{ fontSize: '0.74rem', color: 'var(--text-ink-muted)' }}>
+                            Active • Pooled Vault Quota
+                          </div>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        className="btn btn-danger btn-sm"
+                        style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}
+                        onClick={() => handleDeleteAccount(acc.id, acc.account_email)}
+                        title="Disconnect account"
+                      >
+                        <i className="fas fa-unlink" aria-hidden="true" />
+                      </button>
+                    </div>
+
+                    <div style={{ background: 'var(--surface-card)', height: '6px', borderRadius: '4px', overflow: 'hidden' }}>
+                      <div
+                        style={{
+                          width: `${pct}%`,
+                          height: '100%',
+                          background: 'var(--accent-gradient)',
+                        }}
+                      />
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-ink-muted)' }}>
+                      <span>Used: {api.helpers.formatBytes(used)}</span>
+                      <span>Total: {api.helpers.formatBytes(limit)}</span>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+
+        {/* RIGHT COLUMN: Family Contributors Roster */}
+        <div className="famdoc-card fd-fade-up">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+            <div>
+              <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.15rem', margin: '0 0 0.25rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <i className="fas fa-users" style={{ color: 'var(--accent-brand)' }} aria-hidden="true" />
+                <span>Family Contributors</span>
+              </h3>
+              <span id="contributors-count-badge" style={{ fontSize: '0.76rem', color: 'var(--text-ink-muted)', fontWeight: 500 }}>
+                {members.length} Member{members.length !== 1 ? 's' : ''} in Vault
+              </span>
+            </div>
+          </div>
+
+          <p style={{ fontSize: '0.82rem', color: 'var(--text-ink-muted)', marginBottom: '1rem' }}>
+            Every family member who links their free personal Google Drive adds 15 GB to your shared family vault.
+          </p>
+
+          <div className="contributors-roster-list" style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+            {members.map((m) => (
+              <div
+                key={m.id}
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '0.75rem 1rem',
+                  borderRadius: 'var(--radius-md)',
+                  background: 'var(--surface-paper-tint)',
+                  border: '1px solid var(--border-paper)',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <div
+                    style={{
+                      width: '26px',
+                      height: '26px',
+                      borderRadius: '50%',
+                      backgroundColor: 'var(--color-primary-container)',
+                      color: 'var(--color-primary)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontWeight: 700,
+                      fontSize: '0.72rem',
+                    }}
+                  >
+                    {m.username.substring(0, 2).toUpperCase()}
                   </div>
                   <div>
-                    <div className="text-xs font-bold text-[var(--text-ink)]">{acc.account_email}</div>
-                    <div className="text-[11px] text-[var(--text-ink-muted)] mt-0.5">
-                      Used: {api.helpers.formatBytes(acc.storage_used_bytes)} / {api.helpers.formatBytes(acc.storage_limit_bytes)}
+                    <div style={{ fontWeight: 600, fontSize: '0.84rem', color: 'var(--text-ink)' }}>
+                      {m.username}
+                    </div>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-ink-muted)' }}>
+                      {m.email}
                     </div>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteAccount(acc.id, acc.account_email)}
-                    className="p-2 rounded-xl text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors"
-                    title="Disconnect account"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
+                <span className="cloud-member-badge active" style={{ fontSize: '0.75rem' }}>
+                  <i className="fab fa-google" style={{ color: '#4285F4', marginRight: '0.35rem' }} aria-hidden="true" />
+                  +15 GB Active
+                </span>
               </div>
             ))}
           </div>
-        )}
+        </div>
       </div>
     </div>
   );

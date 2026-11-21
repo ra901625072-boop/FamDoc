@@ -218,19 +218,12 @@ export function AppLayout() {
 
       {/* Main Content Area */}
       <main className="main-content" id="mainContent">
-        {/* Desktop Top Status Bar */}
-        <div className="hidden md:flex items-center justify-between pb-4 mb-4 border-b border-[var(--border-paper)]">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-[var(--text-ink-muted)] uppercase tracking-wider">
-              Cloud Vault
-            </span>
-          </div>
-          <div className="flex items-center gap-3">
-            <ConnectionPill />
-          </div>
+        {/* Floating Connection Pill */}
+        <div className="fixed top-4 right-6 z-30 hidden md:block">
+          <ConnectionPill />
         </div>
 
-        <div id="view-mount-point" className="flex-1 w-full max-w-7xl mx-auto">
+        <div id="view-mount-point" className="w-full">
           <Outlet />
         </div>
       </main>

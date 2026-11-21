@@ -1,23 +1,28 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { useCurrentUser, useFamilyDetails } from '../api/hooks';
+import { useCurrentUser, useFamilyDetails, useRegenerateSecretCode } from '../api/hooks';
 import { api, resolveApiBaseUrl } from '../api/client';
 import { useAuthStore } from '../stores/useAuthStore';
-import { Shield, User, Lock, KeyRound, Copy, Check, Server, Save } from 'lucide-react';
 
 export function ProfilePage() {
   const [searchParams] = useSearchParams();
   const { data: user } = useCurrentUser();
   const { data: family } = useFamilyDetails();
+  const regenCodeMut = useRegenerateSecretCode();
   const setUser = useAuthStore((s) => s.setUser);
 
   const [username, setUsername] = useState('');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showCurrentPw, setShowCurrentPw] = useState(false);
+  const [showNewPw, setShowNewPw] = useState(false);
   const [customApiUrl, setCustomApiUrl] = useState('');
   const [savingProfile, setSavingProfile] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
   const [statusMsg, setStatusMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+
+  const isAdmin = user?.role === 'admin';
 
   useEffect(() => {
     if (user?.username) setUsername(user.username);
@@ -26,15 +31,21 @@ export function ProfilePage() {
 
   useEffect(() => {
     if (searchParams.get('invite') === 'true') {
-      const el = document.getElementById('invite-code-section');
+      const el = document.getElementById('ticket-reveal-container');
       el?.scrollIntoView({ behavior: 'smooth' });
     }
   }, [searchParams]);
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSavingProfile(true);
     setStatusMsg(null);
+
+    if (newPassword && newPassword !== confirmPassword) {
+      setStatusMsg({ text: 'New passwords do not match.', type: 'error' });
+      return;
+    }
+
+    setSavingProfile(true);
     try {
       const payload: { username?: string; password?: string; current_password?: string } = {};
       if (username !== user?.username) payload.username = username;
@@ -47,6 +58,7 @@ export function ProfilePage() {
       setUser(updated);
       setCurrentPassword('');
       setNewPassword('');
+      setConfirmPassword('');
       setStatusMsg({ text: 'Profile updated successfully!', type: 'success' });
     } catch (err: unknown) {
       setStatusMsg({
@@ -77,154 +89,278 @@ export function ProfilePage() {
     }
   };
 
+  const handleRegenerateCode = async () => {
+    if (confirm('Regenerate vault invitation code? The old code will stop working.')) {
+      await regenCodeMut.mutateAsync();
+    }
+  };
+
   return (
-    <div className="space-y-6 max-w-3xl">
-      <div className="p-6 rounded-3xl bg-[var(--surface-card)] border border-[var(--border-paper)] shadow-xs">
-        <h1 className="text-xl font-bold text-[var(--text-ink)]">Profile & Security Settings</h1>
-        <p className="text-xs text-[var(--text-ink-muted)] mt-1">
-          Manage your personal credentials, family access keys, and cloud configurations.
-        </p>
+    <div className="fd-fade-in space-y-6">
+      {/* Content Header */}
+      <div className="content-header fd-fade-in">
+        <div>
+          <h1 className="page-title">Profile Settings</h1>
+          <p className="page-subtitle">Manage your credentials and family vault details.</p>
+        </div>
       </div>
 
       {statusMsg && (
         <div
-          className={`p-4 rounded-2xl text-xs font-semibold ${
-            statusMsg.type === 'success'
-              ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20'
-              : 'bg-red-500/10 text-red-600 border border-red-500/20'
-          }`}
+          className="famdoc-alert"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.65rem',
+            padding: '1rem 1.25rem',
+            borderRadius: 'var(--radius-md)',
+            backgroundColor: statusMsg.type === 'success' ? 'var(--surface-alert-info)' : 'rgba(239, 68, 68, 0.1)',
+            color: statusMsg.type === 'success' ? 'var(--color-primary)' : 'var(--warning-red)',
+            border: `1px solid ${statusMsg.type === 'success' ? 'var(--border-paper)' : 'rgba(239, 68, 68, 0.3)'}`,
+            fontWeight: 600,
+            fontSize: '0.85rem',
+          }}
         >
-          {statusMsg.text}
+          <i
+            className={`fas ${statusMsg.type === 'success' ? 'fa-check-circle' : 'fa-exclamation-triangle'}`}
+            aria-hidden="true"
+          />
+          <span>{statusMsg.text}</span>
         </div>
       )}
 
-      {/* Secret Invite Code Card */}
-      <div
-        id="invite-code-section"
-        className="p-6 rounded-3xl bg-gradient-to-r from-emerald-900 to-teal-950 text-white shadow-lg space-y-3"
-      >
-        <div className="flex items-center gap-2.5">
-          <KeyRound className="w-5 h-5 text-emerald-300" />
-          <h2 className="text-sm font-bold">Family Secret Invite Code</h2>
-        </div>
-        <p className="text-xs text-emerald-200">
-          Share this code with your family members so they can join this vault directly.
-        </p>
-
-        <div className="flex items-center gap-3 pt-1">
-          <div className="flex-1 p-3 px-4 rounded-2xl bg-black/40 border border-white/10 font-mono text-base font-bold tracking-widest text-emerald-300 select-all">
-            {family?.secret_code || 'FAMD-0000-0000'}
-          </div>
-          <button
-            type="button"
-            onClick={handleCopyCode}
-            className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-md transition-colors cursor-pointer"
-          >
-            {copiedCode ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-            <span>{copiedCode ? 'Copied' : 'Copy'}</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Profile Form */}
-      <div className="p-6 rounded-3xl bg-[var(--surface-card)] border border-[var(--border-paper)] shadow-xs">
-        <div className="flex items-center gap-2.5 mb-6">
-          <User className="w-5 h-5 text-[var(--color-primary)]" />
-          <h2 className="text-sm font-bold text-[var(--text-ink)]">Account Details</h2>
-        </div>
-
-        <form onSubmit={handleUpdateProfile} className="space-y-4">
-          <div className="space-y-1">
-            <label className="text-xs font-semibold text-[var(--text-ink)]">Username</label>
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              required
-              className="w-full px-4 py-2.5 rounded-xl border border-[var(--border-paper)] bg-[var(--surface-paper-tint)]/40 text-xs text-[var(--text-ink)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
-            />
+      {/* Two-Column Grid */}
+      <div className="profile-grid">
+        {/* Card 1: Account Details */}
+        <div className="famdoc-card fd-fade-up" style={{ '--fd-delay': '0.05s' } as React.CSSProperties}>
+          <div className="famdoc-card-header" style={{ marginBottom: '1.25rem' }}>
+            <h2 className="famdoc-card-title" style={{ fontFamily: 'var(--font-serif)', fontSize: '1.25rem', margin: 0 }}>
+              <i className="fas fa-user-circle" style={{ color: 'var(--accent-brand)', marginRight: '0.5rem' }} aria-hidden="true" />
+              Account Details
+            </h2>
           </div>
 
-          <div className="space-y-1">
-            <label className="text-xs font-semibold text-[var(--text-ink)]">Email Address (Read-only)</label>
-            <input
-              type="email"
-              value={user?.email || ''}
-              disabled
-              className="w-full px-4 py-2.5 rounded-xl border border-[var(--border-paper)] bg-[var(--surface-paper-tint)]/20 text-xs text-[var(--text-ink-muted)] cursor-not-allowed"
-            />
-          </div>
-
-          <div className="pt-4 border-t border-[var(--border-paper)] space-y-3">
-            <div className="flex items-center gap-2">
-              <Lock className="w-4 h-4 text-[var(--color-primary)]" />
-              <h3 className="text-xs font-bold text-[var(--text-ink)]">Change Password</h3>
+          <form id="profile-form" onSubmit={handleUpdateProfile}>
+            <div className="form-group" style={{ marginBottom: '1rem' }}>
+              <label htmlFor="profile-email" className="form-label">
+                Email Address
+              </label>
+              <input
+                type="email"
+                id="profile-email"
+                className="form-control"
+                value={user?.email || ''}
+                disabled
+                style={{ opacity: 0.65, cursor: 'not-allowed' }}
+              />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-[var(--text-ink)]">Current Password</label>
+            <div className="form-group" style={{ marginBottom: '1rem' }}>
+              <label htmlFor="profile-username" className="form-label">
+                Username
+              </label>
+              <input
+                type="text"
+                id="profile-username"
+                className="form-control"
+                placeholder="Choose a username"
+                required
+                minLength={3}
+                maxLength={20}
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+              />
+            </div>
+
+            <div className="form-group" style={{ marginBottom: '1rem' }}>
+              <label htmlFor="profile-password" className="form-label">
+                Update Password (Optional)
+              </label>
+              <div className="password-input-wrapper">
                 <input
-                  type="password"
+                  type={showCurrentPw ? 'text' : 'password'}
+                  id="profile-password"
+                  className="form-control"
+                  placeholder="Current password"
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full px-4 py-2.5 rounded-xl border border-[var(--border-paper)] bg-[var(--surface-paper-tint)]/40 text-xs text-[var(--text-ink)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
                 />
+                <button
+                  type="button"
+                  className="password-toggle-btn"
+                  aria-label="Toggle visibility"
+                  onClick={() => setShowCurrentPw(!showCurrentPw)}
+                >
+                  <i className={`fas ${showCurrentPw ? 'fa-eye-slash' : 'fa-eye'}`} aria-hidden="true" />
+                </button>
               </div>
+            </div>
 
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-[var(--text-ink)]">New Password</label>
+            <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+              <label htmlFor="profile-confirm-password" className="form-label">
+                New Password
+              </label>
+              <div className="password-input-wrapper">
                 <input
-                  type="password"
+                  type={showNewPw ? 'text' : 'password'}
+                  id="profile-confirm-password"
+                  className="form-control"
+                  placeholder="Min. 8 characters with 1 uppercase and 1 number"
+                  minLength={8}
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="••••••••"
-                  minLength={8}
-                  className="w-full px-4 py-2.5 rounded-xl border border-[var(--border-paper)] bg-[var(--surface-paper-tint)]/40 text-xs text-[var(--text-ink)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
                 />
+                <button
+                  type="button"
+                  className="password-toggle-btn"
+                  aria-label="Toggle visibility"
+                  onClick={() => setShowNewPw(!showNewPw)}
+                >
+                  <i className={`fas ${showNewPw ? 'fa-eye-slash' : 'fa-eye'}`} aria-hidden="true" />
+                </button>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              id="btn-save-profile"
+              className="btn btn-primary"
+              disabled={savingProfile}
+              style={{ width: '100%', justifyContent: 'center' }}
+            >
+              <i className="fas fa-save" aria-hidden="true" />
+              <span>{savingProfile ? 'Saving...' : 'Save Profile Details'}</span>
+            </button>
+          </form>
+        </div>
+
+        {/* Card 2: Family Vault Details */}
+        <div className="famdoc-card fd-fade-up" style={{ '--fd-delay': '0.1s' } as React.CSSProperties}>
+          <div className="famdoc-card-header" style={{ marginBottom: '1.25rem' }}>
+            <h2 className="famdoc-card-title" style={{ fontFamily: 'var(--font-serif)', fontSize: '1.25rem', margin: 0 }}>
+              <i className="fas fa-home" style={{ color: 'var(--accent-brand)', marginRight: '0.5rem' }} aria-hidden="true" />
+              Family Vault Details
+            </h2>
+          </div>
+
+          <div>
+            <div style={{ marginBottom: '1.25rem' }}>
+              <div
+                style={{
+                  fontSize: '0.75rem',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px',
+                  color: 'var(--text-ink-muted)',
+                  marginBottom: '0.25rem',
+                }}
+              >
+                Vault Name
+              </div>
+              <div style={{ fontWeight: 700, fontSize: '1.1rem', color: 'var(--text-ink)' }}>
+                {family?.name || "Kanuji's Family"}
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '1.25rem' }}>
+              <div
+                style={{
+                  fontSize: '0.75rem',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px',
+                  color: 'var(--text-ink-muted)',
+                  marginBottom: '0.25rem',
+                }}
+              >
+                Members Roster Capacity
+              </div>
+              <div style={{ fontWeight: 700, fontSize: '1.1rem', color: 'var(--text-ink)' }}>
+                {family?.max_members || 10} Members Maximum
+              </div>
+            </div>
+
+            {isAdmin && (
+              <button
+                type="button"
+                className="btn btn-secondary"
+                id="btn-regen-family-code"
+                style={{ width: 'fit-content' }}
+                onClick={handleRegenerateCode}
+              >
+                <i className="fas fa-sync-alt" aria-hidden="true" />
+                <span>Regenerate Vault Invitation Code</span>
+              </button>
+            )}
+
+            {/* Perforated Invitation Stub */}
+            <div id="ticket-reveal-container" style={{ marginTop: '2rem' }}>
+              <div
+                style={{
+                  fontSize: '0.75rem',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px',
+                  color: 'var(--text-ink-muted)',
+                  marginBottom: '0.5rem',
+                }}
+              >
+                Share invitation code
+              </div>
+
+              <div className="ticket-stub">
+                <div>
+                  <div className="ticket-label">Family Invitation</div>
+                  <div className="ticket-code" id="revealed-code">
+                    {family?.secret_code || 'FAMD-0000-0000'}
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  id="btn-copy-code"
+                  style={{ padding: '0.5rem 1rem' }}
+                  onClick={handleCopyCode}
+                >
+                  <i className={`far ${copiedCode ? 'fa-check-circle' : 'fa-copy'}`} aria-hidden="true" />
+                  <span>{copiedCode ? 'Copied' : 'Copy'}</span>
+                </button>
               </div>
             </div>
           </div>
-
-          <div className="pt-2 flex justify-end">
-            <button
-              type="submit"
-              disabled={savingProfile}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[var(--color-primary)] hover:bg-[var(--color-primary-dark)] text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer disabled:opacity-50"
-            >
-              <Save className="w-4 h-4" />
-              <span>{savingProfile ? 'Saving...' : 'Save Profile Changes'}</span>
-            </button>
-          </div>
-        </form>
-      </div>
-
-      {/* Cloud Backend Configuration */}
-      <div className="p-6 rounded-3xl bg-[var(--surface-card)] border border-[var(--border-paper)] shadow-xs">
-        <div className="flex items-center gap-2.5 mb-2">
-          <Server className="w-5 h-5 text-[var(--color-primary)]" />
-          <h2 className="text-sm font-bold text-[var(--text-ink)]">Custom API Base URL</h2>
         </div>
-        <p className="text-xs text-[var(--text-ink-muted)] mb-4">
-          Default connects to Railway backend at <code>https://famdoc-api-production-4260f70c.up.railway.app</code>.
-        </p>
 
-        <form onSubmit={handleSaveApiUrl} className="flex gap-2">
-          <input
-            type="text"
-            value={customApiUrl}
-            onChange={(e) => setCustomApiUrl(e.target.value)}
-            placeholder="https://famdoc-api-production-4260f70c.up.railway.app or /api"
-            className="flex-1 px-4 py-2 rounded-xl border border-[var(--border-paper)] bg-[var(--surface-paper-tint)]/40 text-xs font-mono text-[var(--text-ink)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
-          />
-          <button
-            type="submit"
-            className="px-4 py-2 rounded-xl bg-[var(--surface-paper-tint)] hover:bg-[var(--surface-paper-hover)] border border-[var(--border-paper)] text-xs font-semibold text-[var(--text-ink)] transition-colors cursor-pointer"
-          >
-            Save URL
-          </button>
-        </form>
+        {/* Card 3: Backend API Configuration (Spans full width symmetrically) */}
+        <div
+          className="famdoc-card fd-fade-up"
+          id="profile-storage-card"
+          style={{ '--fd-delay': '0.15s' } as React.CSSProperties}
+        >
+          <div className="famdoc-card-header" style={{ marginBottom: '1.25rem' }}>
+            <h2 className="famdoc-card-title" style={{ fontFamily: 'var(--font-serif)', fontSize: '1.25rem', margin: 0 }}>
+              <i className="fas fa-server" style={{ color: 'var(--accent-brand)', marginRight: '0.5rem' }} aria-hidden="true" />
+              Backend API Configuration
+            </h2>
+          </div>
+
+          <p style={{ fontSize: '0.85rem', color: 'var(--text-ink-muted)', marginBottom: '1rem' }}>
+            Configure your custom backend API server host. Leave blank to use the active production Railway backend at{' '}
+            <code>https://famdoc-api-production-4260f70c.up.railway.app</code>.
+          </p>
+
+          <form onSubmit={handleSaveApiUrl} style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+            <input
+              type="text"
+              value={customApiUrl}
+              onChange={(e) => setCustomApiUrl(e.target.value)}
+              placeholder="https://famdoc-api-production-4260f70c.up.railway.app"
+              className="form-control"
+              style={{ flex: 1, minWidth: '240px', fontFamily: 'var(--font-mono)', fontSize: '0.85rem' }}
+            />
+            <button type="submit" className="btn btn-secondary">
+              <i className="fas fa-save" aria-hidden="true" />
+              <span>Save API URL</span>
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   );

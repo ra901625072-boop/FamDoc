@@ -23,6 +23,7 @@ export interface Folder {
   parent_id?: number | null;
   created_at: string;
   updated_at?: string;
+  last_modified?: string;
   file_count?: number;
   total_size?: number;
 }

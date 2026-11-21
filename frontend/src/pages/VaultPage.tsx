@@ -13,25 +13,6 @@ import { api } from '../api/client';
 import { useVaultStore } from '../stores/useVaultStore';
 import { uploadService } from '../services/uploadManager';
 import type { FileItem, Folder } from '../api/types';
-import {
-  Folder as FolderIcon,
-  FileText,
-  Upload,
-  FolderPlus,
-  Search,
-  LayoutGrid,
-  List,
-  MoreVertical,
-  Download,
-  Share2,
-  Trash2,
-  Eye,
-  Edit2,
-  X,
-  FileVideo,
-  FileSpreadsheet,
-  FileImage,
-} from 'lucide-react';
 
 export function VaultPage() {
   const [searchParams] = useSearchParams();
@@ -55,12 +36,14 @@ export function VaultPage() {
   } = useVaultStore();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedFolderIds, setSelectedFolderIds] = useState<number[]>([]);
   const [isNewFolderOpen, setIsNewFolderOpen] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const [renamingItem, setRenamingItem] = useState<{ id: number; name: string; type: 'file' | 'folder' } | null>(null);
   const [renameValue, setRenameValue] = useState('');
   const [isDragOver, setIsDragOver] = useState(false);
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+  const [mobileFabOpen, setMobileFabOpen] = useState(false);
 
   // Queries & Mutations
   const { data: allFolders = [] } = useFolders();
@@ -70,6 +53,18 @@ export function VaultPage() {
   const deleteFolderMut = useDeleteFolder();
   const renameFileMut = useRenameFile();
   const deleteFileMut = useDeleteFile();
+
+  // Close active menu when clicking outside
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('.dropdown-menu') && !target.closest('.item-actions-trigger')) {
+        setActiveMenuId(null);
+      }
+    };
+    window.addEventListener('click', handleOutsideClick);
+    return () => window.removeEventListener('click', handleOutsideClick);
+  }, []);
 
   // Handle URL deep links (?folder_id=123, ?action=new-folder, ?action=upload)
   useEffect(() => {
@@ -101,7 +96,7 @@ export function VaultPage() {
       const fn = file.filename.toLowerCase();
       if (cat === 'video' && !mime.includes('video') && !fn.endsWith('.mp4') && !fn.endsWith('.mkv')) return false;
       if (cat === 'pdf' && !mime.includes('pdf') && !fn.endsWith('.pdf')) return false;
-      if (cat === 'image' && !mime.includes('image') && !fn.endsWith('.jpg') && !fn.endsWith('.png')) return false;
+      if (cat === 'image' && !mime.includes('image') && !fn.endsWith('.jpg') && !fn.endsWith('.png') && !fn.endsWith('.webp')) return false;
       if (cat === 'document' && !mime.includes('word') && !mime.includes('document') && !fn.endsWith('.docx') && !fn.endsWith('.doc')) return false;
       if (cat === 'sheet' && !mime.includes('sheet') && !mime.includes('excel') && !fn.endsWith('.xlsx') && !fn.endsWith('.csv')) return false;
       if (cat === 'text' && !mime.includes('text') && !fn.endsWith('.txt')) return false;
@@ -111,7 +106,7 @@ export function VaultPage() {
 
   // Breadcrumbs chain
   const getBreadcrumbs = (): Array<{ id: number | null; name: string }> => {
-    const chain: Array<{ id: number | null; name: string }> = [{ id: null, name: 'Home Vault' }];
+    const chain: Array<{ id: number | null; name: string }> = [{ id: null, name: 'Root Vault' }];
     if (!currentFolderId) return chain;
 
     let curr: Folder | undefined = currentFolder;
@@ -156,19 +151,47 @@ export function VaultPage() {
     }
   };
 
-  const getFileIcon = (mime: string, name: string) => {
-    const m = (mime || '').toLowerCase();
-    const n = name.toLowerCase();
-    if (m.includes('video') || n.endsWith('.mp4')) return <FileVideo className="w-5 h-5 text-pink-500" />;
-    if (m.includes('image') || n.endsWith('.jpg') || n.endsWith('.png')) return <FileImage className="w-5 h-5 text-blue-500" />;
-    if (m.includes('pdf') || n.endsWith('.pdf')) return <FileText className="w-5 h-5 text-red-500" />;
-    if (m.includes('sheet') || n.endsWith('.xlsx') || n.endsWith('.csv')) return <FileSpreadsheet className="w-5 h-5 text-emerald-500" />;
-    return <FileText className="w-5 h-5 text-purple-500" />;
+  const toggleSelectFolder = (folderId: number) => {
+    setSelectedFolderIds((prev) =>
+      prev.includes(folderId) ? prev.filter((id) => id !== folderId) : [...prev, folderId]
+    );
+  };
+
+  const totalSelectableCount = currentSubfolders.length + filteredFiles.length;
+  const totalSelectedCount = selectedFolderIds.length + selectedFileIds.length;
+  const isAllSelected = totalSelectableCount > 0 && totalSelectedCount === totalSelectableCount;
+
+  const handleToggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedFolderIds([]);
+      clearSelectedFiles();
+    } else {
+      setSelectedFolderIds(currentSubfolders.map((f) => f.id));
+      selectAllFiles(filteredFiles.map((f) => f.id));
+    }
+  };
+
+  const handleClearSelection = () => {
+    setSelectedFolderIds([]);
+    clearSelectedFiles();
+  };
+
+  const handleBulkDelete = async () => {
+    const total = selectedFolderIds.length + selectedFileIds.length;
+    if (!confirm(`Move ${total} selected item${total > 1 ? 's' : ''} to trash?`)) return;
+
+    for (const folderId of selectedFolderIds) {
+      await deleteFolderMut.mutateAsync(folderId);
+    }
+    for (const fileId of selectedFileIds) {
+      await deleteFileMut.mutateAsync(fileId);
+    }
+    handleClearSelection();
   };
 
   return (
     <div
-      className="space-y-6 relative"
+      className="fd-fade-in relative min-h-screen"
       onDragOver={(e) => {
         e.preventDefault();
         setIsDragOver(true);
@@ -176,401 +199,655 @@ export function VaultPage() {
       onDragLeave={() => setIsDragOver(false)}
       onDrop={handleDrop}
     >
-      {/* Hidden Drag Overlay (satisfies baseline locator #drag-overlay) */}
-      <div
-        id="drag-overlay"
-        className={`fixed inset-0 z-50 bg-[var(--overlay-bg)]/80 backdrop-blur-xs flex items-center justify-center pointer-events-none transition-opacity ${
-          isDragOver ? 'opacity-100 pointer-events-auto' : 'opacity-0'
-        }`}
-      >
-        <div className="p-8 rounded-3xl bg-[var(--surface-card)] border-2 border-dashed border-[var(--color-primary)] text-center shadow-2xl">
-          <Upload className="w-12 h-12 text-[var(--color-primary)] mx-auto mb-3 animate-bounce" />
-          <h3 className="text-lg font-bold text-[var(--text-ink)]">Drop files to upload</h3>
-          <p className="text-xs text-[var(--text-ink-muted)] mt-1">
-            Files will be uploaded into {currentFolder?.name || 'Home Vault'}
-          </p>
+      {/* Authentic Content Header */}
+      <div className="content-header fd-fade-in">
+        <div>
+          <h1 className="page-title">Shared Vault</h1>
+          <p className="page-subtitle">Your family's secure document archive.</p>
+        </div>
+        <div className="toolbar-actions">
+          <input
+            type="file"
+            id="file-picker"
+            ref={fileInputRef}
+            multiple
+            style={{ display: 'none' }}
+            onChange={handleFileUpload}
+          />
+          <button
+            className="btn btn-secondary"
+            id="btn-new-folder"
+            type="button"
+            onClick={() => setIsNewFolderOpen(true)}
+          >
+            <i className="fas fa-folder-plus" aria-hidden="true" />
+            <span>New Folder</span>
+          </button>
+          <button
+            className="btn btn-primary"
+            id="btn-upload-file"
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <i className="fas fa-cloud-upload-alt" aria-hidden="true" />
+            <span>Upload File</span>
+          </button>
         </div>
       </div>
 
-      {/* Hidden File Input */}
-      <input
-        type="file"
-        id="file-input"
-        ref={fileInputRef}
-        multiple
-        onChange={handleFileUpload}
-        className="hidden"
-      />
+      {/* Drag & Drop Overlay Indicator */}
+      <div id="drag-overlay" className={isDragOver ? 'show' : ''}>
+        <i className="fas fa-cloud-upload-alt" style={{ fontSize: '4rem' }} aria-hidden="true" />
+        <h2 style={{ fontFamily: 'var(--font-serif)', fontWeight: 800 }}>Drop Files Anywhere to Upload</h2>
+        <p style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: '0.9rem' }}>
+          Uploading to {currentFolder?.name || 'Root Vault'}
+        </p>
+      </div>
 
-      {/* Explorer Top Toolbar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-3xl bg-[var(--surface-card)] border border-[var(--border-paper)] shadow-xs">
-        {/* Breadcrumbs */}
-        <div id="breadcrumbs" className="flex items-center flex-wrap gap-1.5 text-xs font-semibold text-[var(--text-ink)]">
-          {getBreadcrumbs().map((b, idx, arr) => (
-            <div key={b.id ?? 'root'} className="flex items-center gap-1.5">
+      {/* Main Browser Surface */}
+      <div id="explorer-container" className="explorer-container">
+        {/* Browser Toolbar with Breadcrumbs, Search, Filter, View Toggles */}
+        <div className="browser-toolbar fd-fade-in">
+          {/* Breadcrumbs */}
+          <div className="browser-breadcrumbs" id="breadcrumbs">
+            {getBreadcrumbs().map((b, idx, arr) =>
+              idx === arr.length - 1 ? (
+                <span key={b.id ?? 'root'} className="breadcrumb-current">
+                  {b.name}
+                </span>
+              ) : (
+                <span key={b.id ?? 'root'} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <a
+                    href={`#/vault${b.id ? `?folder_id=${b.id}` : ''}`}
+                    className="breadcrumb-link"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setCurrentFolderId(b.id);
+                      handleClearSelection();
+                    }}
+                  >
+                    {b.name}
+                  </a>
+                  <span className="breadcrumb-separator">
+                    <i className="fas fa-chevron-right" style={{ fontSize: '0.75rem' }} aria-hidden="true" />
+                  </span>
+                </span>
+              )
+            )}
+          </div>
+
+          {/* Right Toolbar Controls */}
+          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+            {/* Search Input */}
+            <div className="search-input-wrapper">
+              <i className="fas fa-search" aria-hidden="true" />
+              <input
+                type="text"
+                id="vault-search"
+                className="form-control"
+                placeholder="Search files..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={{ padding: '0.5rem 1rem 0.5rem 2.25rem', fontSize: '0.85rem', width: '180px' }}
+              />
+            </div>
+
+            {/* Filter Category Select */}
+            <select
+              id="filter-type"
+              className="form-control"
+              value={selectedCategory || ''}
+              onChange={(e) => setSelectedCategory(e.target.value || null)}
+              style={{ padding: '0.5rem 1rem', fontSize: '0.85rem', width: 'auto', height: 'auto' }}
+            >
+              <option value="">All Formats</option>
+              <option value="video">Videos</option>
+              <option value="pdf">PDF Documents</option>
+              <option value="image">Images</option>
+              <option value="document">Word Docs</option>
+              <option value="sheet">Spreadsheets</option>
+              <option value="text">Text Files</option>
+            </select>
+
+            {/* View Mode Toggle */}
+            <div
+              style={{
+                display: 'flex',
+                border: '1px solid var(--border-paper)',
+                borderRadius: 'var(--radius-md)',
+                overflow: 'hidden',
+                backgroundColor: 'var(--surface-paper-tint)',
+              }}
+            >
               <button
                 type="button"
-                onClick={() => {
-                  setCurrentFolderId(b.id);
-                  clearSelectedFiles();
-                }}
-                className={`hover:text-[var(--color-primary)] transition-colors cursor-pointer ${
-                  idx === arr.length - 1 ? 'text-[var(--color-primary)] font-bold' : 'text-[var(--text-ink-muted)]'
-                }`}
+                className={`view-toggle-btn ${viewMode === 'grid' ? 'active' : ''}`}
+                id="toggle-grid"
+                style={{ border: 'none', padding: '0.5rem 0.75rem', fontSize: '0.85rem' }}
+                aria-label="Grid View"
+                onClick={() => setViewMode('grid')}
               >
-                {b.name}
+                <i className="fas fa-th-large" aria-hidden="true" />
               </button>
-              {idx < arr.length - 1 && <span className="text-[var(--text-ink-muted)]">/</span>}
+              <button
+                type="button"
+                className={`view-toggle-btn ${viewMode === 'list' ? 'active' : ''}`}
+                id="toggle-list"
+                style={{ border: 'none', padding: '0.5rem 0.75rem', fontSize: '0.85rem' }}
+                aria-label="List View"
+                onClick={() => setViewMode('list')}
+              >
+                <i className="fas fa-list" aria-hidden="true" />
+              </button>
             </div>
-          ))}
+
+            {/* Select All Checkbox */}
+            <label
+              className="fd-select-checkbox-container"
+              style={{ marginLeft: '0.5rem', marginRight: 0 }}
+              title="Select all items in folder"
+            >
+              <input
+                type="checkbox"
+                id="select-all-checkbox"
+                checked={isAllSelected}
+                onChange={handleToggleSelectAll}
+              />
+              <span className="fd-select-checkmark" />
+            </label>
+          </div>
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            id="btn-upload"
-            onClick={() => fileInputRef.current?.click()}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[var(--color-primary)] hover:bg-[var(--color-primary-dark)] text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
-          >
-            <Upload className="w-4 h-4" />
-            <span>Upload</span>
-          </button>
+        {/* Items Container: Grid or List */}
+        <div
+          id="items-wrapper"
+          className={viewMode === 'grid' ? 'items-grid' : 'items-list'}
+          style={{ display: viewMode === 'grid' ? 'grid' : 'flex', width: '100%', minHeight: '350px' }}
+        >
+          {/* Empty State when no folders or files */}
+          {currentSubfolders.length === 0 && filteredFiles.length === 0 ? (
+            <div
+              id="explorer-empty"
+              className="empty-state fd-fade-in"
+              style={{ display: 'flex', gridColumn: '1 / -1', width: '100%', minHeight: '350px' }}
+            >
+              <i className="fas fa-folder-open empty-state-icon" aria-hidden="true" />
+              <h3 className="empty-state-title">This folder is empty</h3>
+              <p className="empty-state-text">Drag and drop files here, or click upload to add family records.</p>
+            </div>
+          ) : (
+            <>
+              {/* 1. Subfolders */}
+              {currentSubfolders.map((folder, index) => {
+              const isSelected = selectedFolderIds.includes(folder.id);
+              const isMenuOpen = activeMenuId === `folder-${folder.id}`;
 
+              if (viewMode === 'list') {
+                return (
+                  <div
+                    key={`folder-${folder.id}`}
+                    className={`vault-item fd-fade-up fd-stagger ${isSelected ? 'selected' : ''}`}
+                    style={{ '--fd-delay': `${Math.min(index * 0.05, 0.5)}s` } as React.CSSProperties}
+                    onClick={() => {
+                      setCurrentFolderId(folder.id);
+                      handleClearSelection();
+                    }}
+                  >
+                    <label
+                      className="fd-select-checkbox-container"
+                      style={{ marginLeft: '0.5rem', marginRight: 0 }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <input
+                        type="checkbox"
+                        className="item-select-checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleSelectFolder(folder.id)}
+                      />
+                      <span className="fd-select-checkmark" />
+                    </label>
+
+                    <i className="item-icon folder fas fa-folder" aria-hidden="true" />
+
+                    <div className="item-details">
+                      <div className="item-name" title={folder.name}>
+                        {folder.name}
+                      </div>
+                      <div className="item-meta-size">{folder.file_count ?? 0} files</div>
+                      <div className="item-meta-date">
+                        {api.helpers.formatDate(folder.last_modified).split(',')[0]}
+                      </div>
+                      <div className="item-meta-uploader">—</div>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="item-actions-trigger"
+                      data-action="toggle-dropdown"
+                      aria-label="Actions Menu"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveMenuId(isMenuOpen ? null : `folder-${folder.id}`);
+                      }}
+                    >
+                      <i className="fas fa-ellipsis-v" aria-hidden="true" />
+                    </button>
+
+                    <div className={`dropdown-menu ${isMenuOpen ? 'show' : ''}`} onClick={(e) => e.stopPropagation()}>
+                      <button
+                        type="button"
+                        className="dropdown-item"
+                        onClick={() => {
+                          setRenamingItem({ id: folder.id, name: folder.name, type: 'folder' });
+                          setRenameValue(folder.name);
+                          setActiveMenuId(null);
+                        }}
+                      >
+                        <i className="fas fa-edit" aria-hidden="true" /> Rename
+                      </button>
+                      <button
+                        type="button"
+                        className="dropdown-item danger"
+                        onClick={async () => {
+                          if (confirm(`Delete folder "${folder.name}"?`)) {
+                            await deleteFolderMut.mutateAsync(folder.id);
+                          }
+                          setActiveMenuId(null);
+                        }}
+                      >
+                        <i className="fas fa-trash-alt" aria-hidden="true" /> Delete
+                      </button>
+                    </div>
+                  </div>
+                );
+              }
+
+              {/* Grid View for Folders */}
+              return (
+                <div
+                  key={`folder-${folder.id}`}
+                  className={`vault-item fd-fade-up fd-stagger ${isSelected ? 'selected' : ''}`}
+                  style={{ '--fd-delay': `${Math.min(index * 0.05, 0.5)}s` } as React.CSSProperties}
+                  onClick={() => {
+                    setCurrentFolderId(folder.id);
+                    handleClearSelection();
+                  }}
+                >
+                  <label
+                    className="fd-select-checkbox-container"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <input
+                      type="checkbox"
+                      className="item-select-checkbox"
+                      checked={isSelected}
+                      onChange={() => toggleSelectFolder(folder.id)}
+                    />
+                    <span className="fd-select-checkmark" />
+                  </label>
+
+                  <div className="item-preview-area">
+                    <i className="item-icon folder fas fa-folder" aria-hidden="true" />
+                  </div>
+
+                  <div className="item-footer">
+                    <div className="item-details">
+                      <div className="item-name" title={folder.name}>
+                        {folder.name}
+                      </div>
+                      <div className="item-meta">{folder.file_count ?? 0} files</div>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="item-actions-trigger"
+                      data-action="toggle-dropdown"
+                      aria-label="Actions Menu"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveMenuId(isMenuOpen ? null : `folder-${folder.id}`);
+                      }}
+                    >
+                      <i className="fas fa-ellipsis-v" aria-hidden="true" />
+                    </button>
+
+                    <div className={`dropdown-menu ${isMenuOpen ? 'show' : ''}`} onClick={(e) => e.stopPropagation()}>
+                      <button
+                        type="button"
+                        className="dropdown-item"
+                        onClick={() => {
+                          setRenamingItem({ id: folder.id, name: folder.name, type: 'folder' });
+                          setRenameValue(folder.name);
+                          setActiveMenuId(null);
+                        }}
+                      >
+                        <i className="fas fa-edit" aria-hidden="true" /> Rename
+                      </button>
+                      <button
+                        type="button"
+                        className="dropdown-item danger"
+                        onClick={async () => {
+                          if (confirm(`Delete folder "${folder.name}"?`)) {
+                            await deleteFolderMut.mutateAsync(folder.id);
+                          }
+                          setActiveMenuId(null);
+                        }}
+                      >
+                        <i className="fas fa-trash-alt" aria-hidden="true" /> Delete
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* 2. Files */}
+            {filteredFiles.map((file, index) => {
+              const isSelected = selectedFileIds.includes(file.id);
+              const isMenuOpen = activeMenuId === `file-${file.id}`;
+              const iconClass = api.helpers.getFileIconClass(file.filename, file.file_type);
+
+              if (viewMode === 'list') {
+                return (
+                  <div
+                    key={`file-${file.id}`}
+                    className={`vault-item fd-fade-up fd-stagger ${isSelected ? 'selected' : ''}`}
+                    style={{ '--fd-delay': `${Math.min((currentSubfolders.length + index) * 0.05, 0.5)}s` } as React.CSSProperties}
+                    onClick={() => setActivePreviewFile(file)}
+                  >
+                    <label
+                      className="fd-select-checkbox-container"
+                      style={{ marginLeft: '0.5rem', marginRight: 0 }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <input
+                        type="checkbox"
+                        className="item-select-checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleSelectFile(file.id)}
+                      />
+                      <span className="fd-select-checkmark" />
+                    </label>
+
+                    <i className={`item-icon ${iconClass}`} aria-hidden="true" />
+
+                    <div className="item-details">
+                      <div className="item-name" title={file.filename}>
+                        {file.filename}
+                      </div>
+                      <div className="item-meta-size">{api.helpers.formatBytes(file.file_size)}</div>
+                      <div className="item-meta-date">
+                        {api.helpers.formatDate(file.created_at).split(',')[0]}
+                      </div>
+                      <div className="item-meta-uploader">—</div>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="item-actions-trigger"
+                      data-action="toggle-dropdown"
+                      aria-label="Actions Menu"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveMenuId(isMenuOpen ? null : `file-${file.id}`);
+                      }}
+                    >
+                      <i className="fas fa-ellipsis-v" aria-hidden="true" />
+                    </button>
+
+                    <div className={`dropdown-menu ${isMenuOpen ? 'show' : ''}`} onClick={(e) => e.stopPropagation()}>
+                      <a
+                        href={api.files.getDownloadUrl(file.id)}
+                        download={file.filename}
+                        className="dropdown-item"
+                        style={{ textDecoration: 'none' }}
+                      >
+                        <i className="fas fa-download" aria-hidden="true" /> Download
+                      </a>
+                      <button
+                        type="button"
+                        className="dropdown-item"
+                        onClick={() => {
+                          setActiveShareFile(file);
+                          setActiveMenuId(null);
+                        }}
+                      >
+                        <i className="fas fa-share-alt" aria-hidden="true" /> Share
+                      </button>
+                      <button
+                        type="button"
+                        className="dropdown-item"
+                        onClick={() => {
+                          setRenamingItem({ id: file.id, name: file.filename, type: 'file' });
+                          setRenameValue(file.filename);
+                          setActiveMenuId(null);
+                        }}
+                      >
+                        <i className="fas fa-edit" aria-hidden="true" /> Rename
+                      </button>
+                      <button
+                        type="button"
+                        className="dropdown-item danger"
+                        onClick={async () => {
+                          if (confirm(`Move "${file.filename}" to trash?`)) {
+                            await deleteFileMut.mutateAsync(file.id);
+                          }
+                          setActiveMenuId(null);
+                        }}
+                      >
+                        <i className="fas fa-trash-alt" aria-hidden="true" /> Trash
+                      </button>
+                    </div>
+                  </div>
+                );
+              }
+
+              {/* Grid View for Files */}
+              return (
+                <div
+                  key={`file-${file.id}`}
+                  className={`vault-item fd-fade-up fd-stagger ${isSelected ? 'selected' : ''}`}
+                  style={{ '--fd-delay': `${Math.min((currentSubfolders.length + index) * 0.05, 0.5)}s` } as React.CSSProperties}
+                  onClick={() => setActivePreviewFile(file)}
+                >
+                  <label
+                    className="fd-select-checkbox-container"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <input
+                      type="checkbox"
+                      className="item-select-checkbox"
+                      checked={isSelected}
+                      onChange={() => toggleSelectFile(file.id)}
+                    />
+                    <span className="fd-select-checkmark" />
+                  </label>
+
+                  <div className="item-preview-area">
+                    <div className="thumbnail-wrapper">
+                      <i className={`item-icon ${iconClass}`} aria-hidden="true" />
+                    </div>
+                  </div>
+
+                  <div className="item-footer">
+                    <div className="item-details">
+                      <div className="item-name" title={file.filename}>
+                        {file.filename}
+                      </div>
+                      <div className="item-meta">{api.helpers.formatBytes(file.file_size)}</div>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="item-actions-trigger"
+                      data-action="toggle-dropdown"
+                      aria-label="Actions Menu"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveMenuId(isMenuOpen ? null : `file-${file.id}`);
+                      }}
+                    >
+                      <i className="fas fa-ellipsis-v" aria-hidden="true" />
+                    </button>
+
+                    <div className={`dropdown-menu ${isMenuOpen ? 'show' : ''}`} onClick={(e) => e.stopPropagation()}>
+                      <a
+                        href={api.files.getDownloadUrl(file.id)}
+                        download={file.filename}
+                        className="dropdown-item"
+                        style={{ textDecoration: 'none' }}
+                      >
+                        <i className="fas fa-download" aria-hidden="true" /> Download
+                      </a>
+                      <button
+                        type="button"
+                        className="dropdown-item"
+                        onClick={() => {
+                          setActiveShareFile(file);
+                          setActiveMenuId(null);
+                        }}
+                      >
+                        <i className="fas fa-share-alt" aria-hidden="true" /> Share
+                      </button>
+                      <button
+                        type="button"
+                        className="dropdown-item"
+                        onClick={() => {
+                          setRenamingItem({ id: file.id, name: file.filename, type: 'file' });
+                          setRenameValue(file.filename);
+                          setActiveMenuId(null);
+                        }}
+                      >
+                        <i className="fas fa-edit" aria-hidden="true" /> Rename
+                      </button>
+                      <button
+                        type="button"
+                        className="dropdown-item danger"
+                        onClick={async () => {
+                          if (confirm(`Move "${file.filename}" to trash?`)) {
+                            await deleteFileMut.mutateAsync(file.id);
+                          }
+                          setActiveMenuId(null);
+                        }}
+                      >
+                        <i className="fas fa-trash-alt" aria-hidden="true" /> Trash
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Bulk Actions Bar */}
+      <div id="bulk-actions-bar" className={`bulk-actions-bar ${totalSelectedCount > 0 ? 'show' : ''}`}>
+        <div className="bulk-selected-count">
+          <span id="bulk-selected-text">
+            {totalSelectedCount} item{totalSelectedCount > 1 ? 's' : ''} selected
+          </span>
+        </div>
+        <div className="bulk-action-buttons">
+          <button type="button" className="btn btn-secondary" id="bulk-clear-btn" onClick={handleClearSelection}>
+            <i className="fas fa-times" aria-hidden="true" /> Cancel
+          </button>
           <button
             type="button"
-            id="btn-new-folder"
-            onClick={() => setIsNewFolderOpen(true)}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[var(--surface-paper-tint)] hover:bg-[var(--surface-paper-hover)] border border-[var(--border-paper)] text-[var(--text-ink)] text-xs font-semibold transition-colors cursor-pointer"
+            className="btn btn-danger"
+            id="bulk-delete-btn"
+            style={{ backgroundColor: 'var(--warning-red)', color: 'white', borderColor: 'var(--warning-red)' }}
+            onClick={handleBulkDelete}
           >
-            <FolderPlus className="w-4 h-4 text-emerald-600" />
+            <i className="fas fa-trash-alt" aria-hidden="true" /> Delete
+          </button>
+        </div>
+      </div>
+
+      {/* Mobile Floating Action Button (FAB) Menu */}
+      <div className="mobile-fab-container">
+        <button
+          type="button"
+          className={`fab-btn ${mobileFabOpen ? 'active' : ''}`}
+          id="mobile-fab"
+          aria-label="Add new item"
+          onClick={() => setMobileFabOpen(!mobileFabOpen)}
+        >
+          <i className="fas fa-plus" aria-hidden="true" />
+        </button>
+        <div className={`fab-menu ${mobileFabOpen ? 'open' : ''}`} id="fab-menu">
+          <button
+            type="button"
+            className="fab-menu-item"
+            id="fab-upload-file"
+            title="Upload File"
+            onClick={() => {
+              fileInputRef.current?.click();
+              setMobileFabOpen(false);
+            }}
+          >
+            <i className="fas fa-cloud-upload-alt" aria-hidden="true" />
+            <span>Upload File</span>
+          </button>
+          <button
+            type="button"
+            className="fab-menu-item"
+            id="fab-new-folder"
+            title="New Folder"
+            onClick={() => {
+              setIsNewFolderOpen(true);
+              setMobileFabOpen(false);
+            }}
+          >
+            <i className="fas fa-folder-plus" aria-hidden="true" />
             <span>New Folder</span>
           </button>
         </div>
       </div>
 
-      {/* Search, Filter, & View Mode Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex-1 max-w-md relative">
-          <Search className="w-4 h-4 text-[var(--text-ink-muted)] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-          <input
-            id="vault-search"
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search documents by name..."
-            className="w-full pl-10 pr-4 py-2 rounded-xl border border-[var(--border-paper)] bg-[var(--surface-card)] text-[var(--text-ink)] text-xs focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] transition-all"
-          />
-        </div>
-
-        <div className="flex items-center gap-2">
-          {/* Format Filter Dropdown */}
-          <select
-            id="filter-type"
-            value={selectedCategory || ''}
-            onChange={(e) => setSelectedCategory(e.target.value || null)}
-            className="py-2 px-3 rounded-xl border border-[var(--border-paper)] bg-[var(--surface-card)] text-[var(--text-ink)] text-xs font-medium focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
-          >
-            <option value="">All Formats</option>
-            <option value="video">Videos</option>
-            <option value="PDF">PDF Documents</option>
-            <option value="IMAGE">Images</option>
-            <option value="DOCUMENT">Word Docs</option>
-            <option value="SHEET">Spreadsheets</option>
-            <option value="TEXT">Text Files</option>
-          </select>
-
-          {/* View Toggle */}
-          <div className="flex rounded-xl border border-[var(--border-paper)] bg-[var(--surface-paper-tint)] p-0.5">
-            <button
-              type="button"
-              id="toggle-grid"
-              onClick={() => setViewMode('grid')}
-              className={`p-1.5 rounded-lg transition-colors ${
-                viewMode === 'grid'
-                  ? 'bg-[var(--surface-card)] text-[var(--color-primary)] shadow-xs'
-                  : 'text-[var(--text-ink-muted)] hover:text-[var(--text-ink)]'
-              }`}
-              aria-label="Grid View"
-            >
-              <LayoutGrid className="w-4 h-4" />
-            </button>
-            <button
-              type="button"
-              id="toggle-list"
-              onClick={() => setViewMode('list')}
-              className={`p-1.5 rounded-lg transition-colors ${
-                viewMode === 'list'
-                  ? 'bg-[var(--surface-card)] text-[var(--color-primary)] shadow-xs'
-                  : 'text-[var(--text-ink-muted)] hover:text-[var(--text-ink)]'
-              }`}
-              aria-label="List View"
-            >
-              <List className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Explorer Container */}
-      <div id="items-wrapper" className="min-h-[300px]">
-        {currentSubfolders.length === 0 && filteredFiles.length === 0 ? (
-          <div id="explorer-empty" className="p-12 text-center rounded-3xl bg-[var(--surface-card)] border border-[var(--border-paper)]">
-            <FolderIcon className="w-12 h-12 text-[var(--border-paper)] mx-auto mb-3" />
-            <h3 className="empty-state-title text-base font-bold text-[var(--text-ink)]">This folder is empty</h3>
-            <p className="empty-state-text text-xs text-[var(--text-ink-muted)] mt-1">
-              Drag and drop files here, or click upload to add family records.
-            </p>
-          </div>
-        ) : viewMode === 'grid' ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {/* Subfolders */}
-            {currentSubfolders.map((folder) => (
-              <div
-                key={`folder-${folder.id}`}
-                onClick={() => setCurrentFolderId(folder.id)}
-                className="group p-4 rounded-2xl bg-[var(--surface-card)] border border-[var(--border-paper)] hover:border-[var(--color-primary)] hover:shadow-xs transition-all cursor-pointer flex flex-col justify-between relative"
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-600">
-                    <FolderIcon className="w-6 h-6 fill-current" />
-                  </div>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setActiveMenuId(activeMenuId === `f-${folder.id}` ? null : `f-${folder.id}`);
-                    }}
-                    className="p-1 rounded-lg text-[var(--text-ink-muted)] hover:text-[var(--text-ink)] hover:bg-[var(--surface-paper-hover)]"
-                  >
-                    <MoreVertical className="w-4 h-4" />
-                  </button>
-                </div>
-
-                {activeMenuId === `f-${folder.id}` && (
-                  <div
-                    className="absolute top-12 right-4 z-20 w-36 rounded-xl bg-[var(--surface-card)] border border-[var(--border-paper)] shadow-xl p-1 text-xs"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setRenamingItem({ id: folder.id, name: folder.name, type: 'folder' });
-                        setRenameValue(folder.name);
-                        setActiveMenuId(null);
-                      }}
-                      className="flex items-center gap-2 w-full p-2 rounded-lg hover:bg-[var(--surface-paper-hover)] text-[var(--text-ink)]"
-                    >
-                      <Edit2 className="w-3.5 h-3.5" /> Rename
-                    </button>
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        if (confirm(`Delete folder "${folder.name}"?`)) {
-                          await deleteFolderMut.mutateAsync(folder.id);
-                        }
-                        setActiveMenuId(null);
-                      }}
-                      className="flex items-center gap-2 w-full p-2 rounded-lg hover:bg-red-50 text-red-600"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" /> Delete
-                    </button>
-                  </div>
-                )}
-
-                <div>
-                  <div className="text-xs font-bold text-[var(--text-ink)] truncate" title={folder.name}>
-                    {folder.name}
-                  </div>
-                  <div className="text-[10px] text-[var(--text-ink-muted)] mt-0.5">
-                    {folder.file_count ?? 0} items
-                  </div>
-                </div>
-              </div>
-            ))}
-
-            {/* Files */}
-            {filteredFiles.map((file) => (
-              <div
-                key={`file-${file.id}`}
-                onClick={() => setActivePreviewFile(file)}
-                className={`group p-4 rounded-2xl bg-[var(--surface-card)] border transition-all cursor-pointer flex flex-col justify-between relative ${
-                  selectedFileIds.includes(file.id)
-                    ? 'border-[var(--color-primary)] ring-2 ring-[var(--color-primary)]/20'
-                    : 'border-[var(--border-paper)] hover:border-[var(--color-primary)] hover:shadow-xs'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <div className="p-2.5 rounded-xl bg-[var(--surface-paper-tint)]">
-                    {getFileIcon(file.file_type, file.filename)}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setActiveMenuId(activeMenuId === `file-${file.id}` ? null : `file-${file.id}`);
-                    }}
-                    className="p-1 rounded-lg text-[var(--text-ink-muted)] hover:text-[var(--text-ink)] hover:bg-[var(--surface-paper-hover)]"
-                  >
-                    <MoreVertical className="w-4 h-4" />
-                  </button>
-                </div>
-
-                {activeMenuId === `file-${file.id}` && (
-                  <div
-                    className="absolute top-12 right-4 z-20 w-36 rounded-xl bg-[var(--surface-card)] border border-[var(--border-paper)] shadow-xl p-1 text-xs"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <a
-                      href={api.files.getDownloadUrl(file.id)}
-                      download={file.filename}
-                      className="flex items-center gap-2 w-full p-2 rounded-lg hover:bg-[var(--surface-paper-hover)] text-[var(--text-ink)] no-underline"
-                    >
-                      <Download className="w-3.5 h-3.5" /> Download
-                    </a>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setActiveShareFile(file);
-                        setActiveMenuId(null);
-                      }}
-                      className="flex items-center gap-2 w-full p-2 rounded-lg hover:bg-[var(--surface-paper-hover)] text-[var(--text-ink)]"
-                    >
-                      <Share2 className="w-3.5 h-3.5" /> Share
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setRenamingItem({ id: file.id, name: file.filename, type: 'file' });
-                        setRenameValue(file.filename);
-                        setActiveMenuId(null);
-                      }}
-                      className="flex items-center gap-2 w-full p-2 rounded-lg hover:bg-[var(--surface-paper-hover)] text-[var(--text-ink)]"
-                    >
-                      <Edit2 className="w-3.5 h-3.5" /> Rename
-                    </button>
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        if (confirm(`Move "${file.filename}" to trash?`)) {
-                          await deleteFileMut.mutateAsync(file.id);
-                        }
-                        setActiveMenuId(null);
-                      }}
-                      className="flex items-center gap-2 w-full p-2 rounded-lg hover:bg-red-50 text-red-600"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" /> Trash
-                    </button>
-                  </div>
-                )}
-
-                <div>
-                  <div className="text-xs font-semibold text-[var(--text-ink)] truncate" title={file.filename}>
-                    {file.filename}
-                  </div>
-                  <div className="flex items-center justify-between text-[10px] text-[var(--text-ink-muted)] mt-1">
-                    <span>{api.helpers.formatBytes(file.file_size)}</span>
-                    <span>{api.helpers.formatDate(file.created_at)}</span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          /* List View */
-          <div className="rounded-2xl bg-[var(--surface-card)] border border-[var(--border-paper)] overflow-hidden divide-y divide-[var(--border-paper)]">
-            {currentSubfolders.map((folder) => (
-              <div
-                key={`folder-row-${folder.id}`}
-                onClick={() => setCurrentFolderId(folder.id)}
-                className="flex items-center justify-between p-3 px-4 hover:bg-[var(--surface-paper-hover)] transition-colors cursor-pointer"
-              >
-                <div className="flex items-center gap-3">
-                  <FolderIcon className="w-5 h-5 text-emerald-600 fill-current" />
-                  <span className="text-xs font-bold text-[var(--text-ink)]">{folder.name}</span>
-                </div>
-                <span className="text-xs text-[var(--text-ink-muted)]">{folder.file_count ?? 0} items</span>
-              </div>
-            ))}
-
-            {filteredFiles.map((file) => (
-              <div
-                key={`file-row-${file.id}`}
-                onClick={() => setActivePreviewFile(file)}
-                className="flex items-center justify-between p-3 px-4 hover:bg-[var(--surface-paper-hover)] transition-colors cursor-pointer"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  {getFileIcon(file.file_type, file.filename)}
-                  <span className="text-xs font-semibold text-[var(--text-ink)] truncate">{file.filename}</span>
-                </div>
-                <div className="flex items-center gap-4 text-xs text-[var(--text-ink-muted)] shrink-0">
-                  <span>{api.helpers.formatBytes(file.file_size)}</span>
-                  <span>{api.helpers.formatDate(file.created_at)}</span>
-                  <a
-                    href={api.files.getDownloadUrl(file.id)}
-                    download={file.filename}
-                    onClick={(e) => e.stopPropagation()}
-                    className="p-1 rounded-lg hover:bg-[var(--surface-paper-tint)] text-[var(--text-ink)]"
-                  >
-                    <Download className="w-4 h-4" />
-                  </a>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Create Folder Modal */}
+      {/* Create Folder Dialog */}
       {isNewFolderOpen && (
-        <div
-          id="modal-create-folder"
-          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4"
-          onClick={() => setIsNewFolderOpen(false)}
-        >
-          <div
-            className="w-full max-w-md bg-[var(--surface-card)] rounded-3xl p-6 border border-[var(--border-paper)] shadow-2xl relative"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="modal-title text-base font-bold text-[var(--text-ink)]">Create Folder</h3>
+        <div id="modal-create-folder" className="modal-overlay" onClick={() => setIsNewFolderOpen(false)}>
+          <div className="famdoc-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">Create Folder</h3>
               <button
                 type="button"
-                onClick={() => setIsNewFolderOpen(false)}
-                className="modal-close text-[var(--text-ink-muted)] hover:text-[var(--text-ink)]"
+                className="modal-close"
                 aria-label="Close modal"
+                onClick={() => setIsNewFolderOpen(false)}
               >
-                <X className="w-5 h-5" />
+                <i className="fas fa-times" aria-hidden="true" />
               </button>
             </div>
-            <form id="form-create-folder" onSubmit={handleCreateFolder} className="space-y-4">
-              <div className="space-y-1">
-                <label htmlFor="new-folder-name" className="text-xs font-semibold text-[var(--text-ink)]">
-                  Folder Name
-                </label>
-                <input
-                  id="new-folder-name"
-                  type="text"
-                  value={newFolderName}
-                  onChange={(e) => setNewFolderName(e.target.value)}
-                  placeholder="e.g. Tax Receipts"
-                  required
-                  maxLength={50}
-                  className="w-full px-4 py-2.5 rounded-xl border border-[var(--border-paper)] bg-[var(--surface-paper-tint)]/40 text-xs text-[var(--text-ink)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
-                />
+            <form id="form-create-folder" onSubmit={handleCreateFolder}>
+              <div className="modal-body">
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label htmlFor="new-folder-name" className="form-label">
+                    Folder Name
+                  </label>
+                  <input
+                    type="text"
+                    id="new-folder-name"
+                    className="form-control"
+                    placeholder="e.g. Tax Receipts"
+                    value={newFolderName}
+                    onChange={(e) => setNewFolderName(e.target.value)}
+                    required
+                    maxLength={50}
+                  />
+                </div>
               </div>
-              <div className="flex justify-end gap-2 pt-2">
+              <div className="modal-footer">
                 <button
                   type="button"
+                  className="btn btn-secondary modal-close-btn"
                   onClick={() => setIsNewFolderOpen(false)}
-                  className="px-4 py-2 rounded-xl border border-[var(--border-paper)] text-xs font-semibold hover:bg-[var(--surface-paper-hover)]"
                 >
                   Cancel
                 </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 rounded-xl bg-[var(--color-primary)] text-white text-xs font-semibold shadow-xs hover:bg-[var(--color-primary-dark)]"
-                >
+                <button type="submit" className="btn btn-primary">
                   Create
                 </button>
               </div>
@@ -579,47 +856,48 @@ export function VaultPage() {
         </div>
       )}
 
-      {/* Rename Modal */}
+      {/* Rename Item Dialog */}
       {renamingItem && (
-        <div
-          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4"
-          onClick={() => setRenamingItem(null)}
-        >
-          <div
-            className="w-full max-w-md bg-[var(--surface-card)] rounded-3xl p-6 border border-[var(--border-paper)] shadow-2xl relative"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-bold text-[var(--text-ink)]">Rename {renamingItem.type}</h3>
+        <div id="modal-rename" className="modal-overlay" onClick={() => setRenamingItem(null)}>
+          <div className="famdoc-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">Rename {renamingItem.type === 'folder' ? 'Folder' : 'File'}</h3>
               <button
                 type="button"
+                className="modal-close"
+                aria-label="Close modal"
                 onClick={() => setRenamingItem(null)}
-                className="text-[var(--text-ink-muted)] hover:text-[var(--text-ink)]"
               >
-                <X className="w-5 h-5" />
+                <i className="fas fa-times" aria-hidden="true" />
               </button>
             </div>
-            <form onSubmit={handleRename} className="space-y-4">
-              <input
-                type="text"
-                value={renameValue}
-                onChange={(e) => setRenameValue(e.target.value)}
-                required
-                className="w-full px-4 py-2.5 rounded-xl border border-[var(--border-paper)] bg-[var(--surface-paper-tint)]/40 text-xs text-[var(--text-ink)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
-              />
-              <div className="flex justify-end gap-2 pt-2">
+            <form id="form-rename" onSubmit={handleRename}>
+              <div className="modal-body">
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label htmlFor="rename-input" className="form-label">
+                    New Name
+                  </label>
+                  <input
+                    type="text"
+                    id="rename-input"
+                    className="form-control"
+                    value={renameValue}
+                    onChange={(e) => setRenameValue(e.target.value)}
+                    required
+                    maxLength={100}
+                  />
+                </div>
+              </div>
+              <div className="modal-footer">
                 <button
                   type="button"
+                  className="btn btn-secondary modal-close-btn"
                   onClick={() => setRenamingItem(null)}
-                  className="px-4 py-2 rounded-xl border border-[var(--border-paper)] text-xs font-semibold hover:bg-[var(--surface-paper-hover)]"
                 >
                   Cancel
                 </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 rounded-xl bg-[var(--color-primary)] text-white text-xs font-semibold shadow-xs hover:bg-[var(--color-primary-dark)]"
-                >
-                  Save
+                <button type="submit" className="btn btn-primary">
+                  Rename
                 </button>
               </div>
             </form>
@@ -627,71 +905,146 @@ export function VaultPage() {
         </div>
       )}
 
-      {/* Document Preview Modal */}
-      {activePreviewFile && (
-        <div
-          id="preview-modal"
-          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex flex-col p-4 md:p-8"
-          onClick={() => setActivePreviewFile(null)}
-        >
-          <div
-            className="flex items-center justify-between text-white p-3 px-4 bg-black/40 rounded-2xl mb-4"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center gap-2 truncate">
-              <Eye className="w-5 h-5 text-emerald-400" />
-              <span className="font-semibold text-sm truncate">{activePreviewFile.filename}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <a
-                href={api.files.getDownloadUrl(activePreviewFile.id)}
-                download={activePreviewFile.filename}
-                className="px-3 py-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-white text-xs font-medium no-underline"
-              >
-                Download
-              </a>
+      {/* Share Link Dialog */}
+      {activeShareFile && (
+        <div id="modal-share" className="modal-overlay" onClick={() => setActiveShareFile(null)}>
+          <div className="famdoc-modal" style={{ maxWidth: '550px' }} onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">Share Vault Item</h3>
               <button
                 type="button"
-                onClick={() => setActivePreviewFile(null)}
-                className="p-1 rounded-xl hover:bg-white/20 text-white"
+                className="modal-close"
+                aria-label="Close modal"
+                onClick={() => setActiveShareFile(null)}
               >
-                <X className="w-5 h-5" />
+                <i className="fas fa-times" aria-hidden="true" />
+              </button>
+            </div>
+            <div className="modal-body">
+              <h4 id="share-filename" style={{ fontFamily: 'var(--font-serif)', marginBottom: '1.25rem' }}>
+                {activeShareFile.filename}
+              </h4>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-ink-muted)' }}>
+                Direct Link:
+              </p>
+              <div
+                style={{
+                  padding: '0.75rem 1rem',
+                  borderRadius: 'var(--radius-md)',
+                  background: 'var(--surface-paper-tint)',
+                  border: '1px solid var(--border-paper)',
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: '0.8rem',
+                  wordBreak: 'break-all',
+                  marginBottom: '1rem',
+                }}
+              >
+                {api.files.getDownloadUrl(activeShareFile.id)}
+              </div>
+              <button
+                type="button"
+                className="btn btn-primary"
+                style={{ width: '100%' }}
+                onClick={() => {
+                  navigator.clipboard.writeText(api.files.getDownloadUrl(activeShareFile.id));
+                  alert('Download link copied to clipboard!');
+                }}
+              >
+                <i className="fas fa-copy" aria-hidden="true" /> Copy Download URL
+              </button>
+            </div>
+            <div className="modal-footer">
+              <button
+                type="button"
+                className="btn btn-secondary modal-close-btn"
+                onClick={() => setActiveShareFile(null)}
+              >
+                Close
               </button>
             </div>
           </div>
+        </div>
+      )}
 
-          <div
-            className="flex-1 bg-black/60 rounded-3xl overflow-hidden flex items-center justify-center p-4 relative"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {activePreviewFile.file_type.includes('image') ? (
-              <img
-                src={api.files.getPreviewUrl(activePreviewFile.id)}
-                alt={activePreviewFile.filename}
-                className="max-h-full max-w-full object-contain rounded-xl"
-              />
-            ) : activePreviewFile.file_type.includes('pdf') ? (
-              <iframe
-                src={api.files.getPreviewUrl(activePreviewFile.id)}
-                title={activePreviewFile.filename}
-                className="w-full h-full rounded-xl bg-white"
-              />
-            ) : (
-              <div className="text-center text-white p-8">
-                <FileText className="w-16 h-16 mx-auto mb-4 text-emerald-400 opacity-80" />
-                <h4 className="text-base font-bold mb-2">Preview not available directly in browser</h4>
-                <p className="text-xs text-white/60 mb-6">
-                  {activePreviewFile.filename} ({api.helpers.formatBytes(activePreviewFile.file_size)})
-                </p>
+      {/* Media Preview Modal */}
+      {activePreviewFile && (
+        <div id="modal-preview" className="modal-overlay" onClick={() => setActivePreviewFile(null)}>
+          <div className="famdoc-modal preview-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3
+                className="modal-title"
+                id="preview-title"
+                style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '80%' }}
+              >
+                {activePreviewFile.filename}
+              </h3>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                 <a
                   href={api.files.getDownloadUrl(activePreviewFile.id)}
                   download={activePreviewFile.filename}
-                  className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold no-underline"
+                  id="preview-download-btn"
+                  className="btn btn-secondary"
+                  style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', textDecoration: 'none' }}
                 >
-                  Download File
+                  <i className="fas fa-download" aria-hidden="true" />
+                  <span>Download</span>
                 </a>
+                <button
+                  type="button"
+                  className="modal-close"
+                  aria-label="Close modal"
+                  onClick={() => setActivePreviewFile(null)}
+                >
+                  <i className="fas fa-times" aria-hidden="true" />
+                </button>
               </div>
-            )}
+            </div>
+            <div className="preview-body" id="preview-content-area">
+              {activePreviewFile.file_type.includes('image') ? (
+                <img
+                  src={api.files.getPreviewUrl(activePreviewFile.id)}
+                  alt={activePreviewFile.filename}
+                  className="preview-image"
+                />
+              ) : activePreviewFile.file_type.includes('video') ? (
+                <video
+                  src={api.files.getPreviewUrl(activePreviewFile.id)}
+                  controls
+                  className="preview-video"
+                />
+              ) : activePreviewFile.file_type.includes('pdf') ? (
+                <iframe
+                  src={api.files.getPreviewUrl(activePreviewFile.id)}
+                  title={activePreviewFile.filename}
+                  className="preview-frame"
+                />
+              ) : (
+                <div style={{ padding: '3rem', textAlign: 'center' }}>
+                  <i
+                    className={`item-icon ${api.helpers.getFileIconClass(
+                      activePreviewFile.filename,
+                      activePreviewFile.file_type
+                    )}`}
+                    style={{ fontSize: '3.5rem', marginBottom: '1rem', display: 'inline-block' }}
+                    aria-hidden="true"
+                  />
+                  <h4 style={{ fontFamily: 'var(--font-serif)', marginBottom: '0.5rem' }}>
+                    Preview not supported for this file type
+                  </h4>
+                  <p style={{ color: 'var(--text-ink-muted)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
+                    {activePreviewFile.filename} ({api.helpers.formatBytes(activePreviewFile.file_size)})
+                  </p>
+                  <a
+                    href={api.files.getDownloadUrl(activePreviewFile.id)}
+                    download={activePreviewFile.filename}
+                    className="btn btn-primary"
+                    style={{ textDecoration: 'none' }}
+                  >
+                    <i className="fas fa-download" aria-hidden="true" /> Download File
+                  </a>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
