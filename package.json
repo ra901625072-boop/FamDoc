@@ -1,0 +1,17 @@
+{
+  "name": "famdoc-backend",
+  "version": "1.0.0",
+  "description": "Cloudflare edge router and container deployment for FDMS",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy:staging": "wrangler deploy --env staging",
+    "deploy:prod": "wrangler deploy --env production",
+    "tail": "wrangler tail"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241112.0",
+    "typescript": "^5.5.0",
+    "wrangler": "^3.90.0"
+  }
+}

@@ -18,11 +18,12 @@ socket.setdefaulttimeout(20.0)
 if not hasattr(asyncio, "coroutine"):
     asyncio.coroutine = lambda f: f
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.gzip import GZipMiddleware
-from database import engine, Base, run_migrations, SessionLocal
+from sqlalchemy.orm import Session
+from database import engine, Base, run_migrations, SessionLocal, get_db
 from routers import auth, family, storage_config, folders, files, recycle_bin, search, dashboard, share, views
 from config import CORS_ORIGINS, IS_DEFAULT_JWT_SECRET, SERVE_FRONTEND
 from utils.cleanup import purge_old_recycle_bin_items
@@ -173,6 +174,17 @@ app.include_router(share.router)
 @app.get("/api/health")
 def health_check():
     return {"status": "ok"}
+
+@app.post("/api/internal/cleanup-retention")
+def trigger_retention_cleanup(request: Request, db: Session = Depends(get_db)):
+    internal_secret = os.getenv("INTERNAL_API_SECRET")
+    if internal_secret:
+        auth_header = request.headers.get("authorization", "")
+        token = auth_header.replace("Bearer ", "").strip()
+        if token != internal_secret:
+            raise HTTPException(status_code=403, detail="Unauthorized internal call")
+    purge_old_recycle_bin_items(db, retention_days=30)
+    return {"status": "ok", "message": "Retention cleanup completed successfully"}
 
 if SERVE_FRONTEND:
     app.include_router(views.router)
