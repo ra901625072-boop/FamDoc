@@ -179,6 +179,23 @@ export const api = {
       return data;
     },
 
+    async googleVerify(idToken: string, inviteCode?: string): Promise<AuthResponse> {
+      const data = await performRequest<AuthResponse>('/api/auth/google/verify', {
+        method: 'POST',
+        body: JSON.stringify({
+          id_token: idToken,
+          invite_code: inviteCode,
+        }),
+      });
+      if (data && data.access_token && typeof window !== 'undefined') {
+        localStorage.setItem('famdoc_token', data.access_token);
+        if (data.user) {
+          localStorage.setItem('famdoc_user', JSON.stringify(data.user));
+        }
+      }
+      return data;
+    },
+
     async joinFamily(username: string, email: string, secretCode: string, password: string): Promise<AuthResponse> {
       const data = await performRequest<AuthResponse>('/api/auth/join', {
         method: 'POST',

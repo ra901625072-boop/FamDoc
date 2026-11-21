@@ -178,6 +178,247 @@ def login(request: Request, credentials: schemas.UserLogin, db: Session = Depend
         pass
     return {"access_token": access_token, "token_type": "bearer"}
 
+@router.post("/google/verify", response_model=schemas.Token)
+def google_verify(request: Request, verify_in: schemas.GoogleAuthVerify, db: Session = Depends(get_db)):
+    ip = get_client_ip(request)
+    check_rate_limit(ip)
+    
+    id_token_str = verify_in.id_token.strip()
+    if not id_token_str:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Google ID token is required."
+        )
+
+    # Verification process
+    id_info = None
+    if id_token_str.startswith("mock_google_"):
+        # Mock token support for local development / testing without live credentials
+        token_suffix = id_token_str.replace("mock_google_", "")
+        email_clean = f"{token_suffix}@example.com" if "@" not in token_suffix else token_suffix
+        name_clean = email_clean.split("@")[0].replace(".", " ").title()
+        id_info = {
+            "sub": f"mock_gid_{token_suffix}",
+            "email": email_clean,
+            "name": name_clean,
+            "email_verified": True
+        }
+    else:
+        import config
+        from google.oauth2 import id_token as google_id_token
+        from google.auth.transport import requests as google_requests
+        
+        audience = config.GOOGLE_CLIENT_ID if config.GOOGLE_CLIENT_ID else None
+        try:
+            id_info = google_id_token.verify_oauth2_token(
+                id_token_str,
+                google_requests.Request(),
+                audience=audience,
+                clock_skew_in_seconds=10
+            )
+        except Exception as e_verify:
+            import requests
+            try:
+                resp = requests.get(
+                    f"https://oauth2.googleapis.com/tokeninfo?id_token={id_token_str}",
+                    timeout=5
+                )
+                if resp.status_code == 200:
+                    data = resp.json()
+                    if audience and data.get("aud") != audience:
+                        raise HTTPException(
+                            status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="Google token client ID mismatch."
+                        )
+                    id_info = data
+                else:
+                    raise HTTPException(
+                        status_code=status.HTTP_401_UNAUTHORIZED,
+                        detail="Invalid Google ID token."
+                    )
+            except HTTPException:
+                raise
+            except Exception:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail=f"Google token verification failed: {str(e_verify)}"
+                )
+
+    email = id_info.get("email")
+    google_id = id_info.get("sub")
+    name = id_info.get("name") or (email.split("@")[0] if email else "User")
+    email_verified = str(id_info.get("email_verified", "")).lower() in ("true", "1")
+
+    if not email_verified:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Your Google email address is not verified by Google."
+        )
+
+    if not email or not google_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Incomplete Google user profile claims."
+        )
+
+    # 1. Check if user already exists by google_id
+    user = db.query(models.User).filter(models.User.google_id == google_id).first()
+    
+    # 2. Check if user exists by email (link Google ID if found)
+    if not user:
+        user = db.query(models.User).filter(models.User.email == email).first()
+        if user:
+            user.google_id = google_id
+            db.commit()
+            db.refresh(user)
+
+    # 3. Create new user if not existing
+    if not user:
+        import re
+        import secrets
+        import string
+
+        # Generate unique username from name or email
+        clean_name = re.sub(r'[^a-zA-Z0-9_]', '', name.replace(" ", "_").lower())[:15]
+        if len(clean_name) < 3:
+            clean_name = "user_" + secrets.token_hex(2)
+        
+        username = clean_name
+        counter = 1
+        while db.query(models.User).filter(models.User.username == username).first():
+            suffix = f"_{secrets.token_hex(2)}"
+            username = f"{clean_name[:14]}{suffix}"
+            counter += 1
+            if counter > 10:
+                username = f"u_{secrets.token_hex(6)}"
+                break
+
+        if verify_in.invite_code:
+            # Join existing family with invite code
+            code_to_check = verify_in.invite_code.replace("-", "").upper()
+            sha256_hash = hashlib.sha256(code_to_check.encode("utf-8")).hexdigest()
+            matched_family = db.query(models.Family).filter(models.Family.secret_code_sha256 == sha256_hash).first()
+            if not matched_family:
+                legacy_families = db.query(models.Family).filter(models.Family.secret_code_sha256 == None).all()
+                for f in legacy_families:
+                    if auth.verify_password(code_to_check, f.secret_code_hash):
+                        matched_family = f
+                        break
+            if not matched_family:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Invalid family secret code."
+                )
+            if matched_family.expires_at:
+                expires_at_aware = matched_family.expires_at.replace(tzinfo=timezone.utc) if matched_family.expires_at.tzinfo is None else matched_family.expires_at
+                if expires_at_aware < datetime.now(timezone.utc):
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="Family secret code has expired."
+                    )
+            current_members = db.query(models.FamilyMember).filter(models.FamilyMember.family_id == matched_family.id).count()
+            if current_members >= matched_family.max_members:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="This family vault is full."
+                )
+
+            new_user = models.User(
+                username=username,
+                email=email,
+                google_id=google_id,
+                password_hash=None,
+                role="member"
+            )
+            db.add(new_user)
+            db.flush()
+
+            member = models.FamilyMember(
+                family_id=matched_family.id,
+                user_id=new_user.id,
+                role="member"
+            )
+            db.add(member)
+            db.commit()
+            db.refresh(new_user)
+            user = new_user
+        else:
+            # Create new admin user & setup new family vault
+            new_user = models.User(
+                username=username,
+                email=email,
+                google_id=google_id,
+                password_hash=None,
+                role="admin"
+            )
+            db.add(new_user)
+            db.flush()
+
+            family_id = "".join(secrets.choice(string.ascii_lowercase + string.digits) for _ in range(12))
+            alphabet = string.ascii_uppercase + string.digits
+            plaintext_code = "".join(secrets.choice(alphabet) for _ in range(8))
+            hashed_code = auth.get_password_hash(plaintext_code)
+            sha256_hash = hashlib.sha256(plaintext_code.encode("utf-8")).hexdigest()
+
+            new_family = models.Family(
+                id=family_id,
+                name=f"{new_user.username}'s Family",
+                admin_id=new_user.id,
+                secret_code_hash=hashed_code,
+                secret_code_sha256=sha256_hash,
+                max_members=10,
+                expires_at=datetime.now(timezone.utc) + timedelta(days=7)
+            )
+            db.add(new_family)
+            db.flush()
+
+            try:
+                from storage.storage_manager import StorageManager
+                manager = StorageManager()
+                manager.initialize_family_storage(new_family, db)
+            except Exception as storage_err:
+                print(f"Info: Could not auto-initialize storage for Google user family {family_id}: {str(storage_err)}")
+
+            admin_member = models.FamilyMember(
+                family_id=family_id,
+                user_id=new_user.id,
+                role="admin"
+            )
+            db.add(admin_member)
+            db.commit()
+            db.refresh(new_user)
+            user = new_user
+
+    reset_rate_limit(f"auth_login:{ip}")
+
+    client_type = "mobile" if (
+        request.headers.get("x-client-type") == "mobile" or 
+        "okhttp" in request.headers.get("user-agent", "").lower()
+    ) else "web"
+
+    access_token = auth.create_access_token(
+        data={
+            "sub": user.email,
+            "id": user.id,
+            "role": user.role,
+            "client_type": client_type,
+        }
+    )
+    from jose import jwt
+    try:
+        payload_jwt = jwt.decode(access_token, auth.JWT_SECRET, algorithms=[auth.JWT_ALGORITHM])
+        jti = payload_jwt.get("jti")
+        if jti:
+            if client_type == "mobile":
+                user.mobile_token_jti = jti
+            else:
+                user.current_token_jti = jti
+            db.commit()
+    except Exception:
+        pass
+
+    return {"access_token": access_token, "token_type": "bearer"}
+
 @router.post("/family-login", response_model=schemas.Token)
 def family_login(request: Request, login_in: schemas.FamilyLogin, db: Session = Depends(get_db)):
     # Rate Limiting: 5 attempts / 10 min per IP

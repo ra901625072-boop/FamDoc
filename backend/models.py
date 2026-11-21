@@ -12,6 +12,7 @@ class User(Base):
     email = Column(String(255), unique=True, index=True, nullable=False)
     password_hash = Column(String(255), nullable=True) # Nullable for family members created without passwords
     role = Column(String(50), default="member") # "admin" or "member"
+    google_id = Column(String(255), unique=True, index=True, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     current_token_jti = Column(String(64), nullable=True)
     mobile_token_jti = Column(String(64), nullable=True)

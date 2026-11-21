@@ -308,6 +308,14 @@ def run_migrations():
             except Exception as e:
                 logger.error(f"Migration error (users mobile_token_jti): {str(e)}")
 
+        if "google_id" not in columns:
+            try:
+                execute_migration_statement("ALTER TABLE users ADD COLUMN google_id VARCHAR(255)")
+                execute_migration_statement("CREATE UNIQUE INDEX ix_users_google_id ON users(google_id)")
+                logger.info("Migration: Successfully added google_id column and unique index to users table.")
+            except Exception as e:
+                logger.error(f"Migration error (users google_id): {str(e)}")
+
     # 4. Migrate audit_logs table
     if "audit_logs" in table_names:
         columns = [col["name"] for col in inspector.get_columns("audit_logs")]

@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../../api/client';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { ThemeToggle } from '../../components/common/ThemeToggle';
+import { GoogleSignInButton } from '../../components/auth/GoogleSignInButton';
 import { AlertCircle, Eye, EyeOff } from 'lucide-react';
 
 export function RegisterPage() {
@@ -54,6 +55,15 @@ export function RegisterPage() {
             <div id="error-message">{error}</div>
           </div>
         )}
+
+        <GoogleSignInButton
+          label="Sign up with Google"
+          onError={(msg) => setError(msg)}
+        />
+
+        <div className="auth-divider">
+          <span>or register with email</span>
+        </div>
 
         <form id="register-form" onSubmit={handleSubmit}>
           <div className="form-group" style={{ marginBottom: '1.25rem' }}>

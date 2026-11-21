@@ -23,6 +23,10 @@ class UserLogin(BaseModel):
     email: EmailStr
     password: str
 
+class GoogleAuthVerify(BaseModel):
+    id_token: str
+    invite_code: Optional[str] = None
+
 class UserResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
