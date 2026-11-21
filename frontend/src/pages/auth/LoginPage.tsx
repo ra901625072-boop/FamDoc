@@ -3,11 +3,12 @@ import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../../api/client';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { ThemeToggle } from '../../components/common/ThemeToggle';
-import { AlertCircle, Lock, Mail } from 'lucide-react';
+import { AlertCircle, Lock, Mail, Eye, EyeOff } from 'lucide-react';
 
 export function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const setAuth = useAuthStore((s) => s.setAuth);
@@ -42,10 +43,10 @@ export function LoginPage() {
             <img src="/img/logo.svg" alt="FamDoc Logo" className="w-12 h-12" />
           </Link>
           <h1 className="auth-title text-2xl font-extrabold text-[var(--text-ink)] tracking-tight">
-            Sign In to FamDoc
+            Welcome Back
           </h1>
-          <p className="text-xs text-[var(--text-ink-muted)] mt-1.5">
-            Enter your credentials to access your family's vault
+          <p className="auth-subtitle text-xs text-[var(--text-ink-muted)] mt-1.5">
+            Enter your credentials to access your family keepsake vault
           </p>
         </div>
 
@@ -94,17 +95,26 @@ export function LoginPage() {
               <Lock className="w-4 h-4 text-[var(--text-ink-muted)] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
                 id="password"
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
                 required
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[var(--border-paper)] bg-[var(--surface-paper-tint)]/40 text-[var(--text-ink)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] transition-all"
+                className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-[var(--border-paper)] bg-[var(--surface-paper-tint)]/40 text-[var(--text-ink)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] transition-all"
               />
+              <button
+                type="button"
+                className="password-toggle-btn absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-ink-muted)] hover:text-[var(--text-ink)] cursor-pointer"
+                onClick={() => setShowPassword(!showPassword)}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
             </div>
           </div>
 
           <button
+            id="btn-submit"
             type="submit"
             disabled={loading}
             className="w-full py-3 px-4 rounded-xl bg-[var(--color-primary)] hover:bg-[var(--color-primary-dark)] text-white font-semibold text-sm shadow-md transition-all duration-200 disabled:opacity-50 cursor-pointer"

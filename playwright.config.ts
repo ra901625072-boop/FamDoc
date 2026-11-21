@@ -12,7 +12,7 @@ export default defineConfig({
     screenshot: 'on',
   },
   webServer: {
-    command: 'python -m http.server 3000 -d frontend-legacy',
+    command: 'python -m http.server 3000 -d frontend/dist',
     url: 'http://127.0.0.1:3000',
     reuseExistingServer: !process.env.CI,
     timeout: 10000,
