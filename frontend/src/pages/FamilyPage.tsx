@@ -212,8 +212,13 @@ export function FamilyPage() {
                   style={{
                     fontSize: '0.72rem',
                     fontWeight: 700,
-                    color: timeLeft <= 15 ? '#ef4444' : '#10b981',
-                    backgroundColor: timeLeft <= 15 ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)',
+                    color: timeLeft === 0 || timeLeft <= 15 ? (timeLeft === 0 ? '#ef4444' : '#f59e0b') : '#10b981',
+                    backgroundColor:
+                      timeLeft === 0 || timeLeft <= 15
+                        ? timeLeft === 0
+                          ? 'rgba(239, 68, 68, 0.15)'
+                          : 'rgba(245, 158, 11, 0.18)'
+                        : 'rgba(16, 185, 129, 0.15)',
                     padding: '0.15rem 0.5rem',
                     borderRadius: '10px',
                     display: 'inline-flex',
@@ -221,8 +226,25 @@ export function FamilyPage() {
                     gap: '0.3rem',
                   }}
                 >
-                  <i className={`fas ${timeLeft > 0 ? 'fa-stopwatch' : 'fa-exclamation-circle'}`} aria-hidden="true" />
-                  <span>{timeLeft > 0 ? `Valid for: ${timeLeft}s` : 'Expired (Valid for 1 min)'}</span>
+                  <i
+                    className={`fas ${
+                      timeLeft === 0
+                        ? 'fa-exclamation-circle'
+                        : timeLeft > 65
+                        ? 'fa-shield-alt'
+                        : 'fa-stopwatch'
+                    }`}
+                    aria-hidden="true"
+                  />
+                  <span>
+                    {timeLeft === 0
+                      ? 'Expired (1-Min Limit)'
+                      : timeLeft > 65
+                      ? 'Standard Access Code'
+                      : timeLeft <= 15
+                      ? `Expiring in: ${timeLeft}s`
+                      : `Valid for: ${timeLeft}s`}
+                  </span>
                 </span>
               )}
             </div>
@@ -492,8 +514,13 @@ export function FamilyPage() {
                     style={{
                       fontSize: '0.8rem',
                       fontWeight: 700,
-                      color: timeLeft <= 15 ? '#ef4444' : '#10b981',
-                      backgroundColor: timeLeft <= 15 ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)',
+                      color: timeLeft === 0 || timeLeft <= 15 ? (timeLeft === 0 ? '#ef4444' : '#f59e0b') : '#10b981',
+                      backgroundColor:
+                        timeLeft === 0 || timeLeft <= 15
+                          ? timeLeft === 0
+                            ? 'rgba(239, 68, 68, 0.15)'
+                            : 'rgba(245, 158, 11, 0.18)'
+                          : 'rgba(16, 185, 129, 0.15)',
                       padding: '0.25rem 0.75rem',
                       borderRadius: '14px',
                       display: 'inline-flex',
@@ -501,8 +528,25 @@ export function FamilyPage() {
                       gap: '0.35rem',
                     }}
                   >
-                    <i className={`fas ${timeLeft > 0 ? 'fa-stopwatch' : 'fa-exclamation-circle'}`} aria-hidden="true" />
-                    <span>{timeLeft > 0 ? `Valid for: ${timeLeft}s` : 'Expired (Valid for 1 min)'}</span>
+                    <i
+                      className={`fas ${
+                        timeLeft === 0
+                          ? 'fa-exclamation-circle'
+                          : timeLeft > 65
+                          ? 'fa-shield-alt'
+                          : 'fa-stopwatch'
+                      }`}
+                      aria-hidden="true"
+                    />
+                    <span>
+                      {timeLeft === 0
+                        ? 'Expired (1-Min Limit)'
+                        : timeLeft > 65
+                        ? 'Standard Access Code'
+                        : timeLeft <= 15
+                        ? `Expiring in: ${timeLeft}s`
+                        : `Valid for: ${timeLeft}s`}
+                    </span>
                   </span>
                 </div>
               )}

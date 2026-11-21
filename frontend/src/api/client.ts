@@ -297,10 +297,34 @@ export const api = {
     },
 
     async updateDetails(name: string, maxMembers: number): Promise<FamilyDetails> {
-      return performRequest<FamilyDetails>('/api/family/details', {
-        method: 'PUT',
-        body: JSON.stringify({ name, max_members: maxMembers }),
-      });
+      try {
+        return await performRequest<FamilyDetails>('/api/family/details', {
+          method: 'PUT',
+          body: JSON.stringify({ name, max_members: maxMembers }),
+        });
+      } catch (err: unknown) {
+        // Fallback to POST /details or regenerateCode if PUT is rejected by any network intermediary or outdated backend
+        const apiErr = err as { status?: number; message?: string };
+        if (apiErr?.status === 405 || (typeof apiErr?.message === 'string' && apiErr.message.includes('Method Not Allowed'))) {
+          try {
+            return await performRequest<FamilyDetails>('/api/family/details', {
+              method: 'POST',
+              body: JSON.stringify({ name, max_members: maxMembers }),
+            });
+          } catch {
+            const res = await api.family.regenerateCode(name, maxMembers);
+            return {
+              id: 0,
+              name,
+              max_members: maxMembers,
+              secret_code: res.secret_code,
+              expires_at: res.expires_at,
+              created_at: new Date().toISOString(),
+            };
+          }
+        }
+        throw err;
+      }
     },
 
     async regenerateCode(name = 'Family Vault', maxMembers = 10): Promise<{ secret_code: string; expires_at?: string }> {

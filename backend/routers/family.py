@@ -243,6 +243,8 @@ def get_family_details(
     return family
 
 @router.put("/details", response_model=schemas.FamilyResponse)
+@router.post("/details", response_model=schemas.FamilyResponse)
+@router.patch("/details", response_model=schemas.FamilyResponse)
 def update_family_details(
     update_data: schemas.FamilySetup,
     current_user: models.User = Depends(auth.get_admin_user),

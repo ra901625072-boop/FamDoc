@@ -76,6 +76,14 @@ export function ProfilePage() {
     return () => clearInterval(timer);
   }, [expiresAt]);
 
+  // Auto-dismiss status messages after 6 seconds
+  useEffect(() => {
+    if (statusMsg) {
+      const timer = setTimeout(() => setStatusMsg(null), 6000);
+      return () => clearTimeout(timer);
+    }
+  }, [statusMsg]);
+
   useEffect(() => {
     const handleCodeUpdate = (e: Event) => {
       const custom = e as CustomEvent<{ secret_code: string; expires_at?: string } | string>;
@@ -217,6 +225,99 @@ export function ProfilePage() {
   const numPrefix = String(maxMembers).padStart(2, '0').slice(-2);
   const codePreviewPrefix = `${namePrefix}${numPrefix}`;
 
+  // Intelligent code status badge formatter
+  const renderCodeStatusBadge = () => {
+    if (!effectiveCode) return null;
+    if (timeLeft === null) return null;
+
+    if (timeLeft === 0) {
+      return (
+        <span
+          style={{
+            fontSize: '0.75rem',
+            fontWeight: 700,
+            color: '#ef4444',
+            backgroundColor: 'rgba(239, 68, 68, 0.15)',
+            padding: '0.25rem 0.65rem',
+            borderRadius: '12px',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.35rem',
+            border: '1px solid rgba(239, 68, 68, 0.3)',
+          }}
+        >
+          <i className="fas fa-exclamation-circle" aria-hidden="true" />
+          <span>Expired (1-Min Limit)</span>
+        </span>
+      );
+    }
+
+    if (timeLeft > 65) {
+      return (
+        <span
+          style={{
+            fontSize: '0.75rem',
+            fontWeight: 700,
+            color: '#10b981',
+            backgroundColor: 'rgba(16, 185, 129, 0.15)',
+            padding: '0.25rem 0.65rem',
+            borderRadius: '12px',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.35rem',
+            border: '1px solid rgba(16, 185, 129, 0.3)',
+          }}
+          title="Active standard code. Click 'Generate New 1-Min Code' below for disposable 60s security."
+        >
+          <i className="fas fa-shield-alt" aria-hidden="true" />
+          <span>Standard Access Code</span>
+        </span>
+      );
+    }
+
+    if (timeLeft <= 15) {
+      return (
+        <span
+          style={{
+            fontSize: '0.75rem',
+            fontWeight: 700,
+            color: '#f59e0b',
+            backgroundColor: 'rgba(245, 158, 11, 0.18)',
+            padding: '0.25rem 0.65rem',
+            borderRadius: '12px',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.35rem',
+            border: '1px solid rgba(245, 158, 11, 0.4)',
+          }}
+        >
+          <i className="fas fa-stopwatch" aria-hidden="true" />
+          <span>Expiring in: {timeLeft}s</span>
+        </span>
+      );
+    }
+
+    return (
+      <span
+        style={{
+          fontSize: '0.75rem',
+          fontWeight: 700,
+          color: '#10b981',
+          backgroundColor: 'rgba(16, 185, 129, 0.15)',
+          padding: '0.25rem 0.65rem',
+          borderRadius: '12px',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '0.35rem',
+          border: '1px solid rgba(16, 185, 129, 0.3)',
+        }}
+      >
+        <i className="fas fa-stopwatch" aria-hidden="true" />
+        <span>Valid for: {timeLeft}s</span>
+      </span>
+    );
+  };
+
   return (
     <div className="fd-fade-in space-y-6">
       {/* Content Header */}
@@ -229,25 +330,47 @@ export function ProfilePage() {
 
       {statusMsg && (
         <div
-          className="famdoc-alert"
+          className="famdoc-alert fd-fade-in"
           style={{
             display: 'flex',
             alignItems: 'center',
+            justifyContent: 'space-between',
             gap: '0.65rem',
-            padding: '1rem 1.25rem',
+            padding: '0.85rem 1.25rem',
             borderRadius: 'var(--radius-md)',
-            backgroundColor: statusMsg.type === 'success' ? 'var(--surface-alert-info)' : 'rgba(239, 68, 68, 0.1)',
-            color: statusMsg.type === 'success' ? 'var(--color-primary)' : 'var(--warning-red)',
-            border: `1px solid ${statusMsg.type === 'success' ? 'var(--border-paper)' : 'rgba(239, 68, 68, 0.3)'}`,
+            backgroundColor: statusMsg.type === 'success' ? 'var(--surface-alert-info)' : 'rgba(239, 68, 68, 0.12)',
+            color: statusMsg.type === 'success' ? 'var(--color-primary)' : '#ef4444',
+            border: `1px solid ${statusMsg.type === 'success' ? 'var(--border-paper)' : 'rgba(239, 68, 68, 0.35)'}`,
             fontWeight: 600,
             fontSize: '0.85rem',
+            boxShadow: 'var(--shadow-sm)',
           }}
         >
-          <i
-            className={`fas ${statusMsg.type === 'success' ? 'fa-check-circle' : 'fa-exclamation-triangle'}`}
-            aria-hidden="true"
-          />
-          <span>{statusMsg.text}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+            <i
+              className={`fas ${statusMsg.type === 'success' ? 'fa-check-circle' : 'fa-exclamation-triangle'}`}
+              aria-hidden="true"
+            />
+            <span>{statusMsg.text}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setStatusMsg(null)}
+            aria-label="Dismiss alert"
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: 'inherit',
+              cursor: 'pointer',
+              padding: '0.2rem 0.5rem',
+              fontSize: '1rem',
+              lineHeight: 1,
+              opacity: 0.75,
+              borderRadius: '4px',
+            }}
+          >
+            ✕
+          </button>
         </div>
       )}
 
@@ -363,78 +486,179 @@ export function ProfilePage() {
               <i className="fas fa-home" style={{ color: 'var(--accent-brand)', marginRight: '0.5rem' }} aria-hidden="true" />
               Family Vault Details
             </h2>
+            <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.82rem', color: 'var(--text-ink-muted)' }}>
+              Configure vault identity and manage 1-minute ephemeral invite passes.
+            </p>
           </div>
 
           <div>
             {isAdmin ? (
-              <form onSubmit={handleSaveFamilyDetails} style={{ marginBottom: '1.5rem' }}>
-                <div className="form-group" style={{ marginBottom: '1rem' }}>
-                  <label htmlFor="family-name" className="form-label" style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span>Vault Name</span>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-ink-muted)' }}>First 2 letters used in code</span>
-                  </label>
-                  <input
-                    type="text"
-                    id="family-name"
-                    className="form-control"
-                    value={familyName}
-                    onChange={(e) => setFamilyName(e.target.value)}
-                    placeholder="e.g. Family Vault"
-                    required
-                    minLength={2}
-                    maxLength={40}
-                  />
-                </div>
-
-                <div className="form-group" style={{ marginBottom: '1.25rem' }}>
-                  <label htmlFor="family-max-members" className="form-label" style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span>Members Roster Capacity</span>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-ink-muted)' }}>2 digits used in code (2–20)</span>
-                  </label>
-                  <input
-                    type="number"
-                    id="family-max-members"
-                    className="form-control"
-                    value={maxMembers}
-                    onChange={(e) => setMaxMembers(Math.max(2, Math.min(20, parseInt(e.target.value) || 2)))}
-                    min={2}
-                    max={20}
-                    required
-                  />
-                  <div style={{ fontSize: '0.78rem', color: 'var(--text-ink-muted)', marginTop: '0.35rem' }}>
-                    Allowed capacity: 2 to 20 members. Code preview prefix: <strong style={{ color: 'var(--accent-brand)', fontFamily: 'var(--font-mono)' }}>{codePreviewPrefix}-XXXX</strong>
+              <div>
+                {/* Zone 1: Vault Configuration Form */}
+                <form onSubmit={handleSaveFamilyDetails}>
+                  <div className="form-group" style={{ marginBottom: '1rem' }}>
+                    <label htmlFor="family-name" className="form-label" style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span>Vault Name</span>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-ink-muted)' }}>First 2 letters form code prefix</span>
+                    </label>
+                    <input
+                      type="text"
+                      id="family-name"
+                      className="form-control"
+                      value={familyName}
+                      onChange={(e) => setFamilyName(e.target.value)}
+                      placeholder="e.g. Rajput Kanuji"
+                      required
+                      minLength={2}
+                      maxLength={40}
+                    />
                   </div>
-                </div>
 
-                <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                  <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+                    <label htmlFor="family-max-members" className="form-label" style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span>Members Roster Capacity</span>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-ink-muted)' }}>2 digits form code middle (2–20)</span>
+                    </label>
+                    <input
+                      type="number"
+                      id="family-max-members"
+                      className="form-control"
+                      value={maxMembers}
+                      onChange={(e) => setMaxMembers(Math.max(2, Math.min(20, parseInt(e.target.value) || 2)))}
+                      min={2}
+                      max={20}
+                      required
+                    />
+                    <div style={{ fontSize: '0.78rem', color: 'var(--text-ink-muted)', marginTop: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <i className="fas fa-info-circle" style={{ color: 'var(--accent-brand)' }} aria-hidden="true" />
+                      <span>
+                        Allowed: 2 to 20 members. Code prefix preview:{' '}
+                        <strong style={{ color: 'var(--accent-brand)', fontFamily: 'var(--font-mono)' }}>{codePreviewPrefix}-XXXX</strong>
+                      </span>
+                    </div>
+                  </div>
+
                   <button
                     type="submit"
                     id="btn-save-family"
                     className="btn btn-primary"
                     disabled={savingFamily}
+                    style={{ width: '100%', justifyContent: 'center', padding: '0.65rem 1.25rem' }}
                   >
-                    <i className="fas fa-save" aria-hidden="true" />
-                    <span>{savingFamily ? 'Saving...' : 'Save Vault Details'}</span>
+                    <i className={`fas ${savingFamily ? 'fa-spinner fa-spin' : 'fa-save'}`} aria-hidden="true" />
+                    <span>{savingFamily ? 'Saving Vault Details...' : 'Save Vault Details'}</span>
                   </button>
+                </form>
 
+                {/* Elegant Zone Divider */}
+                <div style={{ margin: '1.75rem 0', position: 'relative', textAlign: 'center' }}>
+                  <div style={{ borderTop: '1px solid var(--border-paper)', position: 'absolute', top: '50%', left: 0, right: 0 }} />
+                  <span
+                    style={{
+                      position: 'relative',
+                      background: 'var(--surface-card)',
+                      padding: '0 0.85rem',
+                      fontSize: '0.72rem',
+                      fontWeight: 700,
+                      color: 'var(--text-ink-muted)',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.75px',
+                    }}
+                  >
+                    Invitation Access Pass
+                  </span>
+                </div>
+
+                {/* Zone 2: Ephemeral 1-Minute Invitation Pass */}
+                <div id="ticket-reveal-container">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.65rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-ink-muted)', fontWeight: 600 }}>
+                      Share invitation code
+                    </span>
+                    {renderCodeStatusBadge()}
+                  </div>
+
+                  {/* Perforated Luxury Ticket Stub */}
+                  <div
+                    className="ticket-stub"
+                    style={{
+                      borderColor: timeLeft === 0 ? 'rgba(239, 68, 68, 0.4)' : undefined,
+                      marginBottom: '1rem',
+                    }}
+                  >
+                    <div>
+                      <div className="ticket-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span>Family Invitation Pass</span>
+                        {timeLeft !== null && timeLeft > 0 && timeLeft <= 65 && (
+                          <span style={{ color: timeLeft <= 15 ? '#f59e0b' : '#10b981', fontSize: '0.7rem', fontWeight: 600 }}>
+                            ● Active 1-Min Code
+                          </span>
+                        )}
+                        {timeLeft !== null && timeLeft > 65 && (
+                          <span style={{ color: '#10b981', fontSize: '0.7rem', fontWeight: 600 }}>
+                            ● Vault Secret Code
+                          </span>
+                        )}
+                        {timeLeft === 0 && (
+                          <span style={{ color: '#ef4444', fontSize: '0.7rem', fontWeight: 600 }}>
+                            ✕ Expired
+                          </span>
+                        )}
+                      </div>
+                      <div
+                        className="ticket-code"
+                        id="revealed-code"
+                        style={{
+                          textDecoration: timeLeft === 0 ? 'line-through' : 'none',
+                          opacity: timeLeft === 0 ? 0.45 : 1,
+                          letterSpacing: '2.5px',
+                        }}
+                      >
+                        {effectiveCode || 'CLICK GENERATE BELOW'}
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      id="btn-copy-code"
+                      style={{ padding: '0.55rem 1.15rem' }}
+                      onClick={handleCopyCode}
+                      disabled={!effectiveCode || timeLeft === 0}
+                      title={timeLeft === 0 ? 'Code has expired. Please regenerate.' : 'Copy invitation code'}
+                    >
+                      <i className={`far ${copiedCode ? 'fa-check-circle' : 'fa-copy'}`} aria-hidden="true" />
+                      <span>{copiedCode ? 'Copied!' : timeLeft === 0 ? 'Expired' : 'Copy'}</span>
+                    </button>
+                  </div>
+
+                  {/* Action Button: Directly Under Ticket Stub */}
                   <button
                     type="button"
                     className="btn btn-secondary"
                     id="btn-regen-family-code"
                     onClick={handleRegenerateCode}
                     disabled={regenCodeMut.isPending}
+                    style={{ width: '100%', justifyContent: 'center', padding: '0.65rem 1.25rem' }}
                   >
                     <i className={`fas fa-sync-alt ${regenCodeMut.isPending ? 'fa-spin' : ''}`} aria-hidden="true" />
                     <span>
                       {regenCodeMut.isPending
-                        ? 'Generating...'
+                        ? 'Generating Secure 1-Min Code...'
                         : effectiveCode
                         ? 'Regenerate 1-Min Code'
                         : 'Generate 1-Min Code'}
                     </span>
                   </button>
+
+                  <div style={{ marginTop: '0.75rem', fontSize: '0.78rem', color: 'var(--text-ink-muted)', display: 'flex', alignItems: 'center', gap: '0.45rem', lineHeight: 1.4 }}>
+                    <i className="fas fa-shield-alt" style={{ color: 'var(--accent-brand)', fontSize: '0.85rem' }} aria-hidden="true" />
+                    <span>
+                      For security, generated codes automatically expire after <strong>60 seconds</strong>. Family members must submit it in &quot;Join Family Vault&quot; before the timer runs out.
+                    </span>
+                  </div>
                 </div>
-              </form>
+              </div>
             ) : (
               <div>
                 <div style={{ marginBottom: '1.25rem' }}>
@@ -454,95 +678,24 @@ export function ProfilePage() {
                     {family?.max_members || 10} Members Maximum
                   </div>
                 </div>
+
+                <div className="ticket-stub" style={{ marginTop: '1.5rem' }}>
+                  <div>
+                    <div className="ticket-label">Family Vault Code</div>
+                    <div className="ticket-code">{effectiveCode || 'FAMD-0000-0000'}</div>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={handleCopyCode}
+                    disabled={!effectiveCode}
+                  >
+                    <i className={`far ${copiedCode ? 'fa-check-circle' : 'fa-copy'}`} aria-hidden="true" />
+                    <span>{copiedCode ? 'Copied' : 'Copy'}</span>
+                  </button>
+                </div>
               </div>
             )}
-
-            {/* Perforated Invitation Stub */}
-            <div id="ticket-reveal-container" style={{ marginTop: '1.75rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-                <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-ink-muted)' }}>
-                  Share invitation code
-                </span>
-                {effectiveCode && timeLeft !== null && (
-                  timeLeft > 0 ? (
-                    <span
-                      style={{
-                        fontSize: '0.75rem',
-                        fontWeight: 700,
-                        color: timeLeft <= 15 ? '#ef4444' : '#10b981',
-                        backgroundColor: timeLeft <= 15 ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)',
-                        padding: '0.2rem 0.6rem',
-                        borderRadius: '12px',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '0.35rem',
-                      }}
-                    >
-                      <i className="fas fa-stopwatch" aria-hidden="true" />
-                      <span>Valid for: {timeLeft}s</span>
-                    </span>
-                  ) : (
-                    <span
-                      style={{
-                        fontSize: '0.75rem',
-                        fontWeight: 700,
-                        color: '#ef4444',
-                        backgroundColor: 'rgba(239, 68, 68, 0.15)',
-                        padding: '0.2rem 0.6rem',
-                        borderRadius: '12px',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '0.35rem',
-                      }}
-                    >
-                      <i className="fas fa-exclamation-circle" aria-hidden="true" />
-                      <span>Expired (Valid for 1 min)</span>
-                    </span>
-                  )
-                )}
-              </div>
-
-              <div className="ticket-stub" style={{ borderColor: timeLeft === 0 ? 'rgba(239, 68, 68, 0.4)' : undefined }}>
-                <div>
-                  <div className="ticket-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span>Family Invitation</span>
-                    {timeLeft !== null && timeLeft > 0 && (
-                      <span style={{ color: '#10b981', fontSize: '0.7rem', fontWeight: 600 }}>● Active 1-Min Code</span>
-                    )}
-                  </div>
-                  <div
-                    className="ticket-code"
-                    id="revealed-code"
-                    style={{
-                      textDecoration: timeLeft === 0 ? 'line-through' : 'none',
-                      opacity: timeLeft === 0 ? 0.5 : 1,
-                    }}
-                  >
-                    {effectiveCode || (isAdmin ? 'CLICK GENERATE ABOVE' : 'FAMD-0000-0000')}
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  id="btn-copy-code"
-                  style={{ padding: '0.5rem 1rem' }}
-                  onClick={handleCopyCode}
-                  disabled={!effectiveCode || timeLeft === 0}
-                  title={timeLeft === 0 ? 'Code has expired. Please regenerate.' : 'Copy invitation code'}
-                >
-                  <i className={`far ${copiedCode ? 'fa-check-circle' : 'fa-copy'}`} aria-hidden="true" />
-                  <span>{copiedCode ? 'Copied' : timeLeft === 0 ? 'Expired' : 'Copy'}</span>
-                </button>
-              </div>
-
-              {timeLeft === 0 && (
-                <div style={{ marginTop: '0.65rem', fontSize: '0.8rem', color: '#ef4444', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <i className="fas fa-info-circle" aria-hidden="true" />
-                  <span>Invitation codes expire after 1 minute for vault security. Click &quot;Regenerate 1-Min Code&quot; above to create a new code.</span>
-                </div>
-              )}
-            </div>
           </div>
         </div>
       </div>
