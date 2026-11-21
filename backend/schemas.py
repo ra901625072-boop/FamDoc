@@ -270,3 +270,27 @@ class PasswordResetConfirm(BaseModel):
         if not any(char.isdigit() for char in v):
             raise ValueError('Password must contain at least one number')
         return v
+
+
+# ==========================================
+# Direct Cloud Storage Upload Schemas (R2)
+# ==========================================
+
+class PresignedUploadRequest(BaseModel):
+    filename: str = Field(..., max_length=255)
+    file_type: str = Field(..., max_length=100)
+    size_bytes: int = Field(..., ge=1)
+    folder_id: Optional[int] = None
+
+class PresignedUploadResponse(BaseModel):
+    upload_url: str
+    cloud_file_id: str
+    bucket: str
+    expires_in: int
+
+class PresignedUploadComplete(BaseModel):
+    cloud_file_id: str
+    filename: str
+    file_type: str
+    size_bytes: int
+    folder_id: Optional[int] = None

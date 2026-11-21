@@ -428,6 +428,134 @@ async def upload_file(
 
     return serialize_file(db_file, current_user_id=current_user.id)
 
+@router.post("/upload-url", response_model=schemas.PresignedUploadResponse)
+def get_upload_url(
+    req: schemas.PresignedUploadRequest,
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    family = current_user.family
+    if not family:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Family record not found")
+
+    if req.folder_id is not None:
+        auth.verify_resource_access(models.Folder, req.folder_id, current_user.family_id, db)
+
+    # Safe filename check
+    if not SAFE_FILENAME_PATTERN.match(req.filename) or len(req.filename) > 255:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Filename contains unsupported characters.")
+
+    # Extension check
+    _, ext = os.path.splitext(req.filename.lower())
+    detected_mime, _ = mimetypes.guess_type(req.filename)
+    is_video_mime = (req.file_type and req.file_type.lower().startswith("video/")) or (detected_mime and detected_mime.lower().startswith("video/"))
+    if ext not in ALLOWED_EXTENSIONS and not is_video_mime:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="File type not allowed.")
+
+    # Size check
+    MAX_FILE_SIZE = MAX_FILE_SIZE_MB * 1024 * 1024
+    if req.size_bytes > MAX_FILE_SIZE:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"File size exceeds maximum limit of {MAX_FILE_SIZE_MB}MB.")
+
+    # Duplicate name check
+    existing_file = db.query(models.File).filter(
+        models.File.filename == req.filename,
+        models.File.folder_id == req.folder_id,
+        models.File.family_id == current_user.family_id,
+        models.File.deleted_at == None
+    ).first()
+    if existing_file:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="A file with this name already exists in this folder.")
+
+    # Quota check
+    from sqlalchemy import func
+    used_bytes = db.query(func.sum(models.File.size_bytes)).filter(
+        models.File.family_id == current_user.family_id,
+        models.File.deleted_at == None
+    ).scalar() or 0
+
+    if family.storage_quota_bytes and (used_bytes + req.size_bytes > family.storage_quota_bytes):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Family storage quota exceeded.")
+
+    manager = StorageManager()
+    r2_provider = manager.providers.get("r2")
+    if not r2_provider or r2_provider._get_client() is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Direct Cloudflare R2 upload is not configured on this environment. Use standard /upload endpoint."
+        )
+
+    res = r2_provider.generate_presigned_upload_url(
+        family_id=current_user.family_id,
+        filename=req.filename,
+        mimetype=req.file_type
+    )
+
+    return schemas.PresignedUploadResponse(
+        upload_url=res["upload_url"],
+        cloud_file_id=res["object_key"],
+        bucket=res["bucket"],
+        expires_in=res["expires_in"]
+    )
+
+
+@router.post("/upload-complete", response_model=schemas.FileResponse, status_code=status.HTTP_201_CREATED)
+def complete_direct_upload(
+    req: schemas.PresignedUploadComplete,
+    request: Request,
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    family = current_user.family
+    if not family:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Family record not found")
+
+    if req.folder_id is not None:
+        auth.verify_resource_access(models.Folder, req.folder_id, current_user.family_id, db)
+
+    # Duplicate check
+    existing_file = db.query(models.File).filter(
+        models.File.filename == req.filename,
+        models.File.folder_id == req.folder_id,
+        models.File.family_id == current_user.family_id,
+        models.File.deleted_at == None
+    ).first()
+    if existing_file:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="A file with this name already exists in this folder.")
+
+    now = datetime.now(timezone.utc)
+    provider = family.storage_provider or "r2"
+
+    db_file = models.File(
+        filename         = req.filename,
+        file_type        = req.file_type,
+        size_bytes       = req.size_bytes,
+        _file_id         = req.cloud_file_id,
+        local_file_id    = None,
+        cloud_file_id    = req.cloud_file_id,
+        folder_id        = req.folder_id,
+        family_id        = current_user.family_id,
+        uploader_id      = current_user.id,
+        storage_provider = "r2",
+        pending_sync     = (provider == "google"),
+        pending_sync_at  = now if (provider == "google") else None,
+        synced_to        = None,
+        cloud_link       = None,
+        primary_storage  = "r2",
+        backup_status    = "none"
+    )
+
+    db.add(db_file)
+    db.commit()
+    db.refresh(db_file)
+
+    ip = get_client_ip(request)
+    log_action(db, "UPLOAD_FILE", current_user.id, current_user.family_id, ip, f"Direct uploaded file: {db_file.filename} ({db_file.size_bytes} bytes)")
+
+    invalidate_family_caches(current_user.family_id)
+
+    return serialize_file(db_file, current_user_id=current_user.id)
+
 @router.get("/{file_id}/preview-token")
 def get_preview_token(
     file_id: int,
