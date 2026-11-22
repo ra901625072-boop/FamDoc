@@ -163,8 +163,8 @@ textarea.form-control {
 }
 
 .badge-success {
-  background-color: rgba(16, 185, 129, 0.15);
-  color: #047857;
+  background-color: var(--success-sage-light, rgba(16, 185, 129, 0.15));
+  color: var(--success-sage-dark, #065F46);
   border: 1px solid rgba(16, 185, 129, 0.3);
 }
 

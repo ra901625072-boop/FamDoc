@@ -94,49 +94,61 @@
   transform: translateY(-1px);
 }
 
-/* Individual Colored Glow Borders & Circular Pastel Icon Badges (Matches StatCard.kt) */
+/* Individual Colored Glow Borders & Circular Icon Badges */
 #card-stat-files {
-  border-color: rgba(16, 185, 129, 0.25);
+  border-color: rgba(var(--accent-brand-rgb), 0.20);
 }
 #card-stat-files:hover {
-  border-color: rgba(16, 185, 129, 0.55);
+  border-color: rgba(var(--accent-brand-rgb), 0.50);
 }
 #card-stat-files .stat-icon {
-  background: linear-gradient(135deg, rgba(16, 185, 129, 0.22), rgba(16, 185, 129, 0.08));
-  color: #10B981;
+  background: var(--color-primary-container);
+  color: var(--color-primary);
 }
 
 #card-stat-folders {
-  border-color: rgba(139, 92, 246, 0.25);
+  border-color: rgba(245, 158, 11, 0.20);
 }
 #card-stat-folders:hover {
-  border-color: rgba(139, 92, 246, 0.55);
+  border-color: rgba(245, 158, 11, 0.50);
 }
 #card-stat-folders .stat-icon {
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0.22), rgba(139, 92, 246, 0.08));
-  color: #8B5CF6;
+  background: #FEF3C7;
+  color: #D97706;
+}
+[data-theme="dark"] #card-stat-folders .stat-icon {
+  background: #451A03;
+  color: #FBBF24;
 }
 
 #card-stat-size {
-  border-color: rgba(13, 148, 136, 0.25);
+  border-color: rgba(79, 70, 229, 0.20);
 }
 #card-stat-size:hover {
-  border-color: rgba(13, 148, 136, 0.55);
+  border-color: rgba(79, 70, 229, 0.50);
 }
 #card-stat-size .stat-icon {
-  background: linear-gradient(135deg, rgba(13, 148, 136, 0.22), rgba(13, 148, 136, 0.08));
-  color: #0D9488;
+  background: #E0E7FF;
+  color: #4F46E5;
+}
+[data-theme="dark"] #card-stat-size .stat-icon {
+  background: #1E1B4B;
+  color: #818CF8;
 }
 
 #card-stat-members {
-  border-color: rgba(245, 158, 11, 0.25);
+  border-color: rgba(71, 85, 105, 0.20);
 }
 #card-stat-members:hover {
-  border-color: rgba(245, 158, 11, 0.55);
+  border-color: rgba(71, 85, 105, 0.50);
 }
 #card-stat-members .stat-icon {
-  background: linear-gradient(135deg, rgba(245, 158, 11, 0.22), rgba(245, 158, 11, 0.08));
-  color: #F59E0B;
+  background: #F1F5F9;
+  color: #475569;
+}
+[data-theme="dark"] #card-stat-members .stat-icon {
+  background: #1E293B;
+  color: #94A3B8;
 }
 
 .stat-icon {
@@ -221,7 +233,7 @@
 .breakdown-subtitle {
   font-size: 0.8rem;
   color: var(--text-ink-muted);
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
 }
 
 .breakdown-progress-container {
@@ -238,20 +250,8 @@
 
 .breakdown-legend-grid {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
   gap: 0.75rem;
-}
-
-@media (max-width: 960px) {
-  .breakdown-legend-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-
-@media (max-width: 540px) {
-  .breakdown-legend-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
 }
 
 .breakdown-legend-chip {
@@ -291,18 +291,19 @@
 }
 
 .chip-meta {
-  font-family: var(--font-mono);
-  font-size: 0.7rem;
+  font-family: var(--font-sans);
+  font-size: 0.72rem;
   color: var(--text-ink-muted);
 }
 
-/* Category Colors (Matches Android Category Breakdown Tokens in Color.kt) */
-.storage-segment-video, .dot-video { background-color: var(--category-video, #ec4899); }
-.storage-segment-image, .dot-image { background-color: var(--category-image, #3b82f6); }
-.storage-segment-pdf, .dot-pdf { background-color: var(--category-pdf, #ef4444); }
-.storage-segment-document, .dot-document { background-color: var(--category-doc, #8b5cf6); }
-.storage-segment-sheet, .dot-sheet { background-color: var(--category-sheet, #10b981); }
-.storage-segment-text, .dot-text { background-color: var(--category-text, #f59e0b); }
+/* Category Colors (Anti-Collision Palette) */
+.storage-segment-video, .dot-video { background-color: var(--cat-video, #ec4899); }
+.storage-segment-image, .dot-image { background-color: var(--cat-images, #0ea5e9); }
+.storage-segment-pdf, .dot-pdf { background-color: var(--cat-pdfs, #ef4444); }
+.storage-segment-document, .dot-document { background-color: var(--cat-docs, #8b5cf6); }
+.storage-segment-sheet, .dot-sheet { background-color: var(--cat-sheets, #0d9488); }
+.storage-segment-text, .dot-text { background-color: var(--cat-text, #f59e0b); }
+.storage-segment-other, .dot-other { background-color: var(--cat-other, #64748b); }
 /* ==========================================================================
    Recent Uploads Section Styling (Matches Android File List Items)
    ========================================================================== */
@@ -344,7 +345,18 @@
 }
 
 /* Thumbnail images */
-#recent-uploads-list .vault-item img.item-thumbnail,
+#recent-uploads-list .vault-item img.item-thumbnail {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: var(--radius-sm, 8px) !important;
+  object-fit: cover !important;
+  border: none !important;
+  z-index: 1 !important;
+  display: block !important;
+}
+
 #recent-uploads-list .vault-item .pdf-thumbnail-container {
   width: 40px !important;
   height: 40px !important;
@@ -354,10 +366,6 @@
   object-fit: cover !important;
   flex-shrink: 0 !important;
   border: 1px solid var(--border-paper) !important;
-  position: static !important;
-  transform: none !important;
-  opacity: 1 !important;
-  display: block !important;
 }
 
 /* Item details flex layout */

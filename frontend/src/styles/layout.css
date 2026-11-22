@@ -81,23 +81,23 @@ body::before, body::after {
 body::before {
   top: -12%;
   left: -8%;
-  background: radial-gradient(circle, rgba(16, 185, 129, 0.12) 0%, rgba(4, 120, 87, 0.04) 45%, transparent 70%);
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.08) 0%, rgba(29, 78, 216, 0.02) 45%, transparent 70%);
 }
 
 body::after {
   bottom: -15%;
   right: -8%;
-  background: radial-gradient(circle, rgba(13, 148, 136, 0.10) 0%, rgba(6, 78, 59, 0.03) 50%, transparent 70%);
+  background: radial-gradient(circle, rgba(14, 165, 233, 0.06) 0%, rgba(15, 23, 42, 0.02) 50%, transparent 70%);
 }
 
 [data-theme="dark"] body::before {
   opacity: 0.35;
-  background: radial-gradient(circle, rgba(52, 211, 153, 0.12) 0%, rgba(16, 185, 129, 0.04) 50%, transparent 70%);
+  background: radial-gradient(circle, rgba(96, 165, 250, 0.08) 0%, rgba(29, 78, 216, 0.03) 50%, transparent 70%);
 }
 
 [data-theme="dark"] body::after {
   opacity: 0.25;
-  background: radial-gradient(circle, rgba(45, 212, 191, 0.09) 0%, rgba(20, 41, 31, 0.05) 50%, transparent 70%);
+  background: radial-gradient(circle, rgba(56, 189, 248, 0.06) 0%, rgba(11, 15, 23, 0.04) 50%, transparent 70%);
 }
 
 /* Layout Structure */
@@ -338,9 +338,10 @@ body.drawer-open .bottom-nav,
 
 /* Drawer Header Profile Banner */
 .drawer-header-banner {
-  background: var(--appbar-bg);
+  background: var(--drawer-header-bg, var(--surface-card));
   padding: 1.4rem 1.15rem 1.25rem;
-  color: #FFFFFF;
+  color: var(--drawer-header-text, var(--text-ink));
+  border-bottom: 1px solid var(--border-paper);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -363,9 +364,9 @@ body.drawer-open .bottom-nav,
 }
 
 .sidebar-toggle-btn {
-  background: rgba(255, 255, 255, 0.15);
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  color: #FFFFFF;
+  background: var(--surface-paper-tint);
+  border: 1px solid var(--border-paper);
+  color: var(--text-ink-muted);
   width: 32px;
   height: 32px;
   min-width: 32px;
@@ -380,7 +381,9 @@ body.drawer-open .bottom-nav,
 }
 
 .sidebar-toggle-btn:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: var(--surface-paper-hover);
+  color: var(--color-primary);
+  border-color: var(--border-paper-dark);
   transform: scale(1.08);
 }
 
@@ -449,7 +452,7 @@ body.drawer-open .bottom-nav,
   font-family: var(--font-serif);
   font-weight: 700;
   font-size: 0.98rem;
-  color: #FFFFFF;
+  color: var(--text-ink);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -462,17 +465,18 @@ body.drawer-open .bottom-nav,
   margin-top: 0.25rem;
   margin-bottom: 0.25rem;
   padding: 0.15rem 0.55rem;
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--color-primary-container);
+  border: 1px solid rgba(var(--accent-brand-rgb), 0.2);
   border-radius: var(--radius-xs, 6px);
-  color: #FFFFFF;
+  color: var(--color-on-primary-container);
   font-size: 0.68rem;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.2px;
 }
 
 .drawer-user-email {
   font-size: 0.72rem;
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--text-ink-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -515,9 +519,9 @@ body.drawer-open .bottom-nav,
 .nav-item.active {
   background-color: var(--color-primary) !important;
   color: #FFFFFF !important;
-  border-color: rgba(var(--accent-brand-rgb), 0.15);
+  border-color: transparent;
   font-weight: 700;
-  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.35);
+  box-shadow: var(--accent-shadow);
 }
 
 .nav-item.active svg,
@@ -527,9 +531,9 @@ body.drawer-open .bottom-nav,
 }
 
 [data-theme="dark"] .nav-item.active {
-  background-color: var(--color-primary) !important;
+  background-color: var(--color-primary-dark, #2563EB) !important;
   color: #FFFFFF !important;
-  box-shadow: 0 2px 10px rgba(16, 185, 129, 0.4);
+  box-shadow: 0 2px 10px rgba(37, 99, 235, 0.4);
 }
 
 [data-theme="dark"] .nav-item.active svg,
@@ -569,7 +573,7 @@ body.drawer-open .bottom-nav,
   text-transform: uppercase;
   margin-left: 0.35rem;
   margin-bottom: 0.15rem;
-  opacity: 0.8;
+  opacity: 1;
 }
 
 /* Minimalist 3-Way Segmented Theme Switcher (Matches ThemeSelector.kt) */
@@ -632,24 +636,24 @@ body.drawer-open .bottom-nav,
 
 /* Sign Out Button */
 .btn-logout {
-  background-color: var(--warning-red-light, rgba(239, 68, 68, 0.12));
-  color: var(--warning-red, #EF4444);
-  border: 1px solid var(--warning-red-border, rgba(239, 68, 68, 0.25));
+  background-color: transparent;
+  color: var(--text-ink-muted);
+  border: 1px solid var(--border-paper);
   border-radius: var(--radius-md, 12px);
   font-weight: 600;
-  height: 42px;
+  height: 40px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.25s ease;
+  transition: all 0.2s ease;
 }
 
 .btn-logout:hover {
-  background-color: var(--warning-red, #EF4444);
-  color: #FFFFFF;
-  border-color: var(--warning-red, #EF4444);
-  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.35);
+  background-color: var(--warning-red-light);
+  color: var(--warning-red);
+  border-color: var(--warning-red-border);
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.15);
   transform: translateY(-1px);
 }
 
@@ -1120,33 +1124,33 @@ body.modal-open .main-content {
   align-items: center;
   justify-content: center;
   gap: 0.55rem;
-  padding: 0.6rem 0.85rem;
+  padding: 0.55rem 0.85rem;
   border-radius: var(--radius-md, 12px);
-  background: var(--surface-paper-tint);
+  background: transparent;
   border: 1px solid var(--border-paper);
-  color: var(--text-ink);
+  color: var(--text-ink-muted);
   font-size: 0.82rem;
   font-weight: 600;
   text-decoration: none;
-  transition: all 0.25s ease;
+  transition: all 0.2s ease;
   margin-top: 0.25rem;
 }
 
 .btn-apk-download i {
   color: var(--color-primary);
   font-size: 1.05rem;
-  transition: transform 0.25s ease;
+  transition: transform 0.2s ease;
 }
 
 .btn-apk-download:hover {
-  background: var(--color-primary-container);
-  color: var(--color-primary);
-  border-color: var(--color-primary);
+  background: var(--surface-paper-hover);
+  color: var(--text-ink);
+  border-color: var(--border-paper-dark);
   transform: translateY(-1px);
 }
 
 .btn-apk-download:hover i {
-  transform: scale(1.2) rotate(6deg);
+  transform: scale(1.15);
 }
 
 

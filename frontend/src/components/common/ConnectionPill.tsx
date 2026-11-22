@@ -6,8 +6,8 @@ export function ConnectionPill() {
   const config = {
     CONNECTED: {
       color: 'bg-emerald-500',
-      text: 'Connected',
-      title: latencyMs ? `Latency: ${latencyMs}ms` : 'Connected to FamDoc Cloud',
+      text: 'FamDoc Cloud: Connected',
+      title: latencyMs ? `Latency: ${latencyMs}ms` : 'Connected to FamDoc Cloud Vault',
     },
     CONNECTING: {
       color: 'bg-amber-500 animate-pulse',

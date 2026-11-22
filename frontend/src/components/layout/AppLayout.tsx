@@ -88,7 +88,7 @@ export function AppLayout() {
             <img src="/img/logo.svg" alt="FamDoc Logo" className="famdoc-logo-img" style={{ height: '28px', width: '28px' }} />
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               <span className="brand-text" style={{ color: '#FFFFFF', fontSize: '1.15rem', lineHeight: 1.1, fontWeight: 800 }}>
-                Fam<span style={{ color: '#6EE7B7' }}>Doc</span>
+                Fam<span style={{ color: '#60A5FA' }}>Doc</span>
               </span>
               <span style={{ fontSize: '0.68rem', color: 'rgba(255, 255, 255, 0.8)', fontWeight: 400 }}>
                 Keepsake Vault
@@ -145,7 +145,7 @@ export function AppLayout() {
             <div className="drawer-user-meta">
               <div className="drawer-user-name">{user?.username || 'FamDoc User'}</div>
               <div className="drawer-role-badge">{roleTitle}</div>
-              <div className="drawer-user-email">{user?.email || ''}</div>
+              <div className="drawer-user-email" title={user?.email || ''}>{user?.email || ''}</div>
             </div>
           </div>
           <button

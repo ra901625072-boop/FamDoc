@@ -37,13 +37,13 @@ export function DashboardPage() {
   const usedBytes = totalSize;
 
   const categorySegments = [
-    { key: 'video', label: 'Videos', color: '#ec4899', ...videoData },
-    { key: 'image', label: 'Images', color: '#3b82f6', ...imageData },
-    { key: 'pdf', label: 'PDFs', color: '#ef4444', ...pdfData },
-    { key: 'document', label: 'Docs', color: '#8b5cf6', ...docData },
-    { key: 'sheet', label: 'Sheets', color: '#10b981', ...sheetData },
-    { key: 'text', label: 'Text', color: '#f59e0b', ...textData },
-    { key: 'other', label: 'Other', color: '#64748b', ...otherData },
+    { key: 'video', label: 'Videos', color: 'var(--cat-video, #ec4899)', ...videoData },
+    { key: 'image', label: 'Images', color: 'var(--cat-images, #0ea5e9)', ...imageData },
+    { key: 'pdf', label: 'PDFs', color: 'var(--cat-pdfs, #ef4444)', ...pdfData },
+    { key: 'document', label: 'Docs', color: 'var(--cat-docs, #8b5cf6)', ...docData },
+    { key: 'sheet', label: 'Sheets', color: 'var(--cat-sheets, #0d9488)', ...sheetData },
+    { key: 'text', label: 'Text', color: 'var(--cat-text, #f59e0b)', ...textData },
+    { key: 'other', label: 'Other', color: 'var(--cat-other, #64748b)', ...otherData },
   ];
 
   const recentUploads = stats?.recent_uploads || stats?.recent_files || [];
@@ -76,6 +76,25 @@ export function DashboardPage() {
       setIsUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
+  };
+
+  const getActionLabel = (action = '') => {
+    const map: Record<string, string> = {
+      DOWNLOAD_FILE: 'Downloaded file',
+      UPLOAD_FILE: 'Uploaded file',
+      CREATE_FOLDER: 'Created folder',
+      DELETE_FILE: 'Moved item to trash',
+      SHARE_LINK_CREATE: 'Created share link',
+      SHARE_LINK_REVOKE: 'Revoked share link',
+      RESTORE_FILE: 'Restored file',
+      RENAME_FILE: 'Renamed file',
+      RENAME_FOLDER: 'Renamed folder',
+      MOVE_FILE: 'Moved file',
+      MOVE_FOLDER: 'Moved folder',
+      LOGIN: 'Signed in',
+      REGISTER: 'Registered account',
+    };
+    return map[action] || action.replace(/_/g, ' ').toLowerCase().replace(/^\w/, (c) => c.toUpperCase());
   };
 
   const getActivityIcon = (action = '') => {
@@ -134,11 +153,11 @@ export function DashboardPage() {
           <span>New Folder</span>
         </Link>
         <Link to="/profile?invite=true" className="quick-action-btn" id="btn-quick-invite">
-          <i className="fas fa-ticket-alt" aria-hidden="true" />
+          <i className="fas fa-user-plus" aria-hidden="true" />
           <span>Invite Member</span>
         </Link>
         <Link to="/storage" className="quick-action-btn" id="btn-quick-storage">
-          <i className="fas fa-hdd" aria-hidden="true" />
+          <i className="fas fa-cloud" aria-hidden="true" />
           <span>Cloud Storage Pool</span>
         </Link>
       </div>
@@ -173,11 +192,14 @@ export function DashboardPage() {
           <div id="stat-size" className="stat-val">
             {statsLoading ? '...' : api.helpers.formatBytes(totalSize)}
           </div>
+          <div className="stat-subtext" style={{ fontSize: '0.74rem', color: 'var(--text-ink-muted)', marginTop: '0.25rem' }}>
+            {statsLoading ? 'Calculating capacity...' : `of ${api.helpers.formatBytes(quotaBytes)} (${Math.round((totalSize / (quotaBytes || 1)) * 100)}%)`}
+          </div>
           <div className="stat-card-bottom-progress">
             <div
               className="progress-bar-fill"
               style={{
-                width: `${Math.min(100, Math.max(4, (totalSize / (15 * 1024 * 1024 * 1024)) * 100))}%`,
+                width: quotaBytes > 0 ? `${Math.min(100, (totalSize / quotaBytes) * 100)}%` : '0%',
                 background: 'var(--color-primary)',
               }}
             />
@@ -213,7 +235,7 @@ export function DashboardPage() {
             categorySegments
               .filter((c) => c.size > 0)
               .map((c) => {
-                const segPercent = Math.max(1, (c.size / quotaBytes) * 100);
+                const segPercent = Math.max(2, (c.size / (usedBytes || 1)) * 100);
                 return (
                   <div
                     key={c.key}
@@ -233,8 +255,8 @@ export function DashboardPage() {
               id="category-progress-bar"
               className="progress-bar-fill"
               style={{
-                width: `${Math.min(100, Math.max(4, totalFiles > 0 ? (usedBytes / quotaBytes) * 100 : 0))}%`,
-                background: 'var(--accent-gradient)',
+                width: '100%',
+                background: 'var(--surface-paper-tint)',
               }}
             />
           )}
@@ -242,61 +264,24 @@ export function DashboardPage() {
 
         {/* Category Legend Chips Grid */}
         <div id="breakdown-legend-grid" className="breakdown-legend-grid">
-          <div className="breakdown-legend-chip">
-            <div className="chip-color-dot dot-video" />
-            <div className="chip-info">
-              <span className="chip-label">Videos</span>
-              <span id="meta-cat-video" className="chip-meta">{api.helpers.formatBytes(videoData.size)} ({videoData.count})</span>
-            </div>
-          </div>
-
-          <div className="breakdown-legend-chip">
-            <div className="chip-color-dot dot-image" />
-            <div className="chip-info">
-              <span className="chip-label">Images</span>
-              <span id="meta-cat-image" className="chip-meta">{api.helpers.formatBytes(imageData.size)} ({imageData.count})</span>
-            </div>
-          </div>
-
-          <div className="breakdown-legend-chip">
-            <div className="chip-color-dot dot-pdf" />
-            <div className="chip-info">
-              <span className="chip-label">PDFs</span>
-              <span id="meta-cat-pdf" className="chip-meta">{api.helpers.formatBytes(pdfData.size)} ({pdfData.count})</span>
-            </div>
-          </div>
-
-          <div className="breakdown-legend-chip">
-            <div className="chip-color-dot dot-document" />
-            <div className="chip-info">
-              <span className="chip-label">Docs</span>
-              <span id="meta-cat-doc" className="chip-meta">{api.helpers.formatBytes(docData.size)} ({docData.count})</span>
-            </div>
-          </div>
-
-          <div className="breakdown-legend-chip">
-            <div className="chip-color-dot dot-sheet" />
-            <div className="chip-info">
-              <span className="chip-label">Sheets</span>
-              <span id="meta-cat-sheet" className="chip-meta">{api.helpers.formatBytes(sheetData.size)} ({sheetData.count})</span>
-            </div>
-          </div>
-
-          <div className="breakdown-legend-chip">
-            <div className="chip-color-dot dot-text" />
-            <div className="chip-info">
-              <span className="chip-label">Text</span>
-              <span id="meta-cat-text" className="chip-meta">{api.helpers.formatBytes(textData.size)} ({textData.count})</span>
-            </div>
-          </div>
-
-          <div className="breakdown-legend-chip">
-            <div className="chip-color-dot dot-other" />
-            <div className="chip-info">
-              <span className="chip-label">Other</span>
-              <span id="meta-cat-other" className="chip-meta">{api.helpers.formatBytes(otherData.size)} ({otherData.count})</span>
-            </div>
-          </div>
+          {categorySegments.map((c) => {
+            const isZero = c.size === 0 && c.count === 0;
+            return (
+              <div
+                key={c.key}
+                className="breakdown-legend-chip"
+                style={isZero ? { opacity: 0.6 } : {}}
+              >
+                <div className="chip-color-dot" style={{ backgroundColor: c.color }} />
+                <div className="chip-info">
+                  <span className="chip-label">{c.label}</span>
+                  <span id={`meta-cat-${c.key}`} className="chip-meta">
+                    {isZero ? '0 B (0)' : `${api.helpers.formatBytes(c.size)} (${c.count})`}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 
@@ -416,7 +401,7 @@ export function DashboardPage() {
                   </div>
                   <div className="activity-details">
                     <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-ink)' }}>
-                      {act.action}
+                      {getActionLabel(act.action)}
                     </div>
                     <div style={{ fontSize: '0.74rem', color: 'var(--text-ink-muted)', marginTop: '0.15rem' }}>
                       {act.username || act.actor_username ? `By ${act.username || act.actor_username} • ` : ''}

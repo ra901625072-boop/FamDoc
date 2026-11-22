@@ -9,7 +9,7 @@ export function SegmentedThemeSelector({ idPrefix = 'sidebar', className = '' }:
   const { mode, setMode } = useThemeStore();
 
   const options: { mode: ThemeMode; label: string; icon: string }[] = [
-    { mode: 'system', label: 'Auto', icon: 'fas fa-magic' },
+    { mode: 'system', label: 'Auto', icon: 'fas fa-desktop' },
     { mode: 'light', label: 'Light', icon: 'fas fa-sun' },
     { mode: 'dark', label: 'Dark', icon: 'fas fa-moon' },
   ];
