@@ -119,6 +119,44 @@ export function VaultPage() {
   });
 
   // Breadcrumbs chain
+  const [previewZoom, setPreviewZoom] = useState(1);
+  useEffect(() => {
+    setPreviewZoom(1);
+  }, [activePreviewFile?.id]);
+
+  const activeFileIndex = activePreviewFile ? filteredFiles.findIndex((f) => f.id === activePreviewFile.id) : -1;
+  const hasPrevFile = activeFileIndex > 0;
+  const hasNextFile = activeFileIndex >= 0 && activeFileIndex < filteredFiles.length - 1;
+
+  const handlePrevFile = () => {
+    if (hasPrevFile) setActivePreviewFile(filteredFiles[activeFileIndex - 1]);
+  };
+
+  const handleNextFile = () => {
+    if (hasNextFile) setActivePreviewFile(filteredFiles[activeFileIndex + 1]);
+  };
+
+  useEffect(() => {
+    if (!activePreviewFile) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setActivePreviewFile(null);
+      } else if (e.key === 'ArrowLeft' && hasPrevFile) {
+        handlePrevFile();
+      } else if (e.key === 'ArrowRight' && hasNextFile) {
+        handleNextFile();
+      } else if (e.key === '+' || e.key === '=') {
+        setPreviewZoom((z) => Math.min(3, z + 0.25));
+      } else if (e.key === '-') {
+        setPreviewZoom((z) => Math.max(0.5, z - 0.25));
+      } else if (e.key === '0') {
+        setPreviewZoom(1);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activePreviewFile, hasPrevFile, hasNextFile, activeFileIndex]);
+
   const getBreadcrumbs = (): Array<{ id: number | null; name: string }> => {
     const chain: Array<{ id: number | null; name: string }> = [{ id: null, name: 'Root Vault' }];
     if (!currentFolderId) return chain;
@@ -686,8 +724,9 @@ export function VaultPage() {
                     </div>
 
                     <div className="item-details">
-                      <div className="item-name" title={file.filename}>
-                        {file.filename}
+                      <div className="item-name" title={file.filename} style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file.filename}</span>
+                        <span className="file-format-pill">{api.helpers.getFileFormatLabel(file.filename, file.file_type)}</span>
                       </div>
                       <div className="item-meta-size">{api.helpers.formatBytes(file.file_size ?? file.size_bytes ?? 0)}</div>
                       <div className="item-meta-date">
@@ -712,7 +751,7 @@ export function VaultPage() {
                     <div className={`dropdown-menu ${isMenuOpen ? 'show' : ''}`} onClick={(e) => e.stopPropagation()}>
                       <a
                         href={api.files.getDownloadUrl(file.id, file.preview_token)}
-                        download={file.filename}
+                        download={api.helpers.ensureFilenameWithExtension(file.filename, file.file_type)}
                         className="dropdown-item"
                         style={{ textDecoration: 'none' }}
                         onClick={(e) => e.stopPropagation()}
@@ -818,8 +857,9 @@ export function VaultPage() {
 
                   <div className="item-footer">
                     <div className="item-details">
-                      <div className="item-name" title={file.filename}>
-                        {file.filename}
+                      <div className="item-name" title={file.filename} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file.filename}</span>
+                        <span className="file-format-pill">{api.helpers.getFileFormatLabel(file.filename, file.file_type)}</span>
                       </div>
                       <div className="item-meta">{api.helpers.formatBytes(file.file_size ?? file.size_bytes ?? 0)}</div>
                     </div>
@@ -840,7 +880,7 @@ export function VaultPage() {
                     <div className={`dropdown-menu ${isMenuOpen ? 'show' : ''}`} onClick={(e) => e.stopPropagation()}>
                       <a
                         href={api.files.getDownloadUrl(file.id, file.preview_token)}
-                        download={file.filename}
+                        download={api.helpers.ensureFilenameWithExtension(file.filename, file.file_type)}
                         className="dropdown-item"
                         style={{ textDecoration: 'none' }}
                         onClick={(e) => e.stopPropagation()}
@@ -1252,24 +1292,54 @@ export function VaultPage() {
         </div>
       )}
 
-      {/* Media Preview Modal */}
+      {/* Media Preview Modal - Modern Cinema Lightbox */}
       {activePreviewFile && (
         <div id="modal-preview" className="modal-overlay show" onClick={() => setActivePreviewFile(null)}>
           <div className="famdoc-modal preview-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3
-                className="modal-title"
-                id="preview-title"
-                style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '80%' }}
-              >
-                {activePreviewFile.filename}
-              </h3>
-              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', overflow: 'hidden', minWidth: 0, flex: 1, marginRight: '1rem' }}>
+                <i
+                  className={`item-icon ${api.helpers.getFileIconClass(activePreviewFile.filename, activePreviewFile.file_type)}`}
+                  style={{ fontSize: '1.25rem', flexShrink: 0 }}
+                  aria-hidden="true"
+                />
+                <div style={{ overflow: 'hidden', minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <h3
+                      className="modal-title"
+                      id="preview-title"
+                      style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', margin: 0, fontSize: '0.98rem' }}
+                      title={activePreviewFile.filename}
+                    >
+                      {activePreviewFile.filename}
+                    </h3>
+                    <span className="preview-badge">
+                      {api.helpers.getFileFormatLabel(activePreviewFile.filename, activePreviewFile.file_type)}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '0.73rem', color: '#94A3B8', marginTop: '0.15rem' }}>
+                    {api.helpers.formatBytes(activePreviewFile.file_size ?? activePreviewFile.size_bytes ?? 0)} &bull; {api.helpers.formatDate(activePreviewFile.created_at ?? activePreviewFile.upload_date)}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexShrink: 0 }}>
+                <a
+                  href={api.files.getPreviewUrl(activePreviewFile.id, activePreviewFile.preview_token)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-secondary btn-sm"
+                  title="Open in new tab"
+                  style={{ padding: '0.35rem 0.65rem', fontSize: '0.78rem', textDecoration: 'none' }}
+                >
+                  <i className="fas fa-external-link-alt" aria-hidden="true" />
+                  <span className="hide-on-mobile">Open</span>
+                </a>
                 <a
                   href={api.files.getDownloadUrl(activePreviewFile.id, activePreviewFile.preview_token)}
-                  download={activePreviewFile.filename}
+                  download={api.helpers.ensureFilenameWithExtension(activePreviewFile.filename, activePreviewFile.file_type)}
                   id="preview-download-btn"
-                  className="btn btn-secondary"
+                  className="btn btn-primary btn-sm"
                   style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', textDecoration: 'none' }}
                 >
                   <i className="fas fa-download" aria-hidden="true" />
@@ -1285,14 +1355,96 @@ export function VaultPage() {
                 </button>
               </div>
             </div>
+
             <div className="preview-body" id="preview-content-area">
+              {/* Prev / Next Navigation Arrows */}
+              {hasPrevFile && (
+                <button
+                  type="button"
+                  className="preview-nav-btn preview-nav-prev"
+                  aria-label="Previous file"
+                  title="Previous file (Left Arrow)"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handlePrevFile();
+                  }}
+                >
+                  <i className="fas fa-chevron-left" aria-hidden="true" />
+                </button>
+              )}
+
+              {hasNextFile && (
+                <button
+                  type="button"
+                  className="preview-nav-btn preview-nav-next"
+                  aria-label="Next file"
+                  title="Next file (Right Arrow)"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleNextFile();
+                  }}
+                >
+                  <i className="fas fa-chevron-right" aria-hidden="true" />
+                </button>
+              )}
+
               {(activePreviewFile.file_type?.toLowerCase().includes('image') ||
                 /\.(jpg|jpeg|png|webp|gif|bmp|svg)$/i.test(activePreviewFile.filename)) ? (
-                <img
-                  src={api.files.getPreviewUrl(activePreviewFile.id, activePreviewFile.preview_token)}
-                  alt={activePreviewFile.filename}
-                  className="preview-image"
-                />
+                <>
+                  <div
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      overflow: previewZoom > 1 ? 'auto' : 'hidden',
+                    }}
+                  >
+                    <img
+                      src={api.files.getPreviewUrl(activePreviewFile.id, activePreviewFile.preview_token)}
+                      alt={activePreviewFile.filename}
+                      className="preview-image"
+                      style={{
+                        transform: `scale(${previewZoom})`,
+                        transformOrigin: 'center center',
+                        cursor: previewZoom === 1 ? 'zoom-in' : 'zoom-out',
+                      }}
+                      onClick={() => setPreviewZoom((z) => (z === 1 ? 1.75 : 1))}
+                    />
+                  </div>
+
+                  {/* Zoom Controls Toolbar */}
+                  <div className="preview-toolbar" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      type="button"
+                      className="preview-toolbar-btn"
+                      title="Zoom Out (-)"
+                      disabled={previewZoom <= 0.5}
+                      onClick={() => setPreviewZoom((z) => Math.max(0.5, z - 0.25))}
+                    >
+                      <i className="fas fa-minus" aria-hidden="true" />
+                    </button>
+                    <span className="preview-zoom-label">{Math.round(previewZoom * 100)}%</span>
+                    <button
+                      type="button"
+                      className="preview-toolbar-btn"
+                      title="Zoom In (+)"
+                      disabled={previewZoom >= 3}
+                      onClick={() => setPreviewZoom((z) => Math.min(3, z + 0.25))}
+                    >
+                      <i className="fas fa-plus" aria-hidden="true" />
+                    </button>
+                    <button
+                      type="button"
+                      className="preview-toolbar-btn"
+                      title="Reset Zoom (0)"
+                      onClick={() => setPreviewZoom(1)}
+                    >
+                      <i className="fas fa-redo-alt" aria-hidden="true" />
+                    </button>
+                  </div>
+                </>
               ) : (activePreviewFile.file_type?.toLowerCase().includes('video') ||
                    /\.(mp4|mkv|webm|mov|avi)$/i.test(activePreviewFile.filename)) ? (
                 <video
@@ -1309,7 +1461,7 @@ export function VaultPage() {
                   className="preview-frame"
                 />
               ) : (
-                <div style={{ padding: '3rem', textAlign: 'center' }}>
+                <div style={{ padding: '3rem', textAlign: 'center', color: '#F8FAFC' }}>
                   <i
                     className={`item-icon ${api.helpers.getFileIconClass(
                       activePreviewFile.filename,
@@ -1318,15 +1470,15 @@ export function VaultPage() {
                     style={{ fontSize: '3.5rem', marginBottom: '1rem', display: 'inline-block' }}
                     aria-hidden="true"
                   />
-                  <h4 style={{ fontFamily: 'var(--font-serif)', marginBottom: '0.5rem' }}>
+                  <h4 style={{ fontFamily: 'var(--font-serif)', marginBottom: '0.5rem', color: '#FFFFFF' }}>
                     Preview not supported for this file type
                   </h4>
-                  <p style={{ color: 'var(--text-ink-muted)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
+                  <p style={{ color: '#94A3B8', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
                     {activePreviewFile.filename} ({api.helpers.formatBytes(activePreviewFile.file_size ?? activePreviewFile.size_bytes ?? 0)})
                   </p>
                   <a
                     href={api.files.getDownloadUrl(activePreviewFile.id, activePreviewFile.preview_token)}
-                    download={activePreviewFile.filename}
+                    download={api.helpers.ensureFilenameWithExtension(activePreviewFile.filename, activePreviewFile.file_type)}
                     className="btn btn-primary"
                     style={{ textDecoration: 'none' }}
                   >

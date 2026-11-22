@@ -415,12 +415,16 @@ export const api = {
     async getFiles(folderId: number | null = null): Promise<FileItem[]> {
       const q = folderId !== null ? `?folder_id=${folderId}` : '';
       const items = await performRequest<FileItem[]>(`/api/files${q}`);
-      return (items || []).map((file) => ({
-        ...file,
-        file_size: file.file_size ?? file.size_bytes ?? 0,
-        size_bytes: file.size_bytes ?? file.file_size ?? 0,
-        created_at: file.created_at ?? file.upload_date ?? new Date().toISOString(),
-      }));
+      return (items || []).map((file) => {
+        const safeName = api.helpers.ensureFilenameWithExtension(file.filename, file.file_type);
+        return {
+          ...file,
+          filename: safeName,
+          file_size: file.file_size ?? file.size_bytes ?? 0,
+          size_bytes: file.size_bytes ?? file.file_size ?? 0,
+          created_at: file.created_at ?? file.upload_date ?? new Date().toISOString(),
+        };
+      });
     },
 
     async rename(fileId: number, filename: string): Promise<FileItem> {
@@ -641,6 +645,62 @@ export const api = {
       } catch {
         return dateStr;
       }
+    },
+
+    ensureFilenameWithExtension(filename = '', fileType = ''): string {
+      const cleanName = filename.trim();
+      if (!cleanName) return 'document';
+      const hasExt = cleanName.includes('.') && cleanName.lastIndexOf('.') > 0 && cleanName.length - cleanName.lastIndexOf('.') <= 6;
+      if (hasExt) {
+        return cleanName;
+      }
+      const mime = (fileType || '').toLowerCase();
+      const mimeMap: Record<string, string> = {
+        'image/jpeg': '.jpg',
+        'image/jpg': '.jpg',
+        'image/png': '.png',
+        'image/webp': '.webp',
+        'image/gif': '.gif',
+        'image/svg+xml': '.svg',
+        'image/bmp': '.bmp',
+        'application/pdf': '.pdf',
+        'application/zip': '.zip',
+        'application/json': '.json',
+        'text/plain': '.txt',
+        'text/csv': '.csv',
+        'video/mp4': '.mp4',
+        'video/webm': '.webm',
+        'video/quicktime': '.mov',
+        'application/msword': '.doc',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '.docx',
+        'application/vnd.ms-excel': '.xls',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '.xlsx',
+      };
+      if (mimeMap[mime]) {
+        return `${cleanName}${mimeMap[mime]}`;
+      }
+      if (mime.includes('image')) return `${cleanName}.jpg`;
+      if (mime.includes('pdf')) return `${cleanName}.pdf`;
+      if (mime.includes('video')) return `${cleanName}.mp4`;
+      return cleanName;
+    },
+
+    getFileFormatLabel(filename = '', fileType = ''): string {
+      const parts = filename.split('.');
+      if (parts.length > 1) {
+        const ext = parts.pop()?.toUpperCase() || '';
+        if (ext.length >= 2 && ext.length <= 5) return ext;
+      }
+      const mime = (fileType || '').toLowerCase();
+      if (mime.includes('jpeg') || mime.includes('jpg')) return 'JPG';
+      if (mime.includes('png')) return 'PNG';
+      if (mime.includes('webp')) return 'WEBP';
+      if (mime.includes('gif')) return 'GIF';
+      if (mime.includes('pdf')) return 'PDF';
+      if (mime.includes('video')) return 'MP4';
+      if (mime.includes('word')) return 'DOC';
+      if (mime.includes('sheet') || mime.includes('excel')) return 'XLS';
+      return 'FILE';
     },
 
     getFileIconClass(filename = '', fileType = ''): string {

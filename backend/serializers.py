@@ -1,15 +1,18 @@
 import models
 from datetime import datetime
+from utils.mime_utils import resolve_download_filename_and_type
 
 def serialize_file(file: models.File, is_shared: bool = False, current_user_id: int = None) -> dict:
     uploader_email = None
     if file.uploader:
         uploader_email = file.uploader.email
+
+    safe_filename, safe_file_type = resolve_download_filename_and_type(file.filename, file.file_type)
         
     res = {
         "id": file.id,
-        "filename": file.filename,
-        "file_type": file.file_type,
+        "filename": safe_filename,
+        "file_type": safe_file_type or file.file_type,
         "size_bytes": file.size_bytes,
         "file_size": file.size_bytes,
         "uploader_id": file.uploader_id,

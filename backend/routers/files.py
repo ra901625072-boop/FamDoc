@@ -14,6 +14,7 @@ from sqlalchemy.orm import joinedload
 from utils.audit import log_action
 from utils.ip import get_client_ip
 from serializers import serialize_file
+from utils.mime_utils import resolve_download_filename_and_type
 from datetime import datetime, timezone
 from storage.storage_manager import StorageManager
 from cache import folder_listing_cache, invalidate_family_caches
@@ -595,15 +596,16 @@ def download_file(
     manager = StorageManager()
     family_config = manager.get_family_config(family, db)
 
-    filename = file.filename
     try:
         content = manager.read_file(file, family_config, db=db)
     except FileNotFoundError as e:
         raise HTTPException(status_code=503, detail=str(e))
 
+    filename, media_type = resolve_download_filename_and_type(file.filename, file.file_type, content)
+
     return StreamingResponse(
         io.BytesIO(content),
-        media_type="application/octet-stream",
+        media_type=media_type,
         headers={
             "Content-Disposition": f'attachment; filename="{filename}"',
             "Access-Control-Expose-Headers": "Content-Disposition",

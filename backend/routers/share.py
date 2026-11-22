@@ -12,6 +12,7 @@ from config import BACKEND_URL
 from storage.storage_manager import StorageManager
 from utils.audit import log_action
 from utils.ip import get_client_ip
+from utils.mime_utils import resolve_download_filename_and_type
 import io
 from pydantic import BaseModel
 
@@ -229,11 +230,11 @@ def download_public_shared_file(
     ip = get_client_ip(request)
     log_action(db, "DOWNLOAD_SHARED_FILE", None, file.family_id, ip, f"Public download of shared file: {file.filename} (Link token: {token})")
 
-    filename = file.filename
+    filename, media_type = resolve_download_filename_and_type(file.filename, file.file_type, file_bytes)
 
     return StreamingResponse(
         io.BytesIO(file_bytes),
-        media_type="application/octet-stream",
+        media_type=media_type,
         headers={
             "Content-Disposition": f'attachment; filename="{filename}"',
             "Access-Control-Expose-Headers": "Content-Disposition"

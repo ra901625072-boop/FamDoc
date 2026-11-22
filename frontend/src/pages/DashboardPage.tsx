@@ -362,8 +362,11 @@ export function DashboardPage() {
                     )}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 600, fontSize: '0.88rem', color: 'var(--text-ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {file.filename}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <span style={{ fontWeight: 600, fontSize: '0.88rem', color: 'var(--text-ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {file.filename}
+                      </span>
+                      <span className="file-format-pill">{api.helpers.getFileFormatLabel(file.filename, file.file_type)}</span>
                     </div>
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-ink-muted)', marginTop: '0.15rem' }}>
                       {api.helpers.formatBytes(file.file_size ?? file.size_bytes ?? 0)} &bull; {api.helpers.getRelativeTime(file.created_at ?? file.upload_date)}

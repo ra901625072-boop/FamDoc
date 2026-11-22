@@ -18,21 +18,21 @@
   --color-on-primary-container: #064E3B;
 
   /* Canvas & Surfaces */
-  --bg-linen: #F2FBF6;               /* MintBackground: Mint-tinted crisp canvas */
-  --surface-card: #FFFFFF;           /* MintSurface: Pure crisp white cards */
-  --surface-paper-tint: #E8F7EE;     /* MintSurfaceVariant: Soft mint surface */
-  --surface-paper-hover: #F0FAF4;    /* Light interactive card hover */
+  --bg-linen: #F6FAF8;               /* Clean airy canvas */
+  --surface-card: #FFFFFF;           /* Crisp pure white cards */
+  --surface-paper-tint: #EEF5F1;     /* Soft subtle sage tint */
+  --surface-paper-hover: #F2F7F4;    /* Light interactive card hover */
   --surface-alert-info: #E6F4EA;
-  --surface-nav-glass: rgba(255, 255, 255, 0.92);
-  --overlay-bg: rgba(6, 78, 59, 0.45);
+  --surface-nav-glass: rgba(255, 255, 255, 0.94);
+  --overlay-bg: rgba(15, 23, 42, 0.65); /* Elegant neutral focus overlay */
 
   /* Typography */
-  --text-ink: #0B291D;               /* MintTextPrimary: Deep Emerald Black */
-  --text-ink-muted: #436B59;         /* MintTextSecondary: Balanced Sage Slate */
+  --text-ink: #0F2A1D;               /* Deep Emerald Black */
+  --text-ink-muted: #4B6B5D;         /* Balanced Sage Slate */
 
   /* Borders & Glows */
-  --border-paper: #CBEAD7;           /* MintBorder: Delicate jade border */
-  --border-paper-dark: #B5DEC4;
+  --border-paper: #D9E5DE;           /* Balanced soft border */
+  --border-paper-dark: #C6D6CD;
   --card-glow-border: rgba(16, 185, 129, 0.22); /* MintCardBorder: 20% alpha glow */
 
   /* Legacy & Bridge Variables */
