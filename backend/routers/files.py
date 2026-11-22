@@ -600,8 +600,6 @@ def download_file(
         content = manager.read_file(file, family_config, db=db)
     except FileNotFoundError as e:
         raise HTTPException(status_code=503, detail=str(e))
-    finally:
-        db.close()
 
     return StreamingResponse(
         io.BytesIO(content),
@@ -645,7 +643,6 @@ def preview_file(
         try:
             generator = manager.stream_thumbnail(file, family_config, db=db)
             if generator:
-                db.close()
                 response_headers = {
                     "Content-Disposition": f'inline; filename="thumb_{filename}.jpg"',
                     "Cache-Control": "public, max-age=604800"
@@ -702,8 +699,6 @@ def preview_file(
                 )
         except FileNotFoundError as e:
             raise HTTPException(status_code=503, detail=str(e))
-        finally:
-            db.close()
 
         etag = f'"thumb-{file.id}-{len(content)}"'
         response_headers = {
@@ -722,8 +717,6 @@ def preview_file(
             stream_result, provider_used = manager.stream_file(file, family_config, db=db, range_header=range_header)
         except FileNotFoundError as e:
             raise HTTPException(status_code=503, detail=str(e))
-        finally:
-            db.close()
 
         if isinstance(stream_result, tuple):
             generator, start, end, total = stream_result

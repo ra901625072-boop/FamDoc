@@ -43,6 +43,9 @@ export interface FileItem {
   upload_date?: string;
   updated_at?: string;
   uploader_username?: string;
+  uploader_email?: string;
+  preview_token?: string;
+  is_shared?: boolean;
 }
 
 export interface CategoryBreakdown {

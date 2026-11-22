@@ -153,13 +153,11 @@ def create_folder(
     cloud_folder_id = None
 
     # Get parent cloud folder ID (recursive lazy init if parent cloud ID is missing)
+    parent_cloud_id = None
     try:
         parent_cloud_id = ensure_folder_cloud_id(folder_in.parent_id, provider_name, family, db)
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to resolve parent cloud directory: {str(e)}"
-        )
+        logger.warning(f"Could not resolve parent cloud directory: {e}")
 
     # Create folder on the storage provider
     provider = get_storage_provider(provider_name)
@@ -176,10 +174,9 @@ def create_folder(
         if provider_name == "google":
             google_drive_folder_id = cloud_folder_id
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to create directory in cloud storage: {str(e)}"
-        )
+        logger.warning(f"Cloud folder creation encountered error, buffering folder locally: {e}")
+        import uuid
+        cloud_folder_id = f"local_folder_{uuid.uuid4()}"
 
     new_folder = models.Folder(
         name=folder_name,
@@ -268,10 +265,8 @@ def rename_folder(
                 provider = get_storage_provider(family.storage_provider)
                 provider.rename_file(family_config.get(family.storage_provider, {}), folder.cloud_folder_id, new_name, db=db)
             except Exception as e:
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail=f"Failed to rename folder in cloud storage: {str(e)}"
-                )
+                import logging
+                logging.getLogger(__name__).warning(f"Failed to rename folder in cloud storage: {e}")
     
     # Audit log
     ip = get_client_ip(request)

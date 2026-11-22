@@ -462,7 +462,7 @@ export function FamilyPage() {
 
       {/* Invite Member Dialog Modal */}
       {showInviteModal && (
-        <div id="modal-invite" className="modal-overlay" onClick={() => setShowInviteModal(false)}>
+        <div id="modal-invite" className="modal-overlay show" onClick={() => setShowInviteModal(false)}>
           <div className="famdoc-modal" style={{ maxWidth: '500px' }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3 className="modal-title">Invite Family Member</h3>

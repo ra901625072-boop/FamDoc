@@ -230,7 +230,6 @@ def download_public_shared_file(
     log_action(db, "DOWNLOAD_SHARED_FILE", None, file.family_id, ip, f"Public download of shared file: {file.filename} (Link token: {token})")
 
     filename = file.filename
-    db.close()
 
     return StreamingResponse(
         io.BytesIO(file_bytes),

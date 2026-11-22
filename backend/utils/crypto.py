@@ -7,7 +7,16 @@ from logging_config import logger
 
 # Get or derive the 32-byte url-safe base64-encoded encryption key
 FERNET_KEY = os.getenv("STORAGE_CONFIG_ENCRYPTION_KEY")
-if not FERNET_KEY:
+if FERNET_KEY:
+    try:
+        decoded = base64.urlsafe_b64decode(FERNET_KEY.encode())
+        if len(decoded) != 32:
+            raise ValueError("Invalid key length")
+    except Exception:
+        # If passed as an arbitrary string or password, derive a valid 32 urlsafe base64 key
+        hashed = hashlib.sha256(FERNET_KEY.encode()).digest()
+        FERNET_KEY = base64.urlsafe_b64encode(hashed).decode()
+else:
     jwt_secret = os.getenv("JWT_SECRET", "super-secret-family-document-vault-key-1234567890")
     # Take SHA256 of JWT_SECRET to get 32 bytes, then base64 URL-encode it
     hashed = hashlib.sha256(jwt_secret.encode()).digest()

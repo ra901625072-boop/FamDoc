@@ -74,7 +74,7 @@ export function VaultPage() {
     return () => window.removeEventListener('click', handleOutsideClick);
   }, []);
 
-  // Handle URL deep links (?folder_id=123, ?action=new-folder, ?action=upload)
+  // Handle URL deep links (?folder_id=123, ?action=new-folder, ?action=upload, ?preview=123)
   useEffect(() => {
     const fid = searchParams.get('folder_id');
     if (fid) {
@@ -84,7 +84,13 @@ export function VaultPage() {
     const act = searchParams.get('action');
     if (act === 'new-folder') setIsNewFolderOpen(true);
     if (act === 'upload') fileInputRef.current?.click();
-  }, [searchParams, setCurrentFolderId]);
+
+    const prevId = searchParams.get('preview');
+    if (prevId && allFiles.length > 0) {
+      const target = allFiles.find((f) => f.id === Number(prevId));
+      if (target) setActivePreviewFile(target);
+    }
+  }, [searchParams, setCurrentFolderId, allFiles, setActivePreviewFile]);
 
   // Current subfolders & files
   const currentSubfolders = allFolders.filter((f) =>
@@ -102,12 +108,12 @@ export function VaultPage() {
       const cat = selectedCategory.toLowerCase();
       const mime = (file.file_type || '').toLowerCase();
       const fn = file.filename.toLowerCase();
-      if (cat === 'video' && !mime.includes('video') && !fn.endsWith('.mp4') && !fn.endsWith('.mkv')) return false;
-      if (cat === 'pdf' && !mime.includes('pdf') && !fn.endsWith('.pdf')) return false;
-      if (cat === 'image' && !mime.includes('image') && !fn.endsWith('.jpg') && !fn.endsWith('.png') && !fn.endsWith('.webp')) return false;
-      if (cat === 'document' && !mime.includes('word') && !mime.includes('document') && !fn.endsWith('.docx') && !fn.endsWith('.doc')) return false;
-      if (cat === 'sheet' && !mime.includes('sheet') && !mime.includes('excel') && !fn.endsWith('.xlsx') && !fn.endsWith('.csv')) return false;
-      if (cat === 'text' && !mime.includes('text') && !fn.endsWith('.txt')) return false;
+      if (cat === 'video' && !mime.includes('video') && !/\.(mp4|mkv|webm|mov|avi|flv|wmv|m4v)$/i.test(fn)) return false;
+      if (cat === 'pdf' && !mime.includes('pdf') && !/\.pdf$/i.test(fn)) return false;
+      if (cat === 'image' && !mime.includes('image') && !/\.(jpg|jpeg|png|webp|gif|bmp|svg|tiff|ico)$/i.test(fn)) return false;
+      if (cat === 'document' && !mime.includes('word') && !mime.includes('document') && !/\.(docx|doc|odt|rtf)$/i.test(fn)) return false;
+      if (cat === 'sheet' && !mime.includes('sheet') && !mime.includes('excel') && !/\.(xlsx|xls|csv)$/i.test(fn)) return false;
+      if (cat === 'text' && !mime.includes('text') && !/\.txt$/i.test(fn)) return false;
     }
     return true;
   });
@@ -129,20 +135,31 @@ export function VaultPage() {
   const handleCreateFolder = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newFolderName.trim()) return;
-    await createFolderMut.mutateAsync({ name: newFolderName.trim(), parentId: currentFolderId });
-    setNewFolderName('');
-    setIsNewFolderOpen(false);
+    try {
+      await createFolderMut.mutateAsync({ name: newFolderName.trim(), parentId: currentFolderId });
+      setNewFolderName('');
+      setIsNewFolderOpen(false);
+      refetchFolders();
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Failed to create folder.');
+    }
   };
 
   const handleRename = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!renamingItem || !renameValue.trim()) return;
-    if (renamingItem.type === 'folder') {
-      await renameFolderMut.mutateAsync({ folderId: renamingItem.id, name: renameValue.trim() });
-    } else {
-      await renameFileMut.mutateAsync({ fileId: renamingItem.id, filename: renameValue.trim() });
+    try {
+      if (renamingItem.type === 'folder') {
+        await renameFolderMut.mutateAsync({ folderId: renamingItem.id, name: renameValue.trim() });
+      } else {
+        await renameFileMut.mutateAsync({ fileId: renamingItem.id, filename: renameValue.trim() });
+      }
+      setRenamingItem(null);
+      refetchFolders();
+      refetchFiles();
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Failed to rename item.');
     }
-    setRenamingItem(null);
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -643,15 +660,38 @@ export function VaultPage() {
                       <span className="fd-select-checkmark" />
                     </label>
 
-                    <i className={`item-icon ${iconClass}`} aria-hidden="true" />
+                    <div className="thumbnail-wrapper">
+                      <i className={`item-icon ${iconClass} thumbnail-fallback`} aria-hidden="true" />
+                      {(file.file_type?.toLowerCase().startsWith('image/') ||
+                        /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(file.filename) ||
+                        file.file_type === 'application/pdf' ||
+                        file.filename.toLowerCase().endsWith('.pdf')) && (
+                        <img
+                          className="item-icon item-thumbnail"
+                          src={api.files.getPreviewUrl(file.id, file.preview_token, true)}
+                          alt={file.filename}
+                          loading="lazy"
+                          onLoad={(e) => {
+                            (e.currentTarget as HTMLElement).classList.add('loaded');
+                            const fallback = e.currentTarget.parentElement?.querySelector('.thumbnail-fallback') as HTMLElement | null;
+                            if (fallback) fallback.style.opacity = '0';
+                          }}
+                          onError={(e) => {
+                            (e.currentTarget as HTMLElement).style.display = 'none';
+                            const fallback = e.currentTarget.parentElement?.querySelector('.thumbnail-fallback') as HTMLElement | null;
+                            if (fallback) fallback.style.opacity = '1';
+                          }}
+                        />
+                      )}
+                    </div>
 
                     <div className="item-details">
                       <div className="item-name" title={file.filename}>
                         {file.filename}
                       </div>
-                      <div className="item-meta-size">{api.helpers.formatBytes(file.file_size)}</div>
+                      <div className="item-meta-size">{api.helpers.formatBytes(file.file_size ?? file.size_bytes ?? 0)}</div>
                       <div className="item-meta-date">
-                        {api.helpers.formatDate(file.created_at).split(',')[0]}
+                        {api.helpers.formatDate(file.created_at ?? file.upload_date).split(',')[0]}
                       </div>
                       <div className="item-meta-uploader">—</div>
                     </div>
@@ -671,10 +711,11 @@ export function VaultPage() {
 
                     <div className={`dropdown-menu ${isMenuOpen ? 'show' : ''}`} onClick={(e) => e.stopPropagation()}>
                       <a
-                        href={api.files.getDownloadUrl(file.id)}
+                        href={api.files.getDownloadUrl(file.id, file.preview_token)}
                         download={file.filename}
                         className="dropdown-item"
                         style={{ textDecoration: 'none' }}
+                        onClick={(e) => e.stopPropagation()}
                       >
                         <i className="fas fa-download" aria-hidden="true" /> Download
                       </a>
@@ -750,7 +791,28 @@ export function VaultPage() {
 
                   <div className="item-preview-area">
                     <div className="thumbnail-wrapper">
-                      <i className={`item-icon ${iconClass}`} aria-hidden="true" />
+                      <i className={`item-icon ${iconClass} thumbnail-fallback`} aria-hidden="true" />
+                      {(file.file_type?.toLowerCase().startsWith('image/') ||
+                        /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(file.filename) ||
+                        file.file_type === 'application/pdf' ||
+                        file.filename.toLowerCase().endsWith('.pdf')) && (
+                        <img
+                          className="item-icon item-thumbnail"
+                          src={api.files.getPreviewUrl(file.id, file.preview_token, true)}
+                          alt={file.filename}
+                          loading="lazy"
+                          onLoad={(e) => {
+                            (e.currentTarget as HTMLElement).classList.add('loaded');
+                            const fallback = e.currentTarget.parentElement?.querySelector('.thumbnail-fallback') as HTMLElement | null;
+                            if (fallback) fallback.style.opacity = '0';
+                          }}
+                          onError={(e) => {
+                            (e.currentTarget as HTMLElement).style.display = 'none';
+                            const fallback = e.currentTarget.parentElement?.querySelector('.thumbnail-fallback') as HTMLElement | null;
+                            if (fallback) fallback.style.opacity = '1';
+                          }}
+                        />
+                      )}
                     </div>
                   </div>
 
@@ -759,7 +821,7 @@ export function VaultPage() {
                       <div className="item-name" title={file.filename}>
                         {file.filename}
                       </div>
-                      <div className="item-meta">{api.helpers.formatBytes(file.file_size)}</div>
+                      <div className="item-meta">{api.helpers.formatBytes(file.file_size ?? file.size_bytes ?? 0)}</div>
                     </div>
 
                     <button
@@ -777,10 +839,11 @@ export function VaultPage() {
 
                     <div className={`dropdown-menu ${isMenuOpen ? 'show' : ''}`} onClick={(e) => e.stopPropagation()}>
                       <a
-                        href={api.files.getDownloadUrl(file.id)}
+                        href={api.files.getDownloadUrl(file.id, file.preview_token)}
                         download={file.filename}
                         className="dropdown-item"
                         style={{ textDecoration: 'none' }}
+                        onClick={(e) => e.stopPropagation()}
                       >
                         <i className="fas fa-download" aria-hidden="true" /> Download
                       </a>
@@ -915,7 +978,7 @@ export function VaultPage() {
 
       {/* Create Folder Dialog */}
       {isNewFolderOpen && (
-        <div id="modal-create-folder" className="modal-overlay" onClick={() => setIsNewFolderOpen(false)}>
+        <div id="modal-create-folder" className="modal-overlay show" onClick={() => setIsNewFolderOpen(false)}>
           <div className="famdoc-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3 className="modal-title">Create Folder</h3>
@@ -965,7 +1028,7 @@ export function VaultPage() {
 
       {/* Rename Item Dialog */}
       {renamingItem && (
-        <div id="modal-rename" className="modal-overlay" onClick={() => setRenamingItem(null)}>
+        <div id="modal-rename" className="modal-overlay show" onClick={() => setRenamingItem(null)}>
           <div className="famdoc-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3 className="modal-title">Rename {renamingItem.type === 'folder' ? 'Folder' : 'File'}</h3>
@@ -1130,7 +1193,7 @@ export function VaultPage() {
 
       {/* Share Link Dialog */}
       {activeShareFile && (
-        <div id="modal-share" className="modal-overlay" onClick={() => setActiveShareFile(null)}>
+        <div id="modal-share" className="modal-overlay show" onClick={() => setActiveShareFile(null)}>
           <div className="famdoc-modal" style={{ maxWidth: '550px' }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3 className="modal-title">Share Vault Item</h3>
@@ -1162,14 +1225,14 @@ export function VaultPage() {
                   marginBottom: '1rem',
                 }}
               >
-                {api.files.getDownloadUrl(activeShareFile.id)}
+                {api.files.getDownloadUrl(activeShareFile.id, activeShareFile.preview_token)}
               </div>
               <button
                 type="button"
                 className="btn btn-primary"
                 style={{ width: '100%' }}
                 onClick={() => {
-                  navigator.clipboard.writeText(api.files.getDownloadUrl(activeShareFile.id));
+                  navigator.clipboard.writeText(api.files.getDownloadUrl(activeShareFile.id, activeShareFile.preview_token));
                   alert('Download link copied to clipboard!');
                 }}
               >
@@ -1191,7 +1254,7 @@ export function VaultPage() {
 
       {/* Media Preview Modal */}
       {activePreviewFile && (
-        <div id="modal-preview" className="modal-overlay" onClick={() => setActivePreviewFile(null)}>
+        <div id="modal-preview" className="modal-overlay show" onClick={() => setActivePreviewFile(null)}>
           <div className="famdoc-modal preview-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3
@@ -1203,7 +1266,7 @@ export function VaultPage() {
               </h3>
               <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                 <a
-                  href={api.files.getDownloadUrl(activePreviewFile.id)}
+                  href={api.files.getDownloadUrl(activePreviewFile.id, activePreviewFile.preview_token)}
                   download={activePreviewFile.filename}
                   id="preview-download-btn"
                   className="btn btn-secondary"
@@ -1223,21 +1286,25 @@ export function VaultPage() {
               </div>
             </div>
             <div className="preview-body" id="preview-content-area">
-              {activePreviewFile.file_type.includes('image') ? (
+              {(activePreviewFile.file_type?.toLowerCase().includes('image') ||
+                /\.(jpg|jpeg|png|webp|gif|bmp|svg)$/i.test(activePreviewFile.filename)) ? (
                 <img
-                  src={api.files.getPreviewUrl(activePreviewFile.id)}
+                  src={api.files.getPreviewUrl(activePreviewFile.id, activePreviewFile.preview_token)}
                   alt={activePreviewFile.filename}
                   className="preview-image"
                 />
-              ) : activePreviewFile.file_type.includes('video') ? (
+              ) : (activePreviewFile.file_type?.toLowerCase().includes('video') ||
+                   /\.(mp4|mkv|webm|mov|avi)$/i.test(activePreviewFile.filename)) ? (
                 <video
-                  src={api.files.getPreviewUrl(activePreviewFile.id)}
+                  src={api.files.getPreviewUrl(activePreviewFile.id, activePreviewFile.preview_token)}
                   controls
+                  autoPlay
                   className="preview-video"
                 />
-              ) : activePreviewFile.file_type.includes('pdf') ? (
+              ) : (activePreviewFile.file_type?.toLowerCase().includes('pdf') ||
+                   activePreviewFile.filename.toLowerCase().endsWith('.pdf')) ? (
                 <iframe
-                  src={api.files.getPreviewUrl(activePreviewFile.id)}
+                  src={api.files.getPreviewUrl(activePreviewFile.id, activePreviewFile.preview_token)}
                   title={activePreviewFile.filename}
                   className="preview-frame"
                 />
@@ -1255,10 +1322,10 @@ export function VaultPage() {
                     Preview not supported for this file type
                   </h4>
                   <p style={{ color: 'var(--text-ink-muted)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
-                    {activePreviewFile.filename} ({api.helpers.formatBytes(activePreviewFile.file_size)})
+                    {activePreviewFile.filename} ({api.helpers.formatBytes(activePreviewFile.file_size ?? activePreviewFile.size_bytes ?? 0)})
                   </p>
                   <a
-                    href={api.files.getDownloadUrl(activePreviewFile.id)}
+                    href={api.files.getDownloadUrl(activePreviewFile.id, activePreviewFile.preview_token)}
                     download={activePreviewFile.filename}
                     className="btn btn-primary"
                     style={{ textDecoration: 'none' }}

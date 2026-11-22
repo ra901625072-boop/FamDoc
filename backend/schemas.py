@@ -220,11 +220,13 @@ class FileResponse(BaseModel):
     filename: str
     file_type: str
     size_bytes: int
+    file_size: Optional[int] = None
     uploader_id: Optional[int]
     uploader_email: Optional[str] = None
     folder_id: Optional[int]
     family_id: str
     upload_date: datetime
+    created_at: Optional[datetime] = None
     storage_provider: str
     cloud_file_id: str
     cloud_link: Optional[str]

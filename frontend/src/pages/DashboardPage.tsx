@@ -336,7 +336,31 @@ export function DashboardPage() {
                   }}
                   onClick={() => navigate(`/vault?preview=${file.id}`)}
                 >
-                  <i className={`item-icon ${api.helpers.getFileIconClass(file.filename, file.file_type)}`} style={{ fontSize: '1.4rem' }} aria-hidden="true" />
+                  <div className="thumbnail-wrapper" style={{ width: '40px', height: '40px', borderRadius: 'var(--radius-sm)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--surface-paper-tint)', flexShrink: 0, position: 'relative' }}>
+                    <i className={`item-icon ${api.helpers.getFileIconClass(file.filename, file.file_type)} thumbnail-fallback`} style={{ fontSize: '1.2rem' }} aria-hidden="true" />
+                    {(file.file_type?.toLowerCase().startsWith('image/') ||
+                      /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(file.filename) ||
+                      file.file_type === 'application/pdf' ||
+                      file.filename.toLowerCase().endsWith('.pdf')) && (
+                      <img
+                        className="item-icon item-thumbnail"
+                        src={api.files.getPreviewUrl(file.id, file.preview_token, true)}
+                        alt={file.filename}
+                        loading="lazy"
+                        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+                        onLoad={(e) => {
+                          (e.currentTarget as HTMLElement).classList.add('loaded');
+                          const fallback = e.currentTarget.parentElement?.querySelector('.thumbnail-fallback') as HTMLElement | null;
+                          if (fallback) fallback.style.opacity = '0';
+                        }}
+                        onError={(e) => {
+                          (e.currentTarget as HTMLElement).style.display = 'none';
+                          const fallback = e.currentTarget.parentElement?.querySelector('.thumbnail-fallback') as HTMLElement | null;
+                          if (fallback) fallback.style.opacity = '1';
+                        }}
+                      />
+                    )}
+                  </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 600, fontSize: '0.88rem', color: 'var(--text-ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {file.filename}

@@ -414,7 +414,13 @@ export const api = {
   files: {
     async getFiles(folderId: number | null = null): Promise<FileItem[]> {
       const q = folderId !== null ? `?folder_id=${folderId}` : '';
-      return performRequest<FileItem[]>(`/api/files${q}`);
+      const items = await performRequest<FileItem[]>(`/api/files${q}`);
+      return (items || []).map((file) => ({
+        ...file,
+        file_size: file.file_size ?? file.size_bytes ?? 0,
+        size_bytes: file.size_bytes ?? file.file_size ?? 0,
+        created_at: file.created_at ?? file.upload_date ?? new Date().toISOString(),
+      }));
     },
 
     async rename(fileId: number, filename: string): Promise<FileItem> {
@@ -437,16 +443,23 @@ export const api = {
       });
     },
 
-    getDownloadUrl(fileId: number): string {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('famdoc_token') : null;
+    getDownloadUrl(fileId: number, token?: string): string {
+      const authToken = token || (typeof window !== 'undefined' ? localStorage.getItem('famdoc_token') : null);
       const base = resolveApiBaseUrl();
-      return `${base}/api/files/${fileId}/download${token ? `?token=${encodeURIComponent(token)}` : ''}`;
+      const params = new URLSearchParams();
+      if (authToken) params.set('token', authToken);
+      const qs = params.toString();
+      return `${base}/api/files/${fileId}/download${qs ? `?${qs}` : ''}`;
     },
 
-    getPreviewUrl(fileId: number): string {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('famdoc_token') : null;
+    getPreviewUrl(fileId: number, token?: string, thumbnail = false): string {
+      const authToken = token || (typeof window !== 'undefined' ? localStorage.getItem('famdoc_token') : null);
       const base = resolveApiBaseUrl();
-      return `${base}/api/files/${fileId}/preview${token ? `?token=${encodeURIComponent(token)}` : ''}`;
+      const params = new URLSearchParams();
+      if (authToken) params.set('token', authToken);
+      if (thumbnail) params.set('thumbnail', 'true');
+      const qs = params.toString();
+      return `${base}/api/files/${fileId}/preview${qs ? `?${qs}` : ''}`;
     },
   },
 
@@ -587,13 +600,14 @@ export const api = {
   },
 
   helpers: {
-    formatBytes(bytes: number, decimals = 1): string {
-      if (!bytes || bytes === 0) return '0 B';
+    formatBytes(bytes?: number | null, decimals = 1): string {
+      if (!bytes || bytes <= 0 || isNaN(Number(bytes))) return '0 B';
+      const numBytes = Number(bytes);
       const k = 1024;
       const dm = decimals < 0 ? 0 : decimals;
       const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-      const i = Math.floor(Math.log(bytes) / Math.log(k));
-      return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
+      const i = Math.floor(Math.log(numBytes) / Math.log(k));
+      return `${parseFloat((numBytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
     },
 
     formatDate(dateStr?: string): string {
