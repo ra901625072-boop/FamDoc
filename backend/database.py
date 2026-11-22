@@ -12,6 +12,8 @@ if DATABASE_URL.startswith("sqlite"):
     )
 else:
     connect_args = {}
+    if "sslmode" not in DATABASE_URL and ("supabase.co" in DATABASE_URL or "supabase.com" in DATABASE_URL or "pooler" in DATABASE_URL):
+        connect_args["sslmode"] = "require"
     engine = create_engine(
         DATABASE_URL,
         connect_args=connect_args,

@@ -44,13 +44,13 @@ local_vault/
 backend/local_vault/
 service-account.json
 
-# Node & Frontend Build Artifacts
+# Node, Frontend & Deployment Build Artifacts
 node_modules/
 .vite/
+.vercel/
 *.tsbuildinfo
 dist/
 frontend/dist/
-dist-worker/
 
 # Testing & Code Quality
 test-results/

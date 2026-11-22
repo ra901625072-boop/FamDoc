@@ -12,11 +12,8 @@ else:
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:8000")
 
-# Serve Frontend settings (useful for decoupling frontend on Vercel and backend API on Cloudflare)
-SERVE_FRONTEND = os.getenv("SERVE_FRONTEND", "true").lower() == "true"
-if os.getenv("CLOUDFLARE") or os.getenv("APP_ENV") in ("production", "staging"):
-    # Disable serving frontend by default on Cloudflare/production, unless explicitly set to true
-    SERVE_FRONTEND = os.getenv("SERVE_FRONTEND", "false").lower() == "true"
+# Serve Frontend settings (frontend is decoupled on Vercel, backend API runs on Railway)
+SERVE_FRONTEND = os.getenv("SERVE_FRONTEND", "false" if (os.getenv("RAILWAY_ENVIRONMENT") or os.getenv("RAILWAY_STATIC_URL") or os.getenv("PORT")) else "true").lower() == "true"
 
 # CORS Origins Setup
 cors_origins_raw = os.getenv("CORS_ORIGINS", "")
@@ -69,7 +66,7 @@ R2_SECRET_ACCESS_KEY = os.getenv("R2_SECRET_ACCESS_KEY", "")
 R2_BUCKET_NAME = os.getenv("R2_BUCKET_NAME", "famdoc-vault")
 R2_ENDPOINT_URL = os.getenv("R2_ENDPOINT_URL", f"https://{R2_ACCOUNT_ID}.r2.cloudflarestorage.com" if R2_ACCOUNT_ID else "")
 R2_PUBLIC_DOMAIN = os.getenv("R2_PUBLIC_DOMAIN", "")
-DEFAULT_STORAGE_TIER = os.getenv("DEFAULT_STORAGE_TIER", "r2" if R2_ACCESS_KEY_ID else "local")
+DEFAULT_STORAGE_TIER = os.getenv("DEFAULT_STORAGE_TIER", "google" if os.getenv("GOOGLE_SERVICE_ACCOUNT_FILE") else "local")
 
 # VirusTotal Scanner Settings
 VIRUSTOTAL_API_KEY = os.getenv("VIRUSTOTAL_API_KEY", "")

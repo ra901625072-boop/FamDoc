@@ -18,7 +18,7 @@ export function resolveApiBaseUrl(): string {
   const custom = typeof window !== 'undefined' ? localStorage.getItem('famdoc_api_base_url') : null;
   if (custom) return custom.trim().replace(/\/+$/, '');
 
-  const envUrl = import.meta.env.VITE_API_BASE_URL;
+  const envUrl = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL;
   if (envUrl) return envUrl.trim().replace(/\/+$/, '');
 
   if (typeof window !== 'undefined' && window.location) {

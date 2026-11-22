@@ -3,11 +3,10 @@
     "target": "es2022",
     "module": "es2022",
     "moduleResolution": "bundler",
-    "types": ["@cloudflare/workers-types"],
     "lib": ["es2022"],
     "strict": true,
     "skipLibCheck": true,
     "noEmit": true
   },
-  "include": ["src/**/*"]
+  "include": ["playwright.config.ts", "tests/**/*"]
 }

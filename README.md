@@ -40,8 +40,11 @@
   - Role-based access control (Admin & Family Member profiles).
   - Single-session JWT authentication with SHA-256 vault codes.
   - Fernet symmetric encryption for OAuth credentials and sensitive metadata.
-- ⚡ **Modern React 19 + Vite 6 SPA:** Ultra-fast modern frontend with TypeScript, TanStack Query v5 caching, Zustand state, Tailwind CSS design tokens, IndexedDB background upload queue, and full-screen document previewers, targeting Cloudflare Pages.
-- ☁️ **Production Deployable:** Ready for deployment on **Cloudflare** (Cloudflare Pages for React SPA, Workers Edge Router + Cloudflare Containers for FastAPI backend, R2 for vault storage, Hyperdrive for Supabase connection pooling).
+- ⚡ **Modern React 19 + Vite 6 SPA:** Ultra-fast modern frontend with TypeScript, TanStack Query v5 caching, Zustand state, Tailwind CSS design tokens, IndexedDB background upload queue, and full-screen document previewers, hosted on **Vercel**.
+- ☁️ **Production Deployable Architecture:**
+  - **Frontend:** Hosted on **Vercel** with automated SPA rewrites and edge caching (`vercel.json`).
+  - **Backend:** Hosted on **Railway** via Dockerfile container with dynamic `$PORT` binding (`railway.json`).
+  - **Database:** Hosted on **Supabase** (PostgreSQL with SSL transaction pooler and connection resilience).
 
 ---
 
@@ -51,17 +54,17 @@
 flowchart TD
     subgraph Clients["Clients Layer"]
         A["📱 Android App (Jetpack Compose)"]
-        B["💻 Web SPA (React 19 + Vite 6 on Cloudflare Pages)"]
+        B["💻 Web SPA (React 19 + Vite 6 on Vercel)"]
     end
 
-    subgraph Backend["FastAPI Backend Engine"]
+    subgraph Backend["FastAPI Backend Engine (Railway)"]
         C["API Gateway & JWT Auth"]
         D["Storage Router & Queue"]
         E["Fernet Encryption Engine"]
     end
 
     subgraph Storage["Storage & Persistence Layer"]
-        F[("🐘 PostgreSQL / Supabase")]
+        F[("🐘 Supabase PostgreSQL")]
         G["📁 Google Drive Multi-Account Pool"]
         H["💾 Local Encrypted Failover Vault"]
     end
@@ -86,30 +89,30 @@ FamDoc/
 │   ├── app/src/main/java/     # Compose UI, ViewModels, Repository, Biometrics
 │   └── build.gradle.kts       # Gradle build configuration
 ├── backend/                   # FastAPI Backend Server
-│   ├── app/
-│   │   ├── api/               # API routes (auth, documents, vaults, accounts)
-│   │   ├── core/              # Security, encryption, config, database sessions
-│   │   ├── models/            # SQLAlchemy / Pydantic models
-│   │   └── services/          # Google Drive pooling, storage failover, queues
-│   ├── requirements.txt       # Python dependencies
+│   ├── app/                   # API routes, core security, models, services
+│   ├── Dockerfile             # Multi-stage container for Railway deployment
+│   ├── requirements.txt       # Python dependencies (FastAPI, SQLAlchemy, psycopg2)
 │   └── main.py                # Server entry point
 ├── frontend/                  # Modern Web SPA (React 19 + TypeScript + Vite 6)
 │   ├── src/                   # Components, pages, hooks, stores, API client
-│   ├── public/                # Static assets, Android APK download, _redirects, _headers
+│   ├── public/                # Static assets, Android APK download
+│   ├── vercel.json            # Subdirectory Vercel deployment configuration
 │   └── vite.config.ts         # Vite bundler configuration
 ├── frontend-legacy/           # Preserved legacy Vanilla JS frontend
-├── docs/                      # Technical specifications, migration audits & cutover runbook
+├── docs/                      # Technical specifications & UI/UX polish audits
 ├── tests/e2e/                 # Playwright E2E parity test suite
+├── Dockerfile                 # Root Dockerfile for Railway backend deployment
+├── railway.json               # Railway deployment configuration
+├── vercel.json                # Root Vercel deployment configuration
 ├── build_apk.bat              # One-click Android APK build script
-├── install_debug.bat          # ADB debug install script
-└── wrangler.toml              # Cloudflare Workers & Containers deployment configuration
+└── install_debug.bat          # ADB debug install script
 ```
 
 ---
 
 ## 🚀 Getting Started
 
-### 1. Backend Setup
+### 1. Backend Setup (Local Development)
 
 ```bash
 cd backend
@@ -130,20 +133,29 @@ npm run build                  # Builds production bundle to dist/
 npm test                       # Runs Vitest unit tests
 ```
 
-### 2. Cloudflare Deployment (Edge Router + Containers)
+### 3. Production Deployment (Vercel + Railway + Supabase)
 
-For full migration instructions, see [PRODUCTION_CUTOVER_RUNBOOK.md](file:///d:/FDMS/docs/migration/PRODUCTION_CUTOVER_RUNBOOK.md).
+#### A. Frontend on Vercel
+1. Import repository into **Vercel**.
+2. If Root Directory is left as `./`, `vercel.json` will automatically build `frontend/dist`.
+3. Under **Settings → Environment Variables**, add:
+   - `VITE_API_BASE_URL` = `https://<your-railway-app>.up.railway.app`
+4. Deploy.
 
-```bash
-# Install dependencies
-npm install
+#### B. Backend on Railway
+1. Create a new project on **Railway** connected to this GitHub repository.
+2. Railway detects `railway.json` and `Dockerfile` automatically.
+3. Under **Variables**, add:
+   - `DATABASE_URL` = Your Supabase PostgreSQL connection string (e.g. `postgresql://postgres.[REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres?sslmode=require`)
+   - `JWT_SECRET` = A secure random secret string
+   - `FRONTEND_URL` = `https://<your-vercel-app>.vercel.app`
+4. Railway will build the container, bind to `$PORT`, and run health checks at `/api/health`.
 
-# Deploy to Staging
-npx wrangler deploy --env staging
-
-# Deploy to Production
-npx wrangler deploy --env production
-```
+#### C. Database on Supabase
+1. Create a project in [Supabase](https://supabase.com).
+2. Go to **Project Settings → Database → Connection String**.
+3. Select **URI** mode and copy the transaction pooler connection string (Port `6543`) or direct string (`5432`).
+4. Set as `DATABASE_URL` in Railway. Tables and migrations initialize automatically on server start.
 
 ### 3. Android App Build
 

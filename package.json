@@ -1,18 +1,15 @@
 {
-  "name": "famdoc-backend",
-  "version": "1.0.0",
-  "description": "Cloudflare edge router and container deployment for FDMS",
-  "main": "src/index.ts",
+  "name": "famdoc",
+  "version": "2.0.0",
+  "description": "FamDoc — Family Document Vault (Vercel Frontend + Railway FastAPI Backend + Supabase PostgreSQL)",
   "scripts": {
-    "dev": "wrangler dev",
-    "deploy:staging": "wrangler deploy --env staging",
-    "deploy:prod": "wrangler deploy --env production",
-    "tail": "wrangler tail"
+    "frontend:dev": "cd frontend && npm run dev",
+    "frontend:build": "cd frontend && npm run build",
+    "frontend:test": "cd frontend && npm test",
+    "test:e2e": "playwright test"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^5.20261121.1",
     "@playwright/test": "^1.65.1",
-    "typescript": "^5.5.0",
-    "wrangler": "^4.166.0"
+    "typescript": "^5.5.0"
   }
 }
