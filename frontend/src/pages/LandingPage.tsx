@@ -750,7 +750,7 @@ export const LandingPage = () => {
                     <i className="fas fa-palette" aria-hidden="true" />
                     <div>
                       <div className="hl-title">Material You Design</div>
-                      <div className="hl-sub">Emerald Mint &amp; AMOLED Dark theme</div>
+                      <div className="hl-sub">Royal Blue &amp; Obsidian Dark theme</div>
                     </div>
                   </div>
                 </div>

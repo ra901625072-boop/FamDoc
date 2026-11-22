@@ -1,7 +1,7 @@
 /* ==========================================================================
    FamDoc Design System — Modern Home Page Stylesheet (UI Designer Polish)
    Tailored specifically for Family Keepsake & Document Management Platform
-   Light Theme (Mint Emerald) & AMOLED Dark Theme (Pitch Black + Neon Mint)
+   Light Theme (Clean Paper) & Obsidian Dark Theme (Navy Obsidian + Royal Blue)
    ========================================================================== */
 
 /* --------------------------------------------------------------------------
@@ -389,7 +389,7 @@
 }
 
 .hero-title-highlight {
-  background: linear-gradient(135deg, #047857 0%, #10B981 45%, #0D9488 100%);
+  background: linear-gradient(135deg, #1E3A8A 0%, #1D4ED8 45%, #2563EB 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   display: inline-block;
@@ -397,7 +397,7 @@
 }
 
 [data-theme="dark"] .hero-title-highlight {
-  background: linear-gradient(135deg, #34D399 0%, #6EE7B7 45%, #2DD4BF 100%);
+  background: linear-gradient(135deg, #60A5FA 0%, #93C5FD 45%, #38BDF8 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -533,7 +533,7 @@
 }
 
 .hero-btn-apk i {
-  color: #10B981;
+  color: var(--color-primary, #1D4ED8);
   font-size: 1.15rem;
 }
 
@@ -772,7 +772,7 @@
 }
 
 .seg-mom { background: #3B82F6; }
-.seg-dad { background: #10B981; }
+.seg-dad { background: var(--cat-sheets, #0D9488); }
 .seg-grandma { background: #F59E0B; }
 .seg-local { background: #8B5CF6; }
 
@@ -918,14 +918,14 @@
 }
 
 .doc-icon-pdf { background: #FEE2E2; color: #EF4444; }
-.doc-icon-img { background: #DBEAFE; color: #3B82F6; }
+.doc-icon-img { background: #E0F2FE; color: #0EA5E9; }
 .doc-icon-doc { background: #EDE9FE; color: #8B5CF6; }
-.doc-icon-sheet { background: #D1FAE5; color: #10B981; }
+.doc-icon-sheet { background: #CCFBF1; color: #0D9488; }
 
 [data-theme="dark"] .doc-icon-pdf { background: #321515; color: #F87171; }
-[data-theme="dark"] .doc-icon-img { background: #132238; color: #60A5FA; }
+[data-theme="dark"] .doc-icon-img { background: #0C283E; color: #38BDF8; }
 [data-theme="dark"] .doc-icon-doc { background: #241638; color: #A78BFA; }
-[data-theme="dark"] .doc-icon-sheet { background: #14291F; color: #34D399; }
+[data-theme="dark"] .doc-icon-sheet { background: #0F2D2A; color: #2DD4BF; }
 
 .doc-content {
   flex-grow: 1;
@@ -1098,11 +1098,11 @@
 }
 
 .badge-pool {
-  background: linear-gradient(135deg, #047857 0%, #10B981 100%);
+  background: linear-gradient(135deg, #1D4ED8 0%, #3B82F6 100%);
 }
 
 .badge-failover {
-  background: linear-gradient(135deg, #0D9488 0%, #059669 100%);
+  background: linear-gradient(135deg, #0284C7 0%, #0D9488 100%);
 }
 
 .badge-generations {
@@ -1177,16 +1177,16 @@
   gap: 0.5rem;
   padding: 0.4rem 1rem;
   border-radius: var(--radius-pill, 28px);
-  background: #D1FAE5;
-  color: #047857;
+  background: var(--color-primary-container, #EFF6FF);
+  color: var(--color-primary, #1D4ED8);
   font-size: 0.82rem;
   font-weight: 700;
   margin-bottom: 1.35rem;
 }
 
 [data-theme="dark"] .android-badge-chip {
-  background: #14291F;
-  color: #34D399;
+  background: var(--color-primary-container, #1E293B);
+  color: var(--color-primary-light, #60A5FA);
 }
 
 .android-headline {
@@ -1247,7 +1247,7 @@
   height: 54px;
   padding: 0 1.85rem;
   border-radius: var(--radius-md, 12px);
-  background: #10B981;
+  background: var(--color-primary, #1D4ED8);
   color: #FFFFFF !important;
   font-weight: 700;
   font-size: 0.98rem;
@@ -1255,7 +1255,7 @@
   align-items: center;
   gap: 0.65rem;
   text-decoration: none;
-  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.35);
+  box-shadow: 0 8px 24px rgba(29, 78, 216, 0.35);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -1471,7 +1471,7 @@
   padding: 0 1.85rem;
   border-radius: var(--radius-md, 12px);
   background: #FFFFFF;
-  color: #064E3B !important;
+  color: var(--color-primary, #1D4ED8) !important;
   font-weight: 800;
   font-size: 1rem;
   display: inline-flex;

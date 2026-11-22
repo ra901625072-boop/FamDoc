@@ -18,18 +18,18 @@ def send_otp_email(to_email: str, otp: str):
         <meta charset="UTF-8">
         <title>FamDoc Security Code</title>
       </head>
-      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #F2FBF6; padding: 28px 12px; color: #0B291D; margin: 0; line-height: 1.6;">
-        <div style="max-width: 520px; margin: 0 auto; background-color: #FFFFFF; padding: 36px 32px; border-radius: 16px; box-shadow: 0 8px 24px rgba(4, 40, 25, 0.08); border: 1px solid #CBEAD7;">
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #F8FAFC; padding: 28px 12px; color: #0F172A; margin: 0; line-height: 1.6;">
+        <div style="max-width: 520px; margin: 0 auto; background-color: #FFFFFF; padding: 36px 32px; border-radius: 16px; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08); border: 1px solid #E2E8F0;">
           <div style="text-align: center; margin-bottom: 24px;">
-            <div style="display: inline-block; padding: 8px 16px; background-color: #E8F7EE; border-radius: 9999px; margin-bottom: 12px;">
-              <span style="font-size: 13px; font-weight: 700; letter-spacing: 1px; color: #047857; text-transform: uppercase;">FamDoc Keepsake Vault</span>
+            <div style="display: inline-block; padding: 8px 16px; background-color: #EFF6FF; border-radius: 9999px; margin-bottom: 12px;">
+              <span style="font-size: 13px; font-weight: 700; letter-spacing: 1px; color: #1D4ED8; text-transform: uppercase;">FamDoc Keepsake Vault</span>
             </div>
-            <h2 style="color: #064E3B; margin: 0; font-size: 22px; font-weight: 800;">Password Reset Request</h2>
+            <h2 style="color: #1E3A8A; margin: 0; font-size: 22px; font-weight: 800;">Password Reset Request</h2>
           </div>
-          <p style="font-size: 15px; color: #436B59; margin-bottom: 16px;">Hello,</p>
-          <p style="font-size: 15px; color: #436B59; margin-bottom: 24px;">We received a request to reset the password for your family vault account. Use the 6-digit one-time code below to verify your identity:</p>
+          <p style="font-size: 15px; color: #334155; margin-bottom: 16px;">Hello,</p>
+          <p style="font-size: 15px; color: #334155; margin-bottom: 24px;">We received a request to reset the password for your family vault account. Use the 6-digit one-time code below to verify your identity:</p>
           <div style="text-align: center; margin: 28px 0;">
-            <div style="display: inline-block; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 34px; font-weight: 800; letter-spacing: 8px; color: #047857; background: #F0FAF4; padding: 16px 32px; border-radius: 12px; border: 2px dashed #10B981; box-shadow: 0 4px 14px rgba(4, 120, 87, 0.12);">
+            <div style="display: inline-block; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 34px; font-weight: 800; letter-spacing: 8px; color: #1D4ED8; background: #EFF6FF; padding: 16px 32px; border-radius: 12px; border: 2px dashed #3B82F6; box-shadow: 0 4px 14px rgba(29, 78, 216, 0.12);">
               {otp}
             </div>
           </div>

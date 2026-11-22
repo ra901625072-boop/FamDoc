@@ -64,7 +64,7 @@ export function SharedPage() {
           <Link to="/" className="inline-flex items-center justify-center gap-2 mb-1 no-underline">
             <img src="/img/logo.svg" alt="FamDoc Logo" className="w-8 h-8" />
             <span className="brand-text text-xl font-extrabold text-[var(--text-ink)]">
-              Fam<span className="text-emerald-600 dark:text-emerald-400">Doc</span>
+              Fam<span className="text-blue-600 dark:text-blue-400">Doc</span>
             </span>
           </Link>
           <p className="text-[10px] uppercase tracking-wider text-[var(--text-ink-muted)]">
@@ -75,7 +75,7 @@ export function SharedPage() {
         {/* Loading State */}
         {loading && (
           <div className="py-8 text-center space-y-3">
-            <div className="w-10 h-10 border-4 border-emerald-500/20 border-t-emerald-600 rounded-full animate-spin mx-auto" />
+            <div className="w-10 h-10 border-4 border-blue-500/20 border-t-blue-600 rounded-full animate-spin mx-auto" />
             <p className="text-xs text-[var(--text-ink-muted)]">Retrieving shared document details...</p>
           </div>
         )}
@@ -101,7 +101,7 @@ export function SharedPage() {
         {!loading && !error && info && (
           <div className="space-y-4">
             <div className="flex items-center gap-3 p-4 rounded-2xl bg-[var(--surface-paper-tint)]/60 border border-[var(--border-paper)]">
-              <div className="p-3 rounded-xl bg-white dark:bg-zinc-800 text-emerald-600 shadow-xs">
+              <div className="p-3 rounded-xl bg-white dark:bg-zinc-800 text-blue-600 dark:text-blue-400 shadow-xs">
                 <FileText className="w-6 h-6" />
               </div>
               <div className="flex-1 min-w-0">

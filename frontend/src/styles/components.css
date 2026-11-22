@@ -35,7 +35,7 @@
   cursor: not-allowed;
 }
 
-/* Primary Button (Matches Android MintPrimary / DarkPrimary) */
+/* Primary Button (Matches Android RoyalBlue / DarkPrimary) */
 .btn-primary {
   height: var(--btn-height-primary, 52px);
   background: var(--accent-gradient);
@@ -169,7 +169,7 @@ textarea.form-control {
 }
 
 [data-theme="dark"] .badge-success {
-  color: #34D399;
+  color: var(--success-sage, #34D399);
 }
 
 .badge-danger {
