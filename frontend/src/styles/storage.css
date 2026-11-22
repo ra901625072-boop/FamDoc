@@ -123,13 +123,13 @@
 }
 
 /* Category Colors */
-.storage-segment-video { background-color: #ec4899; }
-.storage-segment-image { background-color: #3b82f6; }
-.storage-segment-pdf { background-color: #ef4444; }
-.storage-segment-document { background-color: #8b5cf6; }
-.storage-segment-sheet { background-color: #10b981; }
-.storage-segment-text { background-color: #f59e0b; }
-.storage-segment-other { background-color: #6b7280; }
+.storage-segment-video { background-color: var(--cat-video, #ec4899); }
+.storage-segment-image { background-color: var(--cat-images, #0ea5e9); }
+.storage-segment-pdf { background-color: var(--cat-pdfs, #ef4444); }
+.storage-segment-document { background-color: var(--cat-docs, #8b5cf6); }
+.storage-segment-sheet { background-color: var(--cat-sheets, #0d9488); }
+.storage-segment-text { background-color: var(--cat-text, #f59e0b); }
+.storage-segment-other { background-color: var(--cat-other, #64748b); }
 
 .hero-legend-row {
   display: flex;
@@ -426,7 +426,7 @@
 }
 
 .contributor-list-item.active {
-  border-left: 3px solid #10b981;
+  border-left: 3px solid var(--color-primary, #1D4ED8);
 }
 
 .contributor-list-item.shared {
@@ -473,9 +473,9 @@
 }
 
 .contributor-status-badge.connected {
-  background-color: #ecfdf5;
-  color: #065f46;
-  border: 1px solid #a7f3d0;
+  background-color: var(--success-sage-container, #ecfdf5);
+  color: var(--success-sage-text, #065f46);
+  border: 1px solid var(--success-sage-border, #a7f3d0);
 }
 
 .contributor-status-badge.shared {
@@ -514,9 +514,9 @@
 }
 
 .cloud-member-badge.active {
-  background-color: #f0fdf4;
-  color: #15803d;
-  border: 1px solid #bbf7d0;
+  background-color: var(--success-sage-container, #f0fdf4);
+  color: var(--success-sage-text, #15803d);
+  border: 1px solid var(--success-sage-border, #bbf7d0);
 }
 
 .cloud-member-badge.none {
@@ -583,9 +583,9 @@
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  background-color: #ecfdf5;
-  color: #065f46;
-  border: 1px solid #a7f3d0;
+  background-color: var(--success-sage-container, #ecfdf5);
+  color: var(--success-sage-text, #065f46);
+  border: 1px solid var(--success-sage-border, #a7f3d0);
   border-radius: 9999px;
   padding: 0.2rem 0.6rem;
   font-size: 0.75rem;

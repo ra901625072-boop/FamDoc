@@ -472,11 +472,11 @@
   letter-spacing: 0.05em;
   padding: 0.18rem 0.45rem;
   border-radius: 4px;
-  background: rgba(16, 185, 129, 0.22);
-  color: #34D399;
-  border: 1px solid rgba(16, 185, 129, 0.4);
+  background: var(--color-primary-container, rgba(29, 78, 216, 0.12));
+  color: var(--color-primary, #1D4ED8);
+  border: 1px solid rgba(var(--accent-brand-rgb, 29, 78, 216), 0.28);
   text-transform: uppercase;
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
 }
 
 .file-format-pill {

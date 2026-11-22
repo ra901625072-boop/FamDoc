@@ -227,7 +227,7 @@ export function StoragePage() {
             }}
           >
             <span>
-              <i className="fas fa-link" style={{ color: '#3b82f6', marginRight: '0.35rem' }} aria-hidden="true" />
+              <i className="fas fa-link" style={{ color: 'var(--color-primary, #1D4ED8)', marginRight: '0.35rem' }} aria-hidden="true" />
               Authorized Redirect URI for Google Cloud Console:
             </span>
             <span style={{ fontSize: '0.75rem', color: 'var(--text-ink-muted)' }}>
@@ -435,30 +435,30 @@ export function StoragePage() {
               className="storage-progress-segment"
               style={{
                 width: `${usedPct}%`,
-                background: 'linear-gradient(90deg, #10B981 0%, #059669 100%)',
+                background: 'linear-gradient(90deg, var(--color-primary, #1D4ED8) 0%, var(--color-primary-hover, #2563EB) 100%)',
               }}
             />
           </div>
 
           <div className="hero-legend-row" id="hero-legend-row">
             <div className="hero-legend-item">
-              <span className="hero-legend-dot" style={{ backgroundColor: '#ec4899', width: '8px', height: '8px', borderRadius: '50%' }} />
+              <span className="hero-legend-dot" style={{ backgroundColor: 'var(--cat-video, #ec4899)', width: '8px', height: '8px', borderRadius: '50%' }} />
               <span>Videos</span>
             </div>
             <div className="hero-legend-item">
-              <span className="hero-legend-dot" style={{ backgroundColor: '#3b82f6', width: '8px', height: '8px', borderRadius: '50%' }} />
+              <span className="hero-legend-dot" style={{ backgroundColor: 'var(--cat-images, #0ea5e9)', width: '8px', height: '8px', borderRadius: '50%' }} />
               <span>Images</span>
             </div>
             <div className="hero-legend-item">
-              <span className="hero-legend-dot" style={{ backgroundColor: '#ef4444', width: '8px', height: '8px', borderRadius: '50%' }} />
+              <span className="hero-legend-dot" style={{ backgroundColor: 'var(--cat-pdfs, #ef4444)', width: '8px', height: '8px', borderRadius: '50%' }} />
               <span>PDF Documents</span>
             </div>
             <div className="hero-legend-item">
-              <span className="hero-legend-dot" style={{ backgroundColor: '#8b5cf6', width: '8px', height: '8px', borderRadius: '50%' }} />
+              <span className="hero-legend-dot" style={{ backgroundColor: 'var(--cat-docs, #8b5cf6)', width: '8px', height: '8px', borderRadius: '50%' }} />
               <span>Word Docs</span>
             </div>
             <div className="hero-legend-item">
-              <span className="hero-legend-dot" style={{ backgroundColor: '#10b981', width: '8px', height: '8px', borderRadius: '50%' }} />
+              <span className="hero-legend-dot" style={{ backgroundColor: 'var(--cat-sheets, #0d9488)', width: '8px', height: '8px', borderRadius: '50%' }} />
               <span>Spreadsheets</span>
             </div>
           </div>
