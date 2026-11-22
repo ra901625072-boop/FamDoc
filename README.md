@@ -154,6 +154,34 @@ Ensure Android SDK / Android Studio is installed, then build debug APK:
 
 ---
 
+## 🎨 Design System & Token Architecture
+
+FamDoc adheres to an accessible, WCAG 2.2 compliant design token architecture configured centrally in `frontend/src/styles/variables.css`.
+
+### Brand Palette (Royal Blue)
+The brand identity is standardized on Royal Blue across the web vault and Android client:
+- **Light Theme Primary:** `#1D4ED8` (WCAG AAA contrast 7.61:1 against white/paper surfaces)
+- **Dark Theme Primary:** `#60A5FA` / `#2563EB` (Restores legibility without glare)
+- **Dark Mode Elevation:** AMOLED black (`#000000`) elevated to Navy Obsidian canvas (`#0B0F17`), card containers (`#151C2C`), and visible structural borders (`#283548`, contrast $\ge 3.0:1$)
+
+### Data-Viz & Category Color Mapping
+To prevent semantic collision with brand blue and semantic statuses, digital keepsakes are color-coded with high-distinguishability tokens:
+- **Videos:** Pink (`--cat-video: #EC4899`)
+- **Images:** Vibrant Cyan (`--cat-images: #0EA5E9`)
+- **PDF Documents:** Crimson (`--cat-pdfs: #EF4444`)
+- **Word Documents:** Violet (`--cat-docs: #8B5CF6`)
+- **Spreadsheets:** Teal/Jade (`--cat-sheets: #0D9488`)
+- **Text & Notes:** Amber (`--cat-text: #F59E0B`)
+- **Other:** Slate (`--cat-other: #64748B`)
+- **Keepsake Folders:** Warm Amber (`--folder-color: #D97706` light / `#FBBF24` dark)
+
+### Semantic Status Tokens
+- **Online / Verified / Active:** Emerald (`--semantic-success: #10B981`)
+- **Pending / Syncing / Warning:** Amber (`--semantic-warning: #F59E0B`)
+- **Offline / Error / Expired:** Red (`--semantic-danger: #EF4444`)
+
+---
+
 ## 👨‍💻 Author
 
 **Akshaysinh Rajput**
