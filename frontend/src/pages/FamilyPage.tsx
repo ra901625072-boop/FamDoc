@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { motion, AnimatePresence } from 'motion/react';
 import {
   useFamilyDetails,
   useFamilyMembers,
@@ -9,6 +10,7 @@ import {
 } from '../api/hooks';
 import { api } from '../api/client';
 import { useAuthStore } from '../stores/useAuthStore';
+import { modalBackdropVariants, modalDialogVariants, springs } from '../lib/motion';
 
 export function FamilyPage() {
   const { data: user } = useCurrentUser();
@@ -461,113 +463,131 @@ export function FamilyPage() {
       </div>
 
       {/* Invite Member Dialog Modal */}
-      {showInviteModal && (
-        <div id="modal-invite" className="modal-overlay show" onClick={() => setShowInviteModal(false)}>
-          <div className="famdoc-modal" style={{ maxWidth: '500px' }} onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3 className="modal-title">Invite Family Member</h3>
-              <button
-                type="button"
-                className="modal-close"
-                aria-label="Close modal"
-                onClick={() => setShowInviteModal(false)}
-              >
-                <i className="fas fa-times" aria-hidden="true" />
-              </button>
-            </div>
-            <div className="modal-body" style={{ textAlign: 'center', padding: '2rem 1.5rem' }}>
-              <i
-                className="fas fa-envelope-open-text"
-                style={{ fontSize: '3rem', color: 'var(--accent-brand)', marginBottom: '1rem' }}
-                aria-hidden="true"
-              />
-              <h4 style={{ fontFamily: 'var(--font-serif)', fontWeight: 800, marginBottom: '0.5rem' }}>
-                Share Your Secret Invite Code
-              </h4>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-ink-muted)', marginBottom: '1.5rem' }}>
-                Family members can install the FamDoc Android app or visit the web app, click &quot;Join Family Vault&quot;,
-                and enter this invitation code:
-              </p>
-
-              <div
-                style={{
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: '1.5rem',
-                  fontWeight: 800,
-                  letterSpacing: '3px',
-                  color: 'var(--accent-brand)',
-                  backgroundColor: 'var(--surface-paper-tint)',
-                  padding: '1rem',
-                  borderRadius: 'var(--radius-md)',
-                  border: '1px dashed var(--border-paper-dark)',
-                  marginBottom: '1rem',
-                  textDecoration: timeLeft === 0 ? 'line-through' : 'none',
-                  opacity: timeLeft === 0 ? 0.6 : 1,
-                }}
-              >
-                {effectiveCode}
+      <AnimatePresence>
+        {showInviteModal && (
+          <motion.div
+            id="modal-invite"
+            className="modal-overlay show"
+            variants={modalBackdropVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            onClick={() => setShowInviteModal(false)}
+          >
+            <motion.div
+              className="famdoc-modal"
+              variants={modalDialogVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              style={{ maxWidth: '500px' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="modal-header">
+                <h3 className="modal-title">Invite Family Member</h3>
+                <button
+                  type="button"
+                  className="modal-close"
+                  aria-label="Close modal"
+                  onClick={() => setShowInviteModal(false)}
+                >
+                  <i className="fas fa-times" aria-hidden="true" />
+                </button>
               </div>
+              <div className="modal-body" style={{ textAlign: 'center', padding: '2rem 1.5rem' }}>
+                <i
+                  className="fas fa-envelope-open-text"
+                  style={{ fontSize: '3rem', color: 'var(--accent-brand)', marginBottom: '1rem' }}
+                  aria-hidden="true"
+                />
+                <h4 style={{ fontFamily: 'var(--font-serif)', fontWeight: 800, marginBottom: '0.5rem' }}>
+                  Share Your Secret Invite Code
+                </h4>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-ink-muted)', marginBottom: '1.5rem' }}>
+                  Family members can install the FamDoc Android app or visit the web app, click &quot;Join Family Vault&quot;,
+                  and enter this invitation code:
+                </p>
 
-              {effectiveCode && effectiveCode !== 'FAMD-0000-0000' && timeLeft !== null && (
-                <div style={{ marginBottom: '1.25rem' }}>
-                  <span
-                    style={{
-                      fontSize: '0.8rem',
-                      fontWeight: 700,
-                      color: timeLeft === 0 || timeLeft <= 15 ? (timeLeft === 0 ? '#ef4444' : '#f59e0b') : '#10b981',
-                      backgroundColor:
-                        timeLeft === 0 || timeLeft <= 15
-                          ? timeLeft === 0
-                            ? 'rgba(239, 68, 68, 0.15)'
-                            : 'rgba(245, 158, 11, 0.18)'
-                          : 'rgba(16, 185, 129, 0.15)',
-                      padding: '0.25rem 0.75rem',
-                      borderRadius: '14px',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.35rem',
-                    }}
-                  >
-                    <i
-                      className={`fas ${
-                        timeLeft === 0
-                          ? 'fa-exclamation-circle'
-                          : timeLeft > 65
-                          ? 'fa-shield-alt'
-                          : 'fa-stopwatch'
-                      }`}
-                      aria-hidden="true"
-                    />
-                    <span>
-                      {timeLeft === 0
-                        ? 'Expired (1-Min Limit)'
-                        : timeLeft > 65
-                        ? 'Standard Access Code'
-                        : timeLeft <= 15
-                        ? `Expiring in: ${timeLeft}s`
-                        : `Valid for: ${timeLeft}s`}
-                    </span>
-                  </span>
+                <div
+                  style={{
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: '1.5rem',
+                    fontWeight: 800,
+                    letterSpacing: '3px',
+                    color: 'var(--accent-brand)',
+                    backgroundColor: 'var(--surface-paper-tint)',
+                    padding: '1rem',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px dashed var(--border-paper-dark)',
+                    marginBottom: '1rem',
+                    textDecoration: timeLeft === 0 ? 'line-through' : 'none',
+                    opacity: timeLeft === 0 ? 0.6 : 1,
+                  }}
+                >
+                  {effectiveCode}
                 </div>
-              )}
 
-              <button
-                type="button"
-                className="btn btn-primary"
-                style={{ width: '100%', justifyContent: 'center' }}
-                disabled={timeLeft === 0}
-                onClick={() => {
-                  handleCopyCode();
-                  setShowInviteModal(false);
-                }}
-              >
-                <i className="fas fa-copy" aria-hidden="true" />
-                <span>{timeLeft === 0 ? 'Code Expired (Regenerate First)' : 'Copy Code & Close'}</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+                {effectiveCode && effectiveCode !== 'FAMD-0000-0000' && timeLeft !== null && (
+                  <div style={{ marginBottom: '1.25rem' }}>
+                    <span
+                      style={{
+                        fontSize: '0.8rem',
+                        fontWeight: 700,
+                        color: timeLeft === 0 || timeLeft <= 15 ? (timeLeft === 0 ? '#ef4444' : '#f59e0b') : '#10b981',
+                        backgroundColor:
+                          timeLeft === 0 || timeLeft <= 15
+                            ? timeLeft === 0
+                              ? 'rgba(239, 68, 68, 0.15)'
+                              : 'rgba(245, 158, 11, 0.18)'
+                            : 'rgba(16, 185, 129, 0.15)',
+                        padding: '0.25rem 0.75rem',
+                        borderRadius: '14px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.35rem',
+                      }}
+                    >
+                      <i
+                        className={`fas ${
+                          timeLeft === 0
+                            ? 'fa-exclamation-circle'
+                            : timeLeft > 65
+                            ? 'fa-shield-alt'
+                            : 'fa-stopwatch'
+                        }`}
+                        aria-hidden="true"
+                      />
+                      <span>
+                        {timeLeft === 0
+                          ? 'Expired (1-Min Limit)'
+                          : timeLeft > 65
+                          ? 'Standard Access Code'
+                          : timeLeft <= 15
+                          ? `Expiring in: ${timeLeft}s`
+                          : `Valid for: ${timeLeft}s`}
+                      </span>
+                    </span>
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  style={{ width: '100%', justifyContent: 'center' }}
+                  disabled={timeLeft === 0}
+                  onClick={() => {
+                    handleCopyCode();
+                    setShowInviteModal(false);
+                  }}
+                >
+                  <i className="fas fa-copy" aria-hidden="true" />
+                  <span>{timeLeft === 0 ? 'Code Expired (Regenerate First)' : 'Copy Code & Close'}</span>
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { motion, AnimatePresence } from 'motion/react';
 import { useCurrentUser, useFamilyDetails, useRegenerateSecretCode, useUpdateFamilyDetails } from '../api/hooks';
 import { api } from '../api/client';
 import { useAuthStore } from '../stores/useAuthStore';
+import { toastVariants, springs } from '../lib/motion';
 
 export function ProfilePage() {
   const [searchParams] = useSearchParams();
@@ -328,51 +330,58 @@ export function ProfilePage() {
         </div>
       </div>
 
-      {statusMsg && (
-        <div
-          className="famdoc-alert fd-fade-in"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '0.65rem',
-            padding: '0.85rem 1.25rem',
-            borderRadius: 'var(--radius-md)',
-            backgroundColor: statusMsg.type === 'success' ? 'var(--surface-alert-info)' : 'rgba(239, 68, 68, 0.12)',
-            color: statusMsg.type === 'success' ? 'var(--color-primary)' : '#ef4444',
-            border: `1px solid ${statusMsg.type === 'success' ? 'var(--border-paper)' : 'rgba(239, 68, 68, 0.35)'}`,
-            fontWeight: 600,
-            fontSize: '0.85rem',
-            boxShadow: 'var(--shadow-sm)',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-            <i
-              className={`fas ${statusMsg.type === 'success' ? 'fa-check-circle' : 'fa-exclamation-triangle'}`}
-              aria-hidden="true"
-            />
-            <span>{statusMsg.text}</span>
-          </div>
-          <button
-            type="button"
-            onClick={() => setStatusMsg(null)}
-            aria-label="Dismiss alert"
+      <AnimatePresence>
+        {statusMsg && (
+          <motion.div
+            variants={toastVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            className="famdoc-alert fd-fade-in"
             style={{
-              background: 'transparent',
-              border: 'none',
-              color: 'inherit',
-              cursor: 'pointer',
-              padding: '0.2rem 0.5rem',
-              fontSize: '1rem',
-              lineHeight: 1,
-              opacity: 0.75,
-              borderRadius: '4px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '0.65rem',
+              padding: '0.85rem 1.25rem',
+              borderRadius: 'var(--radius-md)',
+              backgroundColor: statusMsg.type === 'success' ? 'var(--surface-alert-info)' : 'rgba(239, 68, 68, 0.12)',
+              color: statusMsg.type === 'success' ? 'var(--color-primary)' : '#ef4444',
+              border: `1px solid ${statusMsg.type === 'success' ? 'var(--border-paper)' : 'rgba(239, 68, 68, 0.35)'}`,
+              fontWeight: 600,
+              fontSize: '0.85rem',
+              boxShadow: 'var(--shadow-sm)',
+              marginBottom: '1.5rem',
             }}
           >
-            ✕
-          </button>
-        </div>
-      )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+              <i
+                className={`fas ${statusMsg.type === 'success' ? 'fa-check-circle' : 'fa-exclamation-triangle'}`}
+                aria-hidden="true"
+              />
+              <span>{statusMsg.text}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setStatusMsg(null)}
+              aria-label="Dismiss alert"
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: 'inherit',
+                cursor: 'pointer',
+                padding: '0.2rem 0.5rem',
+                fontSize: '1rem',
+                lineHeight: 1,
+                opacity: 0.75,
+                borderRadius: '4px',
+              }}
+            >
+              ✕
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Two-Column Grid */}
       <div className="profile-grid">

@@ -200,3 +200,150 @@ To prevent semantic collision with brand blue and semantic statuses, digital kee
 - 🌐 Portfolio: [portfolioakshay.in](https://portfolioakshay.in)
 - 💼 LinkedIn: [Akshaysinh Rajput](https://www.linkedin.com/in/akshaysinh-rajput-8a575532b/)
 - 🐙 GitHub: [@ra901625072-boop](https://github.com/ra901625072-boop)
+
+---
+
+##  FamDoc Front-End Motion Guide (Apple-Calibrated System)
+
+FamDoc uses a unified, physical, Apple-inspired motion design language (iOS / iPadOS / visionOS feel). Animations are designed to feel responsive, tactile, and calm—easy to notice, never flashy, never cartoonish, and never causing layout shift.
+
+### 1. Design Tokens & Single Source of Truth
+
+The central motion system lives in [`frontend/src/lib/motion.ts`](file:///d:/FDMS/frontend/src/lib/motion.ts) and [`frontend/src/styles/variables.css`](file:///d:/FDMS/frontend/src/styles/variables.css). Never hardcode magic numbers inside components.
+
+| Token | Value | Target Interaction |
+| :--- | :--- | :--- |
+| **Duration: instant** | `100ms` / `0.10s` | Tactile press feedback, micro-clicks |
+| **Duration: fast** | `180ms` / `0.18s` | Hover states, tooltips, segmented switches |
+| **Duration: base** | `280ms` / `0.28s` | Cards, modals, dialogs, dropdowns, toasts |
+| **Duration: slow** | `420ms` / `0.42s` | Page transitions, large drawers, hero reveals |
+| **Ease: Apple Out** | `cubic-bezier(0.22, 1, 0.36, 1)` | Standard natural deceleration |
+| **Ease: Apple In-Out** | `cubic-bezier(0.45, 0, 0.55, 1)` | Color switches, ambient fades |
+| **Spring: Default** | `{ stiffness: 260, damping: 28, mass: 1 }` | Cards, tiles, menus, toast entrances |
+| **Spring: Gentle** | `{ stiffness: 200, damping: 26, mass: 1 }` | Bottom sheets, full modals, overlay drawers |
+| **Spring: Snappy** | `{ stiffness: 400, damping: 30, mass: 0.8 }` | Segmented controls, switches, buttons |
+| **Press Scale** | `0.97` | Tactile tap/click compression |
+| **Hover Lift** | `translateY(-2px)` | Soft elevation without layout disruption |
+| **Entry Translate** | `8px - 12px` | Natural upward settling distance |
+
+### 2. Standard Motion Patterns
+
+#### A. Interactive Buttons & Controls (`tactilePress`)
+```tsx
+import { motion } from 'motion/react';
+import { tactilePress } from '../lib/motion';
+
+<motion.button className="btn btn-primary" {...tactilePress}>
+  Save Document
+</motion.button>
+```
+
+#### B. Modals, Dialogs & Bottom Sheets
+```tsx
+import { motion, AnimatePresence } from 'motion/react';
+import { modalBackdropVariants, modalDialogVariants } from '../lib/motion';
+
+<AnimatePresence>
+  {isOpen && (
+    <motion.div
+      className="modal-overlay"
+      variants={modalBackdropVariants}
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      onClick={onClose}
+    >
+      <motion.div
+        className="famdoc-modal"
+        variants={modalDialogVariants}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Modal Content */}
+      </motion.div>
+    </motion.div>
+  )}
+</AnimatePresence>
+```
+
+#### C. Cards, Grids & Staggered Lists
+```tsx
+import { motion } from 'motion/react';
+import { staggerContainerVariants, staggerItemVariants, tactileCard } from '../lib/motion';
+
+<motion.div className="vault-grid" variants={staggerContainerVariants} initial="initial" animate="animate">
+  {items.map(item => (
+    <motion.div key={item.id} variants={staggerItemVariants} {...tactileCard}>
+      <ItemCard item={item} />
+    </motion.div>
+  ))}
+</motion.div>
+```
+
+#### D. Segmented Tabs with Sliding Active Pill (`layoutId`)
+```tsx
+import { motion } from 'motion/react';
+import { springs } from '../lib/motion';
+
+<button onClick={() => setTab(id)} style={{ position: 'relative' }}>
+  {active && (
+    <motion.div
+      layoutId="active-pill"
+      className="active-pill-background"
+      transition={springs.snappy}
+    />
+  )}
+  <span style={{ position: 'relative', zIndex: 1 }}>{label}</span>
+</button>
+```
+
+### 3. Golden Motion Rules
+1. **GPU Only**: Animate exclusively `transform` and `opacity`. Never animate `width`, `height`, `top`, `left`, or `margin` directly.
+2. **Apple Restraint**: Max translation is 8-12px. No cartoonish bouncy overshoot (`1.56` or `1.75`) — use `cubic-bezier(0.22, 1, 0.36, 1)`.
+3. **Accessibility**: Every motion variant respects `prefers-reduced-motion: reduce`. When enabled, spatial translations collapse to pure, instant opacity crossfades.
+4. **Vercel & Next/Vite Safety**: All motion code is isolated in a standalone vendor chunk (`motion.js`) with zero SSR hydration mismatch.
+
+---
+
+##  FamDoc Minimal Design System & Token Guide
+
+FamDoc follows an Apple-level minimalism mindset inspired by iOS, iCloud, Apple Notes, and Apple Files. The hero theme is **Light Mode**, with a deep neutral dark mode.
+
+### 1. Palette & The 60/30/10 Rule
+
+| Role | Percentage | Light Theme Token (Default) | Dark Theme Token | Purpose |
+| :--- | :---: | :--- | :--- | :--- |
+| **Canvas** | 60% | `--bg-linen: #FAFAFB` (Warm Off-White) | `--bg-linen: #0B0B0F` (Deep Charcoal) | Never pure `#FFF` or pitch `#000` |
+| **Surface** | 30% | `--surface-card: #FFFFFF` + `1px solid rgba(0,0,0,0.06)` | `--surface-card: #141419` + `1px solid #23232A` | Clean cards, elevated sheets |
+| **Accent** | 10% | `--color-primary: #2563EB` / Container: `#EFF6FF` | `--color-primary: #3B82F6` / Container: `#1E293B` | One single brand color only |
+
+### 2. Apple Lighting & Depth System
+
+```css
+/* Soft Layered Shadows */
+--shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.04);
+--shadow-md: 0 4px 12px rgba(16, 24, 40, 0.06), 0 1px 3px rgba(16, 24, 40, 0.04);
+--shadow-lg: 0 12px 32px rgba(16, 24, 40, 0.10), 0 2px 6px rgba(16, 24, 40, 0.05);
+
+/* Specular Card Top Highlight (Light comes from above) */
+--card-inner-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+```
+
+### 3. Strict Spatial & Geometric Rhythm
+
+* **4px / 8px Grid Scale**: Padding: `16px` / `24px`; Section gaps: `32px` / `48px`.
+* **Corner Radii Scale**:
+  * Inputs & buttons: `12px` (`--radius-md`)
+  * Cards & containers: `16px` (`--radius-lg`)
+  * Bottom sheets & modals: `24px` (`--radius-2xl`)
+  * Pills & badges: `9999px` (`--radius-pill`)
+* **Typography**:
+  * Titles: 1–3 words, 600/700 weight, sentence case.
+  * Body copy: 400/450 weight, max 1 line descriptions, Slate/Gray 500 (`#6B7280`).
+  * Contrast: Always $\ge 4.5:1$ against backgrounds.
+
+### 4. Golden Rules for Adding New UI
+
+1. **One Focus Per Screen**: Exactly one primary action button per view. Secondary actions are quiet text/icon buttons.
+2. **Progressive Disclosure**: Show 4 to 6 items maximum on main views, followed by a clean "View all →" link.
+3. **No Rainbow Clutter**: Avoid multi-color category badges or rainbow card borders. Stick to the primary blue accent + neutral slate.
+4. **Zero FOUC Theme Delivery**: The default theme is `light`. The inline pre-hydration script in `index.html` resolves theme state prior to DOM paint.

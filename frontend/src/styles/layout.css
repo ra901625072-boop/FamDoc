@@ -198,17 +198,17 @@ body::after {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.2s ease;
+  transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1), background-color 0.18s ease;
   font-size: 0.95rem;
 }
 
 .hamburger:hover, .mobile-header .theme-toggle-btn:hover {
   background-color: rgba(255, 255, 255, 0.25);
-  transform: scale(1.05);
+  transform: scale(1.04);
 }
 
 .hamburger:active, .mobile-header .theme-toggle-btn:active {
-  transform: scale(0.92);
+  transform: scale(0.96);
 }
 
 /* Floating Rounded Pill Bottom Navigation Bar (Matches FamDocBottomNav.kt) */
@@ -232,7 +232,7 @@ body::after {
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.16);
   padding: 0 6px;
   box-sizing: border-box;
-  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.25s ease, visibility 0.35s;
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.2s ease, visibility 0.28s;
 }
 
 /* Floating Bottom Nav Hidden State when Drawer is Open */
@@ -244,7 +244,7 @@ body.drawer-open .bottom-nav,
   opacity: 0 !important;
   pointer-events: none !important;
   visibility: hidden !important;
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease, visibility 0.3s !important;
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.2s ease, visibility 0.25s !important;
 }
 
 .bottom-nav .nav-btn {
@@ -265,7 +265,7 @@ body.drawer-open .bottom-nav,
 
 .bottom-nav .nav-btn i {
   font-size: 1.15rem;
-  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .bottom-nav .nav-btn:hover {
@@ -376,7 +376,7 @@ body.drawer-open .bottom-nav,
   justify-content: center;
   cursor: pointer;
   font-size: 0.85rem;
-  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1), background-color 0.18s ease, color 0.18s ease;
   flex-shrink: 0;
 }
 
@@ -384,11 +384,11 @@ body.drawer-open .bottom-nav,
   background: var(--surface-paper-hover);
   color: var(--color-primary);
   border-color: var(--border-paper-dark);
-  transform: scale(1.08);
+  transform: scale(1.04);
 }
 
 .sidebar-toggle-btn:active {
-  transform: scale(0.92);
+  transform: scale(0.96);
 }
 
 .desktop-only { display: inline-block; }
@@ -500,7 +500,7 @@ body.drawer-open .bottom-nav,
   font-size: 0.9rem;
   font-weight: 500;
   border-radius: var(--radius-md, 12px);
-  transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: background-color 0.18s ease, color 0.18s ease, transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
   border: 1px solid transparent;
   outline: none;
   text-decoration: none;
@@ -509,11 +509,11 @@ body.drawer-open .bottom-nav,
 .nav-item:hover {
   background-color: var(--surface-paper-hover);
   color: var(--text-ink);
-  transform: translateX(3px);
+  transform: translateX(2px);
 }
 
 .nav-item:active {
-  transform: scale(0.96) translateX(1px);
+  transform: scale(0.97);
 }
 
 .nav-item.active {
@@ -603,7 +603,7 @@ body.drawer-open .bottom-nav,
   font-size: 0.75rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: color 0.18s ease, background-color 0.18s ease, transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
   outline: none;
 }
 
@@ -740,8 +740,8 @@ body.drawer-open .bottom-nav,
   max-width: 500px;
   box-shadow: var(--shadow-lg);
   overflow: hidden;
-  transform: translateY(15px) scale(0.98);
-  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transform: translateY(12px) scale(0.98);
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .modal-overlay.show .famdoc-modal {
@@ -1087,7 +1087,7 @@ body.modal-open .main-content {
     font-family: var(--font-sans);
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
     cursor: pointer;
-    transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1), background-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
   }
@@ -1096,19 +1096,19 @@ body.modal-open .main-content {
     background: var(--surface-paper-hover);
     border-color: var(--color-primary);
     color: var(--color-primary);
-    transform: translateY(-2px) scale(1.03);
+    transform: translateY(-2px);
     box-shadow: var(--shadow-lg);
   }
 
   .desktop-menu-toggle:active {
-    transform: scale(0.96);
+    transform: scale(0.97);
   }
 
   body.sidebar-collapsed .desktop-menu-toggle,
   .layout-wrapper.sidebar-collapsed .desktop-menu-toggle,
   .layout-wrapper .desktop-menu-toggle {
     display: inline-flex !important;
-    animation: fdPopIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    animation: fdPopIn 0.28s cubic-bezier(0.22, 1, 0.36, 1) forwards;
   }
 }
 

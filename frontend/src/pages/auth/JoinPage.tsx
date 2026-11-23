@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'motion/react';
 import { api } from '../../api/client';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { ThemeToggle } from '../../components/common/ThemeToggle';
 import { AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { scaleInVariants, easings } from '../../lib/motion';
 
 export function JoinPage() {
   const [secretCode, setSecretCode] = useState('');
@@ -40,7 +42,14 @@ export function JoinPage() {
         <ThemeToggle />
       </div>
 
-      <div id="auth-card" className="famdoc-card auth-card fd-pop-in" style={{ position: 'relative', zIndex: 1 }}>
+      <motion.div
+        id="auth-card"
+        variants={scaleInVariants}
+        initial="initial"
+        animate="animate"
+        className="famdoc-card auth-card"
+        style={{ position: 'relative', zIndex: 1 }}
+      >
         <div className="auth-header">
           <Link to="/" className="auth-crest-container" title="Back to home">
             <img src="/img/logo.svg" alt="FamDoc Crest" className="auth-crest-img" />
@@ -49,12 +58,22 @@ export function JoinPage() {
           <p className="auth-subtitle">Enter the secret code shared by your family vault organizer</p>
         </div>
 
-        {error && (
-          <div id="error-alert" className="famdoc-alert warning fd-shake" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '1.25rem' }}>
-            <AlertCircle style={{ width: '1rem', height: '1rem', flexShrink: 0 }} />
-            <div id="error-message">{error}</div>
-          </div>
-        )}
+        <AnimatePresence>
+          {error && (
+            <motion.div
+              id="error-alert"
+              className="famdoc-alert warning"
+              initial={{ opacity: 0, y: -6, height: 0 }}
+              animate={{ opacity: 1, y: 0, height: 'auto', x: [0, -4, 4, -3, 3, 0] }}
+              exit={{ opacity: 0, y: -6, height: 0 }}
+              transition={{ duration: 0.35, ease: easings.easeInOut }}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '1.25rem', overflow: 'hidden' }}
+            >
+              <AlertCircle style={{ width: '1rem', height: '1rem', flexShrink: 0 }} />
+              <div id="error-message">{error}</div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <form id="join-form" onSubmit={handleSubmit}>
           <div className="form-group" style={{ marginBottom: '1.25rem' }}>
@@ -131,16 +150,18 @@ export function JoinPage() {
             </div>
           </div>
 
-          <button
+          <motion.button
             type="submit"
             id="btn-submit"
             disabled={loading}
             className="btn btn-primary"
+            whileHover={{ y: -2 }}
+            whileTap={{ scale: 0.97 }}
             style={{ width: '100%', marginTop: '0.5rem' }}
           >
-            <i className="fas fa-key" aria-hidden="true" />
+            <i className={loading ? 'fas fa-spinner fa-spin' : 'fas fa-key'} aria-hidden="true" />
             <span>{loading ? 'Joining Vault...' : 'Join Family Vault'}</span>
-          </button>
+          </motion.button>
         </form>
 
         <div className="auth-footer" style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginTop: '2rem', textAlign: 'center', fontSize: '0.9rem' }}>
@@ -157,7 +178,7 @@ export function JoinPage() {
             </Link>
           </div>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }

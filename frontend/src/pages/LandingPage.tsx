@@ -1,6 +1,15 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { motion, AnimatePresence } from 'motion/react';
 import { ThemeToggle } from '../components/common/ThemeToggle';
+import {
+  modalBackdropVariants,
+  modalDialogVariants,
+  tactilePress,
+  tactileCard,
+  fadeInVariants,
+  springs,
+} from '../lib/motion';
 
 interface ShowcaseDoc {
   id: string;
@@ -379,34 +388,43 @@ export const LandingPage = () => {
           </header>
 
           {/* Mobile Navigation Dropdown Drawer */}
-          {mobileMenuOpen && (
-            <div className="mobile-nav-drawer" id="mobileNavDrawer">
-              <button type="button" onClick={() => scrollToSection('section-showcase')}>
-                <span>
-                  <i className="fas fa-layer-group" style={{ marginRight: '0.6rem' }} /> Live Vault
-                </span>
-                <span className="nav-badge">Test Drive</span>
-              </button>
-              <button type="button" onClick={() => scrollToSection('section-pillars')}>
-                <span>
-                  <i className="fas fa-cubes" style={{ marginRight: '0.6rem' }} /> Architecture
-                </span>
-                <i className="fas fa-chevron-right" style={{ fontSize: '0.75rem' }} />
-              </button>
-              <button type="button" onClick={() => scrollToSection('section-android')}>
-                <span>
-                  <i className="fab fa-android" style={{ marginRight: '0.6rem' }} /> Android App
-                </span>
-                <i className="fas fa-chevron-right" style={{ fontSize: '0.75rem' }} />
-              </button>
-              <button type="button" onClick={() => scrollToSection('section-faq')}>
-                <span>
-                  <i className="fas fa-question-circle" style={{ marginRight: '0.6rem' }} /> FAQ
-                </span>
-                <i className="fas fa-chevron-right" style={{ fontSize: '0.75rem' }} />
-              </button>
-            </div>
-          )}
+          <AnimatePresence>
+            {mobileMenuOpen && (
+              <motion.div
+                className="mobile-nav-drawer"
+                id="mobileNavDrawer"
+                initial={{ opacity: 0, y: -10, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -8, scale: 0.98 }}
+                transition={springs.gentle}
+              >
+                <button type="button" onClick={() => scrollToSection('section-showcase')}>
+                  <span>
+                    <i className="fas fa-layer-group" style={{ marginRight: '0.6rem' }} /> Live Vault
+                  </span>
+                  <span className="nav-badge">Test Drive</span>
+                </button>
+                <button type="button" onClick={() => scrollToSection('section-pillars')}>
+                  <span>
+                    <i className="fas fa-cubes" style={{ marginRight: '0.6rem' }} /> Architecture
+                  </span>
+                  <i className="fas fa-chevron-right" style={{ fontSize: '0.75rem' }} />
+                </button>
+                <button type="button" onClick={() => scrollToSection('section-android')}>
+                  <span>
+                    <i className="fab fa-android" style={{ marginRight: '0.6rem' }} /> Android App
+                  </span>
+                  <i className="fas fa-chevron-right" style={{ fontSize: '0.75rem' }} />
+                </button>
+                <button type="button" onClick={() => scrollToSection('section-faq')}>
+                  <span>
+                    <i className="fas fa-question-circle" style={{ marginRight: '0.6rem' }} /> FAQ
+                  </span>
+                  <i className="fas fa-chevron-right" style={{ fontSize: '0.75rem' }} />
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
 
@@ -450,7 +468,7 @@ export const LandingPage = () => {
             <div className="hero-login-sublink">
               <span>Already part of a family vault?</span>{' '}
               <Link to="/login" id="heroLoginSubLink" style={{ whiteSpace: 'nowrap' }}>
-                Sign In to Your Vault &rarr;
+                Sign In to Your Vault <span className="link-arrow">&rarr;</span>
               </Link>
             </div>
 
@@ -557,65 +575,78 @@ export const LandingPage = () => {
               {/* Interactive Category Filter Tabs */}
               <div className="vault-category-tabs" role="tablist" aria-label="Vault Categories">
                 {Object.entries(VAULT_CATEGORIES).map(([key, cat]) => (
-                  <button
+                  <motion.button
                     key={key}
                     type="button"
                     className={`vault-tab-btn ${activeCategory === key ? 'active' : ''}`}
                     onClick={() => setActiveCategory(key)}
                     role="tab"
                     aria-selected={activeCategory === key}
+                    {...tactilePress}
                   >
                     <i className={cat.icon} aria-hidden="true" />
                     <span>{cat.label}</span>
                     <span className="tab-count-badge">{cat.docs.length}</span>
-                  </button>
+                  </motion.button>
                 ))}
               </div>
 
               {/* Dynamic Documents Grid */}
               <div className="vault-documents-grid" role="region" aria-live="polite">
-                {currentDocs.map((doc, idx) => (
-                  <article
-                    key={doc.id}
-                    className="showcase-doc-card doc-card-anim"
-                    onClick={() => setSelectedDoc(doc)}
-                    tabIndex={0}
-                    role="button"
-                    aria-label={`Preview ${doc.title}`}
-                    style={{ animationDelay: `${idx * 60}ms` }}
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={activeCategory}
+                    className="vault-documents-grid-inner"
+                    variants={fadeInVariants}
+                    initial="initial"
+                    animate="animate"
+                    exit="exit"
+                    style={{ display: 'contents' }}
                   >
-                    <div className={`doc-icon-box ${doc.iconClass}`}>
-                      <i className={doc.icon} aria-hidden="true" />
-                    </div>
-                    <div className="doc-content">
-                      <h4 className="doc-title">{doc.title}</h4>
-                      <div className="doc-meta">
-                        <span>{doc.size}</span>
-                        <span>&bull;</span>
-                        <span>{doc.date}</span>
-                        <span>&bull;</span>
-                        <span className="doc-owner-tag">
-                          <i className="fas fa-user-circle" aria-hidden="true" /> {doc.uploader}
-                        </span>
-                      </div>
-                      <div className="doc-actions">
-                        <span className="doc-security-seal">
-                          <i className="fas fa-lock" aria-hidden="true" /> {doc.badge}
-                        </span>
-                        <button
-                          type="button"
-                          className="doc-preview-trigger"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedDoc(doc);
-                          }}
-                        >
-                          <i className="fas fa-eye" aria-hidden="true" /> Preview
-                        </button>
-                      </div>
-                    </div>
-                  </article>
-                ))}
+                    {currentDocs.map((doc) => (
+                      <motion.article
+                        key={doc.id}
+                        className="showcase-doc-card"
+                        onClick={() => setSelectedDoc(doc)}
+                        tabIndex={0}
+                        role="button"
+                        aria-label={`Preview ${doc.title}`}
+                        {...tactileCard}
+                      >
+                        <div className={`doc-icon-box ${doc.iconClass}`}>
+                          <i className={doc.icon} aria-hidden="true" />
+                        </div>
+                        <div className="doc-content">
+                          <h4 className="doc-title">{doc.title}</h4>
+                          <div className="doc-meta">
+                            <span>{doc.size}</span>
+                            <span>&bull;</span>
+                            <span>{doc.date}</span>
+                            <span>&bull;</span>
+                            <span className="doc-owner-tag">
+                              <i className="fas fa-user-circle" aria-hidden="true" /> {doc.uploader}
+                            </span>
+                          </div>
+                          <div className="doc-actions">
+                            <span className="doc-security-seal">
+                              <i className="fas fa-lock" aria-hidden="true" /> {doc.badge}
+                            </span>
+                            <button
+                              type="button"
+                              className="doc-preview-trigger"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedDoc(doc);
+                              }}
+                            >
+                              <i className="fas fa-eye" aria-hidden="true" /> Preview
+                            </button>
+                          </div>
+                        </div>
+                      </motion.article>
+                    ))}
+                  </motion.div>
+                </AnimatePresence>
               </div>
             </div>
           </div>
@@ -733,7 +764,7 @@ export const LandingPage = () => {
                     </div>
                   </div>
                   <div className="android-highlight-item">
-                    <i className="fas fa-wifi-slash" aria-hidden="true" />
+                    <i className="fas fa-hdd" aria-hidden="true" />
                     <div>
                       <div className="hl-title">Offline Cache</div>
                       <div className="hl-sub">View critical documents without Internet</div>
@@ -1039,77 +1070,87 @@ export const LandingPage = () => {
       </footer>
 
       {/* Interactive Document Preview Modal */}
-      {selectedDoc && (
-        <div
-          className="vault-modal-overlay active"
-          id="vaultPreviewModal"
-          role="dialog"
-          aria-modal="true"
-          onClick={() => setSelectedDoc(null)}
-        >
-          <div className="vault-modal-box" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3 id="modalDocTitle">{selectedDoc.title}</h3>
-              <button
-                type="button"
-                className="modal-close-btn"
-                id="modalCloseBtn"
-                aria-label="Close preview modal"
-                onClick={() => setSelectedDoc(null)}
-              >
-                <i className="fas fa-times" aria-hidden="true" />
-              </button>
-            </div>
-            <div className="modal-body">
-              <div className="modal-preview-canvas">
-                <i className={selectedDoc.icon} id="modalDocIcon" aria-hidden="true" />
-                <h4 id="modalDocHeadline">{selectedDoc.title}</h4>
-                <p id="modalDocSummary">{selectedDoc.previewSummary}</p>
+      <AnimatePresence>
+        {selectedDoc && (
+          <motion.div
+            className="vault-modal-overlay active"
+            id="vaultPreviewModal"
+            role="dialog"
+            aria-modal="true"
+            variants={modalBackdropVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            onClick={() => setSelectedDoc(null)}
+          >
+            <motion.div
+              className="vault-modal-box"
+              variants={modalDialogVariants}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="modal-header">
+                <h3 id="modalDocTitle">{selectedDoc.title}</h3>
+                <button
+                  type="button"
+                  className="modal-close-btn"
+                  id="modalCloseBtn"
+                  aria-label="Close preview modal"
+                  onClick={() => setSelectedDoc(null)}
+                >
+                  <i className="fas fa-times" aria-hidden="true" />
+                </button>
               </div>
-              <div className="modal-meta-grid">
-                <div className="meta-row">
-                  <span className="label">Vault Storage Node</span>
-                  <span className="val" id="modalDocDrive">
-                    {selectedDoc.drive}
-                  </span>
+              <div className="modal-body">
+                <div className="modal-preview-canvas">
+                  <i className={selectedDoc.icon} id="modalDocIcon" aria-hidden="true" />
+                  <h4 id="modalDocHeadline">{selectedDoc.title}</h4>
+                  <p id="modalDocSummary">{selectedDoc.previewSummary}</p>
                 </div>
-                <div className="meta-row">
-                  <span className="label">Uploader</span>
-                  <span className="val" id="modalDocUploader">
-                    {selectedDoc.uploader}
-                  </span>
-                </div>
-                <div className="meta-row">
-                  <span className="label">File Size</span>
-                  <span className="val" id="modalDocSize">
-                    {selectedDoc.size}
-                  </span>
-                </div>
-                <div className="meta-row">
-                  <span className="label">Security Seal</span>
-                  <span className="val" id="modalDocSecurity">
-                    Fernet AES-128 Encrypted
-                  </span>
-                </div>
-                <div className="meta-row" style={{ gridColumn: 'span 2' }}>
-                  <span className="label">Cryptographic Checksum</span>
-                  <span className="val" id="modalDocSha" style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem' }}>
-                    {selectedDoc.sha}
-                  </span>
+                <div className="modal-meta-grid">
+                  <div className="meta-row">
+                    <span className="label">Vault Storage Node</span>
+                    <span className="val" id="modalDocDrive">
+                      {selectedDoc.drive}
+                    </span>
+                  </div>
+                  <div className="meta-row">
+                    <span className="label">Uploader</span>
+                    <span className="val" id="modalDocUploader">
+                      {selectedDoc.uploader}
+                    </span>
+                  </div>
+                  <div className="meta-row">
+                    <span className="label">File Size</span>
+                    <span className="val" id="modalDocSize">
+                      {selectedDoc.size}
+                    </span>
+                  </div>
+                  <div className="meta-row">
+                    <span className="label">Security Seal</span>
+                    <span className="val" id="modalDocSecurity">
+                      Fernet AES-128 Encrypted
+                    </span>
+                  </div>
+                  <div className="meta-row" style={{ gridColumn: 'span 2' }}>
+                    <span className="label">Cryptographic Checksum</span>
+                    <span className="val" id="modalDocSha" style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem' }}>
+                      {selectedDoc.sha}
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
-            <div className="modal-footer">
-              <button type="button" className="btn btn-secondary" onClick={() => setSelectedDoc(null)}>
-                Close
-              </button>
-              <Link to="/register" className="btn btn-primary" id="modalCtaBtn">
-                Secure Your Documents &rarr;
-              </Link>
-            </div>
-          </div>
-        </div>
-      )}
+              <div className="modal-footer">
+                <button type="button" className="btn btn-secondary" onClick={() => setSelectedDoc(null)}>
+                  Close
+                </button>
+                <Link to="/register" className="btn btn-primary" id="modalCtaBtn">
+                  Secure Your Documents &rarr;
+                </Link>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

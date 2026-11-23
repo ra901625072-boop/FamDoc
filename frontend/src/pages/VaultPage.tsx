@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { motion, AnimatePresence } from 'motion/react';
 import {
   useFolders,
   useFiles,
@@ -15,6 +16,15 @@ import { api } from '../api/client';
 import { useVaultStore } from '../stores/useVaultStore';
 import { uploadService } from '../services/uploadManager';
 import type { FileItem, Folder } from '../api/types';
+import {
+  modalBackdropVariants,
+  modalDialogVariants,
+  dropdownVariants,
+  staggerContainerVariants,
+  staggerItemVariants,
+  emptyStateFloatVariants,
+  springs,
+} from '../lib/motion';
 
 export function VaultPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -343,13 +353,24 @@ export function VaultPage() {
       </div>
 
       {/* Drag & Drop Overlay Indicator */}
-      <div id="drag-overlay" className={isDragOver ? 'show' : ''}>
-        <i className="fas fa-cloud-upload-alt" style={{ fontSize: '4rem' }} aria-hidden="true" />
-        <h2 style={{ fontFamily: 'var(--font-serif)', fontWeight: 800 }}>Drop Files Anywhere to Upload</h2>
-        <p style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: '0.9rem' }}>
-          Uploading to {currentFolder?.name || 'Root Vault'}
-        </p>
-      </div>
+      <AnimatePresence>
+        {isDragOver && (
+          <motion.div
+            id="drag-overlay"
+            className="show"
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.98 }}
+            transition={springs.snappy}
+          >
+            <i className="fas fa-cloud-upload-alt" style={{ fontSize: '4rem' }} aria-hidden="true" />
+            <h2 style={{ fontFamily: 'var(--font-serif)', fontWeight: 800 }}>Drop Files Anywhere to Upload</h2>
+            <p style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: '0.9rem' }}>
+              Uploading to {currentFolder?.name || 'Root Vault'}
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Main Browser Surface */}
       <div id="explorer-container" className="explorer-container">
@@ -478,7 +499,9 @@ export function VaultPage() {
               className="empty-state fd-fade-in"
               style={{ display: 'flex', gridColumn: '1 / -1', width: '100%', minHeight: '350px' }}
             >
-              <i className="fas fa-folder-open empty-state-icon" aria-hidden="true" />
+              <motion.div variants={emptyStateFloatVariants} animate="animate">
+                <i className="fas fa-folder-open empty-state-icon" aria-hidden="true" />
+              </motion.div>
               <h3 className="empty-state-title">This folder is empty</h3>
               <p className="empty-state-text">Drag and drop files here, or click upload to add family records.</p>
             </div>
@@ -942,38 +965,49 @@ export function VaultPage() {
       </div>
 
       {/* Bulk Actions Bar */}
-      <div id="bulk-actions-bar" className={`bulk-actions-bar ${totalSelectedCount > 0 ? 'show' : ''}`}>
-        <div className="bulk-selected-count">
-          <span id="bulk-selected-text">
-            {totalSelectedCount} item{totalSelectedCount > 1 ? 's' : ''} selected
-          </span>
-        </div>
-        <div className="bulk-action-buttons">
-          <button type="button" className="btn btn-secondary" id="bulk-clear-btn" onClick={handleClearSelection}>
-            <i className="fas fa-times" aria-hidden="true" /> Cancel
-          </button>
-          <button
-            type="button"
-            className="btn btn-secondary"
-            id="bulk-move-btn"
-            onClick={() => {
-              setBulkDestinationFolderId(null);
-              setIsBulkMoveOpen(true);
-            }}
+      <AnimatePresence>
+        {totalSelectedCount > 0 && (
+          <motion.div
+            id="bulk-actions-bar"
+            className="bulk-actions-bar show"
+            initial={{ opacity: 0, y: 30, x: '-50%' }}
+            animate={{ opacity: 1, y: 0, x: '-50%' }}
+            exit={{ opacity: 0, y: 30, x: '-50%' }}
+            transition={springs.gentle}
           >
-            <i className="fas fa-arrows-alt" aria-hidden="true" /> Move
-          </button>
-          <button
-            type="button"
-            className="btn btn-danger"
-            id="bulk-delete-btn"
-            style={{ backgroundColor: 'var(--warning-red)', color: 'white', borderColor: 'var(--warning-red)' }}
-            onClick={handleBulkDelete}
-          >
-            <i className="fas fa-trash-alt" aria-hidden="true" /> Delete
-          </button>
-        </div>
-      </div>
+            <div className="bulk-selected-count">
+              <span id="bulk-selected-text">
+                {totalSelectedCount} item{totalSelectedCount > 1 ? 's' : ''} selected
+              </span>
+            </div>
+            <div className="bulk-action-buttons">
+              <button type="button" className="btn btn-secondary" id="bulk-clear-btn" onClick={handleClearSelection}>
+                <i className="fas fa-times" aria-hidden="true" /> Cancel
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                id="bulk-move-btn"
+                onClick={() => {
+                  setBulkDestinationFolderId(null);
+                  setIsBulkMoveOpen(true);
+                }}
+              >
+                <i className="fas fa-arrows-alt" aria-hidden="true" /> Move
+              </button>
+              <button
+                type="button"
+                className="btn btn-danger"
+                id="bulk-delete-btn"
+                style={{ backgroundColor: 'var(--warning-red)', color: 'white', borderColor: 'var(--warning-red)' }}
+                onClick={handleBulkDelete}
+              >
+                <i className="fas fa-trash-alt" aria-hidden="true" /> Delete
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Mobile Floating Action Button (FAB) Menu */}
       <div className="mobile-fab-container">
@@ -983,513 +1017,633 @@ export function VaultPage() {
           id="mobile-fab"
           aria-label="Add new item"
           onClick={() => setMobileFabOpen(!mobileFabOpen)}
+          style={{
+            transform: mobileFabOpen ? 'rotate(45deg)' : 'rotate(0deg)',
+            transition: 'transform var(--motion-duration-fast) var(--motion-ease-out)',
+          }}
         >
           <i className="fas fa-plus" aria-hidden="true" />
         </button>
-        <div className={`fab-menu ${mobileFabOpen ? 'open' : ''}`} id="fab-menu">
-          <button
-            type="button"
-            className="fab-menu-item"
-            id="fab-upload-file"
-            title="Upload File"
-            onClick={() => {
-              fileInputRef.current?.click();
-              setMobileFabOpen(false);
-            }}
-          >
-            <i className="fas fa-cloud-upload-alt" aria-hidden="true" />
-            <span>Upload File</span>
-          </button>
-          <button
-            type="button"
-            className="fab-menu-item"
-            id="fab-new-folder"
-            title="New Folder"
-            onClick={() => {
-              setIsNewFolderOpen(true);
-              setMobileFabOpen(false);
-            }}
-          >
-            <i className="fas fa-folder-plus" aria-hidden="true" />
-            <span>New Folder</span>
-          </button>
-        </div>
+        <AnimatePresence>
+          {mobileFabOpen && (
+            <motion.div
+              className="fab-menu open"
+              id="fab-menu"
+              initial={{ opacity: 0, scale: 0.9, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 10 }}
+              transition={springs.snappy}
+            >
+              <button
+                type="button"
+                className="fab-menu-item"
+                id="fab-upload-file"
+                title="Upload File"
+                onClick={() => {
+                  fileInputRef.current?.click();
+                  setMobileFabOpen(false);
+                }}
+              >
+                <i className="fas fa-cloud-upload-alt" aria-hidden="true" />
+                <span>Upload File</span>
+              </button>
+              <button
+                type="button"
+                className="fab-menu-item"
+                id="fab-new-folder"
+                title="New Folder"
+                onClick={() => {
+                  setIsNewFolderOpen(true);
+                  setMobileFabOpen(false);
+                }}
+              >
+                <i className="fas fa-folder-plus" aria-hidden="true" />
+                <span>New Folder</span>
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Create Folder Dialog */}
-      {isNewFolderOpen && (
-        <div id="modal-create-folder" className="modal-overlay show" onClick={() => setIsNewFolderOpen(false)}>
-          <div className="famdoc-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3 className="modal-title">Create Folder</h3>
-              <button
-                type="button"
-                className="modal-close"
-                aria-label="Close modal"
-                onClick={() => setIsNewFolderOpen(false)}
-              >
-                <i className="fas fa-times" aria-hidden="true" />
-              </button>
-            </div>
-            <form id="form-create-folder" onSubmit={handleCreateFolder}>
-              <div className="modal-body">
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label htmlFor="new-folder-name" className="form-label">
-                    Folder Name
-                  </label>
-                  <input
-                    type="text"
-                    id="new-folder-name"
-                    className="form-control"
-                    placeholder="e.g. Tax Receipts"
-                    value={newFolderName}
-                    onChange={(e) => setNewFolderName(e.target.value)}
-                    required
-                    maxLength={50}
-                  />
-                </div>
-              </div>
-              <div className="modal-footer">
-                <button
-                  type="button"
-                  className="btn btn-secondary modal-close-btn"
-                  onClick={() => setIsNewFolderOpen(false)}
-                >
-                  Cancel
-                </button>
-                <button type="submit" className="btn btn-primary">
-                  Create
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Rename Item Dialog */}
-      {renamingItem && (
-        <div id="modal-rename" className="modal-overlay show" onClick={() => setRenamingItem(null)}>
-          <div className="famdoc-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3 className="modal-title">Rename {renamingItem.type === 'folder' ? 'Folder' : 'File'}</h3>
-              <button
-                type="button"
-                className="modal-close"
-                aria-label="Close modal"
-                onClick={() => setRenamingItem(null)}
-              >
-                <i className="fas fa-times" aria-hidden="true" />
-              </button>
-            </div>
-            <form id="form-rename" onSubmit={handleRename}>
-              <div className="modal-body">
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label htmlFor="rename-input" className="form-label">
-                    New Name
-                  </label>
-                  <input
-                    type="text"
-                    id="rename-input"
-                    className="form-control"
-                    value={renameValue}
-                    onChange={(e) => setRenameValue(e.target.value)}
-                    required
-                    maxLength={100}
-                  />
-                </div>
-              </div>
-              <div className="modal-footer">
-                <button
-                  type="button"
-                  className="btn btn-secondary modal-close-btn"
-                  onClick={() => setRenamingItem(null)}
-                >
-                  Cancel
-                </button>
-                <button type="submit" className="btn btn-primary">
-                  Rename
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Move Item Dialog Modal */}
-      {movingItem && (
-        <div id="modal-move" className="modal-overlay show" onClick={() => setMovingItem(null)}>
-          <div className="famdoc-modal fd-pop-in" style={{ maxWidth: '440px' }} onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3 className="modal-title">Move {movingItem.type === 'folder' ? 'Folder' : 'File'}</h3>
-              <button
-                type="button"
-                className="modal-close"
-                aria-label="Close modal"
-                onClick={() => setMovingItem(null)}
-              >
-                <i className="fas fa-times" aria-hidden="true" />
-              </button>
-            </div>
-            <form onSubmit={handleMoveSubmit}>
-              <div className="modal-body" style={{ padding: '1.25rem' }}>
-                <p style={{ fontSize: '0.85rem', color: 'var(--text-ink-muted)', marginBottom: '1rem' }}>
-                  Select destination directory for <strong>{movingItem.name}</strong>:
-                </p>
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label htmlFor="move-destination-select" className="form-label">
-                    Target Folder
-                  </label>
-                  <select
-                    id="move-destination-select"
-                    className="form-control"
-                    value={destinationFolderId === null ? '' : String(destinationFolderId)}
-                    onChange={(e) => setDestinationFolderId(e.target.value ? Number(e.target.value) : null)}
-                  >
-                    <option value="">📁 Root Vault (Home)</option>
-                    {allFolders
-                      .filter((f) => movingItem.type !== 'folder' || f.id !== movingItem.id)
-                      .map((f) => (
-                        <option key={f.id} value={f.id}>
-                          📁 {f.name}
-                        </option>
-                      ))}
-                  </select>
-                </div>
-              </div>
-              <div className="modal-footer">
-                <button
-                  type="button"
-                  className="btn btn-secondary modal-close-btn"
-                  onClick={() => setMovingItem(null)}
-                >
-                  Cancel
-                </button>
-                <button type="submit" className="btn btn-primary">
-                  Move Here
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Bulk Move Dialog Modal */}
-      {isBulkMoveOpen && (
-        <div id="modal-bulk-move" className="modal-overlay show" onClick={() => setIsBulkMoveOpen(false)}>
-          <div className="famdoc-modal fd-pop-in" style={{ maxWidth: '440px' }} onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3 className="modal-title">Move Selected Items</h3>
-              <button
-                type="button"
-                className="modal-close"
-                aria-label="Close modal"
-                onClick={() => setIsBulkMoveOpen(false)}
-              >
-                <i className="fas fa-times" aria-hidden="true" />
-              </button>
-            </div>
-            <form onSubmit={handleBulkMoveSubmit}>
-              <div className="modal-body" style={{ padding: '1.25rem' }}>
-                <p style={{ fontSize: '0.85rem', color: 'var(--text-ink-muted)', marginBottom: '1rem' }}>
-                  Move <strong>{totalSelectedCount}</strong> selected items to:
-                </p>
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label htmlFor="bulk-move-destination-select" className="form-label">
-                    Target Folder
-                  </label>
-                  <select
-                    id="bulk-move-destination-select"
-                    className="form-control"
-                    value={bulkDestinationFolderId === null ? '' : String(bulkDestinationFolderId)}
-                    onChange={(e) => setBulkDestinationFolderId(e.target.value ? Number(e.target.value) : null)}
-                  >
-                    <option value="">📁 Root Vault (Home)</option>
-                    {allFolders
-                      .filter((f) => !selectedFolderIds.includes(f.id))
-                      .map((f) => (
-                        <option key={f.id} value={f.id}>
-                          📁 {f.name}
-                        </option>
-                      ))}
-                  </select>
-                </div>
-              </div>
-              <div className="modal-footer">
-                <button
-                  type="button"
-                  className="btn btn-secondary modal-close-btn"
-                  onClick={() => setIsBulkMoveOpen(false)}
-                >
-                  Cancel
-                </button>
-                <button type="submit" className="btn btn-primary">
-                  Move All
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Share Link Dialog */}
-      {activeShareFile && (
-        <div id="modal-share" className="modal-overlay show" onClick={() => setActiveShareFile(null)}>
-          <div className="famdoc-modal" style={{ maxWidth: '550px' }} onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3 className="modal-title">Share Vault Item</h3>
-              <button
-                type="button"
-                className="modal-close"
-                aria-label="Close modal"
-                onClick={() => setActiveShareFile(null)}
-              >
-                <i className="fas fa-times" aria-hidden="true" />
-              </button>
-            </div>
-            <div className="modal-body">
-              <h4 id="share-filename" style={{ fontFamily: 'var(--font-serif)', marginBottom: '1.25rem' }}>
-                {activeShareFile.filename}
-              </h4>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-ink-muted)' }}>
-                Direct Link:
-              </p>
-              <div
-                style={{
-                  padding: '0.75rem 1rem',
-                  borderRadius: 'var(--radius-md)',
-                  background: 'var(--surface-paper-tint)',
-                  border: '1px solid var(--border-paper)',
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: '0.8rem',
-                  wordBreak: 'break-all',
-                  marginBottom: '1rem',
-                }}
-              >
-                {api.files.getDownloadUrl(activeShareFile.id, activeShareFile.preview_token)}
-              </div>
-              <button
-                type="button"
-                className="btn btn-primary"
-                style={{ width: '100%' }}
-                onClick={() => {
-                  navigator.clipboard.writeText(api.files.getDownloadUrl(activeShareFile.id, activeShareFile.preview_token));
-                  alert('Download link copied to clipboard!');
-                }}
-              >
-                <i className="fas fa-copy" aria-hidden="true" /> Copy Download URL
-              </button>
-            </div>
-            <div className="modal-footer">
-              <button
-                type="button"
-                className="btn btn-secondary modal-close-btn"
-                onClick={() => setActiveShareFile(null)}
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Media Preview Modal - Modern Cinema Lightbox */}
-      {activePreviewFile && (
-        <div id="modal-preview" className="modal-overlay show" onClick={() => setActivePreviewFile(null)}>
-          <div className="famdoc-modal preview-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', overflow: 'hidden', minWidth: 0, flex: 1, marginRight: '1rem' }}>
-                <i
-                  className={`item-icon ${api.helpers.getFileIconClass(activePreviewFile.filename, activePreviewFile.file_type)}`}
-                  style={{ fontSize: '1.25rem', flexShrink: 0 }}
-                  aria-hidden="true"
-                />
-                <div style={{ overflow: 'hidden', minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <h3
-                      className="modal-title"
-                      id="preview-title"
-                      style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', margin: 0, fontSize: '0.98rem' }}
-                      title={activePreviewFile.filename}
-                    >
-                      {activePreviewFile.filename}
-                    </h3>
-                    <span className="preview-badge">
-                      {api.helpers.getFileFormatLabel(activePreviewFile.filename, activePreviewFile.file_type)}
-                    </span>
-                  </div>
-                  <div style={{ fontSize: '0.73rem', color: '#94A3B8', marginTop: '0.15rem' }}>
-                    {api.helpers.formatBytes(activePreviewFile.file_size ?? activePreviewFile.size_bytes ?? 0)} &bull; {api.helpers.formatDate(activePreviewFile.created_at ?? activePreviewFile.upload_date)}
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexShrink: 0 }}>
-                <a
-                  href={api.files.getPreviewUrl(activePreviewFile.id, activePreviewFile.preview_token)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn btn-secondary btn-sm"
-                  title="Open in new tab"
-                  style={{ padding: '0.35rem 0.65rem', fontSize: '0.78rem', textDecoration: 'none' }}
-                >
-                  <i className="fas fa-external-link-alt" aria-hidden="true" />
-                  <span className="hide-on-mobile">Open</span>
-                </a>
-                <a
-                  href={api.files.getDownloadUrl(activePreviewFile.id, activePreviewFile.preview_token)}
-                  download={api.helpers.ensureFilenameWithExtension(activePreviewFile.filename, activePreviewFile.file_type)}
-                  id="preview-download-btn"
-                  className="btn btn-primary btn-sm"
-                  style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', textDecoration: 'none' }}
-                >
-                  <i className="fas fa-download" aria-hidden="true" />
-                  <span>Download</span>
-                </a>
+      <AnimatePresence>
+        {isNewFolderOpen && (
+          <motion.div
+            id="modal-create-folder"
+            className="modal-overlay show"
+            variants={modalBackdropVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            onClick={() => setIsNewFolderOpen(false)}
+          >
+            <motion.div
+              className="famdoc-modal"
+              variants={modalDialogVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="modal-header">
+                <h3 className="modal-title">Create Folder</h3>
                 <button
                   type="button"
                   className="modal-close"
                   aria-label="Close modal"
-                  onClick={() => setActivePreviewFile(null)}
+                  onClick={() => setIsNewFolderOpen(false)}
                 >
                   <i className="fas fa-times" aria-hidden="true" />
                 </button>
               </div>
-            </div>
-
-            <div className="preview-body" id="preview-content-area">
-              {/* Prev / Next Navigation Arrows */}
-              {hasPrevFile && (
-                <button
-                  type="button"
-                  className="preview-nav-btn preview-nav-prev"
-                  aria-label="Previous file"
-                  title="Previous file (Left Arrow)"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handlePrevFile();
-                  }}
-                >
-                  <i className="fas fa-chevron-left" aria-hidden="true" />
-                </button>
-              )}
-
-              {hasNextFile && (
-                <button
-                  type="button"
-                  className="preview-nav-btn preview-nav-next"
-                  aria-label="Next file"
-                  title="Next file (Right Arrow)"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleNextFile();
-                  }}
-                >
-                  <i className="fas fa-chevron-right" aria-hidden="true" />
-                </button>
-              )}
-
-              {(activePreviewFile.file_type?.toLowerCase().includes('image') ||
-                /\.(jpg|jpeg|png|webp|gif|bmp|svg)$/i.test(activePreviewFile.filename)) ? (
-                <>
-                  <div
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      overflow: previewZoom > 1 ? 'auto' : 'hidden',
-                    }}
-                  >
-                    <img
-                      src={api.files.getPreviewUrl(activePreviewFile.id, activePreviewFile.preview_token)}
-                      alt={activePreviewFile.filename}
-                      className="preview-image"
-                      style={{
-                        transform: `scale(${previewZoom})`,
-                        transformOrigin: 'center center',
-                        cursor: previewZoom === 1 ? 'zoom-in' : 'zoom-out',
-                      }}
-                      onClick={() => setPreviewZoom((z) => (z === 1 ? 1.75 : 1))}
+              <form id="form-create-folder" onSubmit={handleCreateFolder}>
+                <div className="modal-body">
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label htmlFor="new-folder-name" className="form-label">
+                      Folder Name
+                    </label>
+                    <input
+                      type="text"
+                      id="new-folder-name"
+                      className="form-control"
+                      placeholder="e.g. Tax Receipts"
+                      value={newFolderName}
+                      onChange={(e) => setNewFolderName(e.target.value)}
+                      required
+                      maxLength={50}
                     />
                   </div>
+                </div>
+                <div className="modal-footer">
+                  <button
+                    type="button"
+                    className="btn btn-secondary modal-close-btn"
+                    onClick={() => setIsNewFolderOpen(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button type="submit" className="btn btn-primary">
+                    Create
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-                  {/* Zoom Controls Toolbar */}
-                  <div className="preview-toolbar" onClick={(e) => e.stopPropagation()}>
-                    <button
-                      type="button"
-                      className="preview-toolbar-btn"
-                      title="Zoom Out (-)"
-                      disabled={previewZoom <= 0.5}
-                      onClick={() => setPreviewZoom((z) => Math.max(0.5, z - 0.25))}
-                    >
-                      <i className="fas fa-minus" aria-hidden="true" />
-                    </button>
-                    <span className="preview-zoom-label">{Math.round(previewZoom * 100)}%</span>
-                    <button
-                      type="button"
-                      className="preview-toolbar-btn"
-                      title="Zoom In (+)"
-                      disabled={previewZoom >= 3}
-                      onClick={() => setPreviewZoom((z) => Math.min(3, z + 0.25))}
-                    >
-                      <i className="fas fa-plus" aria-hidden="true" />
-                    </button>
-                    <button
-                      type="button"
-                      className="preview-toolbar-btn"
-                      title="Reset Zoom (0)"
-                      onClick={() => setPreviewZoom(1)}
-                    >
-                      <i className="fas fa-redo-alt" aria-hidden="true" />
-                    </button>
+      {/* Rename Item Dialog */}
+      <AnimatePresence>
+        {renamingItem && (
+          <motion.div
+            id="modal-rename"
+            className="modal-overlay show"
+            variants={modalBackdropVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            onClick={() => setRenamingItem(null)}
+          >
+            <motion.div
+              className="famdoc-modal"
+              variants={modalDialogVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="modal-header">
+                <h3 className="modal-title">Rename {renamingItem.type === 'folder' ? 'Folder' : 'File'}</h3>
+                <button
+                  type="button"
+                  className="modal-close"
+                  aria-label="Close modal"
+                  onClick={() => setRenamingItem(null)}
+                >
+                  <i className="fas fa-times" aria-hidden="true" />
+                </button>
+              </div>
+              <form id="form-rename" onSubmit={handleRename}>
+                <div className="modal-body">
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label htmlFor="rename-input" className="form-label">
+                      New Name
+                    </label>
+                    <input
+                      type="text"
+                      id="rename-input"
+                      className="form-control"
+                      value={renameValue}
+                      onChange={(e) => setRenameValue(e.target.value)}
+                      required
+                      maxLength={100}
+                    />
                   </div>
-                </>
-              ) : (activePreviewFile.file_type?.toLowerCase().includes('video') ||
-                   /\.(mp4|mkv|webm|mov|avi)$/i.test(activePreviewFile.filename)) ? (
-                <video
-                  src={api.files.getPreviewUrl(activePreviewFile.id, activePreviewFile.preview_token)}
-                  controls
-                  autoPlay
-                  className="preview-video"
-                />
-              ) : (activePreviewFile.file_type?.toLowerCase().includes('pdf') ||
-                   activePreviewFile.filename.toLowerCase().endsWith('.pdf')) ? (
-                <iframe
-                  src={api.files.getPreviewUrl(activePreviewFile.id, activePreviewFile.preview_token)}
-                  title={activePreviewFile.filename}
-                  className="preview-frame"
-                />
-              ) : (
-                <div style={{ padding: '3rem', textAlign: 'center', color: '#F8FAFC' }}>
+                </div>
+                <div className="modal-footer">
+                  <button
+                    type="button"
+                    className="btn btn-secondary modal-close-btn"
+                    onClick={() => setRenamingItem(null)}
+                  >
+                    Cancel
+                  </button>
+                  <button type="submit" className="btn btn-primary">
+                    Rename
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Move Item Dialog Modal */}
+      <AnimatePresence>
+        {movingItem && (
+          <motion.div
+            id="modal-move"
+            className="modal-overlay show"
+            variants={modalBackdropVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            onClick={() => setMovingItem(null)}
+          >
+            <motion.div
+              className="famdoc-modal"
+              variants={modalDialogVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              style={{ maxWidth: '440px' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="modal-header">
+                <h3 className="modal-title">Move {movingItem.type === 'folder' ? 'Folder' : 'File'}</h3>
+                <button
+                  type="button"
+                  className="modal-close"
+                  aria-label="Close modal"
+                  onClick={() => setMovingItem(null)}
+                >
+                  <i className="fas fa-times" aria-hidden="true" />
+                </button>
+              </div>
+              <form onSubmit={handleMoveSubmit}>
+                <div className="modal-body" style={{ padding: '1.25rem' }}>
+                  <p style={{ fontSize: '0.85rem', color: 'var(--text-ink-muted)', marginBottom: '1rem' }}>
+                    Select destination directory for <strong>{movingItem.name}</strong>:
+                  </p>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label htmlFor="move-destination-select" className="form-label">
+                      Target Folder
+                    </label>
+                    <select
+                      id="move-destination-select"
+                      className="form-control"
+                      value={destinationFolderId === null ? '' : String(destinationFolderId)}
+                      onChange={(e) => setDestinationFolderId(e.target.value ? Number(e.target.value) : null)}
+                    >
+                      <option value="">📁 Root Vault (Home)</option>
+                      {allFolders
+                        .filter((f) => movingItem.type !== 'folder' || f.id !== movingItem.id)
+                        .map((f) => (
+                          <option key={f.id} value={f.id}>
+                            📁 {f.name}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+                </div>
+                <div className="modal-footer">
+                  <button
+                    type="button"
+                    className="btn btn-secondary modal-close-btn"
+                    onClick={() => setMovingItem(null)}
+                  >
+                    Cancel
+                  </button>
+                  <button type="submit" className="btn btn-primary">
+                    Move Here
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Bulk Move Dialog Modal */}
+      <AnimatePresence>
+        {isBulkMoveOpen && (
+          <motion.div
+            id="modal-bulk-move"
+            className="modal-overlay show"
+            variants={modalBackdropVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            onClick={() => setIsBulkMoveOpen(false)}
+          >
+            <motion.div
+              className="famdoc-modal"
+              variants={modalDialogVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              style={{ maxWidth: '440px' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="modal-header">
+                <h3 className="modal-title">Move Selected Items</h3>
+                <button
+                  type="button"
+                  className="modal-close"
+                  aria-label="Close modal"
+                  onClick={() => setIsBulkMoveOpen(false)}
+                >
+                  <i className="fas fa-times" aria-hidden="true" />
+                </button>
+              </div>
+              <form onSubmit={handleBulkMoveSubmit}>
+                <div className="modal-body" style={{ padding: '1.25rem' }}>
+                  <p style={{ fontSize: '0.85rem', color: 'var(--text-ink-muted)', marginBottom: '1rem' }}>
+                    Move <strong>{totalSelectedCount}</strong> selected items to:
+                  </p>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label htmlFor="bulk-move-destination-select" className="form-label">
+                      Target Folder
+                    </label>
+                    <select
+                      id="bulk-move-destination-select"
+                      className="form-control"
+                      value={bulkDestinationFolderId === null ? '' : String(bulkDestinationFolderId)}
+                      onChange={(e) => setBulkDestinationFolderId(e.target.value ? Number(e.target.value) : null)}
+                    >
+                      <option value="">📁 Root Vault (Home)</option>
+                      {allFolders
+                        .filter((f) => !selectedFolderIds.includes(f.id))
+                        .map((f) => (
+                          <option key={f.id} value={f.id}>
+                            📁 {f.name}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+                </div>
+                <div className="modal-footer">
+                  <button
+                    type="button"
+                    className="btn btn-secondary modal-close-btn"
+                    onClick={() => setIsBulkMoveOpen(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button type="submit" className="btn btn-primary">
+                    Move All
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Share Link Dialog */}
+      <AnimatePresence>
+        {activeShareFile && (
+          <motion.div
+            id="modal-share"
+            className="modal-overlay show"
+            variants={modalBackdropVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            onClick={() => setActiveShareFile(null)}
+          >
+            <motion.div
+              className="famdoc-modal"
+              variants={modalDialogVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              style={{ maxWidth: '550px' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="modal-header">
+                <h3 className="modal-title">Share Vault Item</h3>
+                <button
+                  type="button"
+                  className="modal-close"
+                  aria-label="Close modal"
+                  onClick={() => setActiveShareFile(null)}
+                >
+                  <i className="fas fa-times" aria-hidden="true" />
+                </button>
+              </div>
+              <div className="modal-body">
+                <h4 id="share-filename" style={{ fontFamily: 'var(--font-serif)', marginBottom: '1.25rem' }}>
+                  {activeShareFile.filename}
+                </h4>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-ink-muted)' }}>
+                  Direct Link:
+                </p>
+                <div
+                  style={{
+                    padding: '0.75rem 1rem',
+                    borderRadius: 'var(--radius-md)',
+                    background: 'var(--surface-paper-tint)',
+                    border: '1px solid var(--border-paper)',
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: '0.8rem',
+                    wordBreak: 'break-all',
+                    marginBottom: '1rem',
+                  }}
+                >
+                  {api.files.getDownloadUrl(activeShareFile.id, activeShareFile.preview_token)}
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  style={{ width: '100%' }}
+                  onClick={() => {
+                    navigator.clipboard.writeText(api.files.getDownloadUrl(activeShareFile.id, activeShareFile.preview_token));
+                    alert('Download link copied to clipboard!');
+                  }}
+                >
+                  <i className="fas fa-copy" aria-hidden="true" /> Copy Download URL
+                </button>
+              </div>
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn btn-secondary modal-close-btn"
+                  onClick={() => setActiveShareFile(null)}
+                >
+                  Close
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Media Preview Modal - Modern Cinema Lightbox */}
+      <AnimatePresence>
+        {activePreviewFile && (
+          <motion.div
+            id="modal-preview"
+            className="modal-overlay show"
+            variants={modalBackdropVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            onClick={() => setActivePreviewFile(null)}
+          >
+            <motion.div
+              className="famdoc-modal preview-modal"
+              variants={modalDialogVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="modal-header">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', overflow: 'hidden', minWidth: 0, flex: 1, marginRight: '1rem' }}>
                   <i
-                    className={`item-icon ${api.helpers.getFileIconClass(
-                      activePreviewFile.filename,
-                      activePreviewFile.file_type
-                    )}`}
-                    style={{ fontSize: '3.5rem', marginBottom: '1rem', display: 'inline-block' }}
+                    className={`item-icon ${api.helpers.getFileIconClass(activePreviewFile.filename, activePreviewFile.file_type)}`}
+                    style={{ fontSize: '1.25rem', flexShrink: 0 }}
                     aria-hidden="true"
                   />
-                  <h4 style={{ fontFamily: 'var(--font-serif)', marginBottom: '0.5rem', color: '#FFFFFF' }}>
-                    Preview not supported for this file type
-                  </h4>
-                  <p style={{ color: '#94A3B8', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
-                    {activePreviewFile.filename} ({api.helpers.formatBytes(activePreviewFile.file_size ?? activePreviewFile.size_bytes ?? 0)})
-                  </p>
+                  <div style={{ overflow: 'hidden', minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <h3
+                        className="modal-title"
+                        id="preview-title"
+                        style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', margin: 0, fontSize: '0.98rem' }}
+                        title={activePreviewFile.filename}
+                      >
+                        {activePreviewFile.filename}
+                      </h3>
+                      <span className="preview-badge">
+                        {api.helpers.getFileFormatLabel(activePreviewFile.filename, activePreviewFile.file_type)}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: '0.73rem', color: '#94A3B8', marginTop: '0.15rem' }}>
+                      {api.helpers.formatBytes(activePreviewFile.file_size ?? activePreviewFile.size_bytes ?? 0)} &bull; {api.helpers.formatDate(activePreviewFile.created_at ?? activePreviewFile.upload_date)}
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexShrink: 0 }}>
+                  <a
+                    href={api.files.getPreviewUrl(activePreviewFile.id, activePreviewFile.preview_token)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn btn-secondary btn-sm"
+                    title="Open in new tab"
+                    style={{ padding: '0.35rem 0.65rem', fontSize: '0.78rem', textDecoration: 'none' }}
+                  >
+                    <i className="fas fa-external-link-alt" aria-hidden="true" />
+                    <span className="hide-on-mobile">Open</span>
+                  </a>
                   <a
                     href={api.files.getDownloadUrl(activePreviewFile.id, activePreviewFile.preview_token)}
                     download={api.helpers.ensureFilenameWithExtension(activePreviewFile.filename, activePreviewFile.file_type)}
-                    className="btn btn-primary"
-                    style={{ textDecoration: 'none' }}
+                    id="preview-download-btn"
+                    className="btn btn-primary btn-sm"
+                    style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', textDecoration: 'none' }}
                   >
-                    <i className="fas fa-download" aria-hidden="true" /> Download File
+                    <i className="fas fa-download" aria-hidden="true" />
+                    <span>Download</span>
                   </a>
+                  <button
+                    type="button"
+                    className="modal-close"
+                    aria-label="Close modal"
+                    onClick={() => setActivePreviewFile(null)}
+                  >
+                    <i className="fas fa-times" aria-hidden="true" />
+                  </button>
                 </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+              </div>
+
+              <div className="preview-body" id="preview-content-area">
+                {/* Prev / Next Navigation Arrows */}
+                {hasPrevFile && (
+                  <button
+                    type="button"
+                    className="preview-nav-btn preview-nav-prev"
+                    aria-label="Previous file"
+                    title="Previous file (Left Arrow)"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handlePrevFile();
+                    }}
+                  >
+                    <i className="fas fa-chevron-left" aria-hidden="true" />
+                  </button>
+                )}
+
+                {hasNextFile && (
+                  <button
+                    type="button"
+                    className="preview-nav-btn preview-nav-next"
+                    aria-label="Next file"
+                    title="Next file (Right Arrow)"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleNextFile();
+                    }}
+                  >
+                    <i className="fas fa-chevron-right" aria-hidden="true" />
+                  </button>
+                )}
+
+                {(activePreviewFile.file_type?.toLowerCase().includes('image') ||
+                  /\.(jpg|jpeg|png|webp|gif|bmp|svg)$/i.test(activePreviewFile.filename)) ? (
+                  <>
+                    <div
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        overflow: previewZoom > 1 ? 'auto' : 'hidden',
+                      }}
+                    >
+                      <img
+                        src={api.files.getPreviewUrl(activePreviewFile.id, activePreviewFile.preview_token)}
+                        alt={activePreviewFile.filename}
+                        className="preview-image"
+                        style={{
+                          transform: `scale(${previewZoom})`,
+                          transformOrigin: 'center center',
+                          cursor: previewZoom === 1 ? 'zoom-in' : 'zoom-out',
+                        }}
+                        onClick={() => setPreviewZoom((z) => (z === 1 ? 1.75 : 1))}
+                      />
+                    </div>
+
+                    {/* Zoom Controls Toolbar */}
+                    <div className="preview-toolbar" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        type="button"
+                        className="preview-toolbar-btn"
+                        title="Zoom Out (-)"
+                        disabled={previewZoom <= 0.5}
+                        onClick={() => setPreviewZoom((z) => Math.max(0.5, z - 0.25))}
+                      >
+                        <i className="fas fa-minus" aria-hidden="true" />
+                      </button>
+                      <span className="preview-zoom-label">{Math.round(previewZoom * 100)}%</span>
+                      <button
+                        type="button"
+                        className="preview-toolbar-btn"
+                        title="Zoom In (+)"
+                        disabled={previewZoom >= 3}
+                        onClick={() => setPreviewZoom((z) => Math.min(3, z + 0.25))}
+                      >
+                        <i className="fas fa-plus" aria-hidden="true" />
+                      </button>
+                      <button
+                        type="button"
+                        className="preview-toolbar-btn"
+                        title="Reset Zoom (0)"
+                        onClick={() => setPreviewZoom(1)}
+                      >
+                        <i className="fas fa-redo-alt" aria-hidden="true" />
+                      </button>
+                    </div>
+                  </>
+                ) : (activePreviewFile.file_type?.toLowerCase().includes('video') ||
+                     /\.(mp4|mkv|webm|mov|avi)$/i.test(activePreviewFile.filename)) ? (
+                  <video
+                    src={api.files.getPreviewUrl(activePreviewFile.id, activePreviewFile.preview_token)}
+                    controls
+                    autoPlay
+                    className="preview-video"
+                  />
+                ) : (activePreviewFile.file_type?.toLowerCase().includes('pdf') ||
+                     activePreviewFile.filename.toLowerCase().endsWith('.pdf')) ? (
+                  <iframe
+                    src={api.files.getPreviewUrl(activePreviewFile.id, activePreviewFile.preview_token)}
+                    title={activePreviewFile.filename}
+                    className="preview-frame"
+                  />
+                ) : (
+                  <div style={{ padding: '3rem', textAlign: 'center', color: '#F8FAFC' }}>
+                    <i
+                      className={`item-icon ${api.helpers.getFileIconClass(
+                        activePreviewFile.filename,
+                        activePreviewFile.file_type
+                      )}`}
+                      style={{ fontSize: '3.5rem', marginBottom: '1rem', display: 'inline-block' }}
+                      aria-hidden="true"
+                    />
+                    <h4 style={{ fontFamily: 'var(--font-serif)', marginBottom: '0.5rem', color: '#FFFFFF' }}>
+                      Preview not supported for this file type
+                    </h4>
+                    <p style={{ color: '#94A3B8', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
+                      {activePreviewFile.filename} ({api.helpers.formatBytes(activePreviewFile.file_size ?? activePreviewFile.size_bytes ?? 0)})
+                    </p>
+                    <a
+                      href={api.files.getDownloadUrl(activePreviewFile.id, activePreviewFile.preview_token)}
+                      download={api.helpers.ensureFilenameWithExtension(activePreviewFile.filename, activePreviewFile.file_type)}
+                      className="btn btn-primary"
+                      style={{ textDecoration: 'none' }}
+                    >
+                      <i className="fas fa-download" aria-hidden="true" /> Download File
+                    </a>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

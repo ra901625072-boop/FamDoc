@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import {
   useStorageConfig,
   useStorageAccounts,
@@ -8,6 +9,7 @@ import {
 } from '../api/hooks';
 import { api } from '../api/client';
 import type { StorageAccount } from '../api/types';
+import { modalBackdropVariants, modalDialogVariants, springs } from '../lib/motion';
 
 export function StoragePage() {
   const { data: config, refetch: refetchConfig } = useStorageConfig();
@@ -169,35 +171,41 @@ export function StoragePage() {
       </div>
 
       {/* Collapsible OAuth Credentials & Setup Drawer */}
-      <div
-        id="oauth-config-drawer"
-        className={`oauth-config-drawer fd-fade-in ${oauthDrawerOpen ? 'open' : ''}`}
-        style={{ display: oauthDrawerOpen ? 'block' : 'none' }}
-      >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-          <h3
-            style={{
-              fontFamily: 'var(--font-serif)',
-              fontSize: '1.15rem',
-              margin: 0,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-            }}
+      <AnimatePresence>
+        {oauthDrawerOpen && (
+          <motion.div
+            id="oauth-config-drawer"
+            className="oauth-config-drawer open"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={springs.gentle}
+            style={{ overflow: 'hidden' }}
           >
-            <i className="fab fa-google" style={{ color: '#4285F4' }} aria-hidden="true" />
-            <span>Google OAuth Setup & Credentials</span>
-          </h3>
-          <button
-            type="button"
-            id="btn-close-oauth-drawer"
-            className="btn btn-secondary btn-sm"
-            style={{ padding: '0.2rem 0.5rem' }}
-            onClick={() => setOauthDrawerOpen(false)}
-          >
-            <i className="fas fa-times" aria-hidden="true" />
-          </button>
-        </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+              <h3
+                style={{
+                  fontFamily: 'var(--font-serif)',
+                  fontSize: '1.15rem',
+                  margin: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                }}
+              >
+                <i className="fab fa-google" style={{ color: '#4285F4' }} aria-hidden="true" />
+                <span>Google OAuth Setup & Credentials</span>
+              </h3>
+              <button
+                type="button"
+                id="btn-close-oauth-drawer"
+                className="btn btn-secondary btn-sm"
+                style={{ padding: '0.2rem 0.5rem' }}
+                onClick={() => setOauthDrawerOpen(false)}
+              >
+                <i className="fas fa-times" aria-hidden="true" />
+              </button>
+            </div>
 
         <p style={{ fontSize: '0.84rem', color: 'var(--text-ink-muted)', marginBottom: '1.25rem' }}>
           Configure Google Cloud OAuth credentials once so all family members can link their Google Drive accounts with 1 click.
@@ -394,7 +402,9 @@ export function StoragePage() {
             </button>
           </div>
         </form>
-      </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* 1. HERO STORAGE POOL SUMMARY CARD */}
       <div className="storage-hero-card fd-fade-up">
@@ -776,92 +786,126 @@ export function StoragePage() {
       </div>
 
       {/* Edit Label Modal */}
-      {editingAccount && (
-        <div className="modal-overlay show" onClick={() => setEditingAccount(null)}>
-          <div className="famdoc-modal fd-pop-in" style={{ maxWidth: '420px' }} onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3 className="modal-title">Edit Drive Label</h3>
-              <button type="button" className="modal-close" onClick={() => setEditingAccount(null)}>
-                <i className="fas fa-times" aria-hidden="true" />
-              </button>
-            </div>
-            <form onSubmit={handleSaveLabel}>
-              <div className="modal-body" style={{ padding: '1.25rem' }}>
-                <p style={{ fontSize: '0.82rem', color: 'var(--text-ink-muted)', marginBottom: '1rem' }}>
-                  Choose a friendly label for <strong>{editingAccount.email}</strong> (e.g. "Dad's Drive", "Family Photos").
-                </p>
-                <div className="form-group">
-                  <label className="form-label" htmlFor="edit-drive-label">Drive Label</label>
-                  <input
-                    type="text"
-                    id="edit-drive-label"
-                    className="form-control"
-                    value={newLabelText}
-                    onChange={(e) => setNewLabelText(e.target.value)}
-                    placeholder="e.g. Papa's Drive"
-                    required
-                    maxLength={50}
-                    autoFocus
-                  />
+      <AnimatePresence>
+        {editingAccount && (
+          <motion.div
+            className="modal-overlay show"
+            variants={modalBackdropVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            onClick={() => setEditingAccount(null)}
+          >
+            <motion.div
+              className="famdoc-modal"
+              variants={modalDialogVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              style={{ maxWidth: '420px' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="modal-header">
+                <h3 className="modal-title">Edit Drive Label</h3>
+                <button type="button" className="modal-close" onClick={() => setEditingAccount(null)}>
+                  <i className="fas fa-times" aria-hidden="true" />
+                </button>
+              </div>
+              <form onSubmit={handleSaveLabel}>
+                <div className="modal-body" style={{ padding: '1.25rem' }}>
+                  <p style={{ fontSize: '0.82rem', color: 'var(--text-ink-muted)', marginBottom: '1rem' }}>
+                    Choose a friendly label for <strong>{editingAccount.email}</strong> (e.g. "Dad's Drive", "Family Photos").
+                  </p>
+                  <div className="form-group">
+                    <label className="form-label" htmlFor="edit-drive-label">Drive Label</label>
+                    <input
+                      type="text"
+                      id="edit-drive-label"
+                      className="form-control"
+                      value={newLabelText}
+                      onChange={(e) => setNewLabelText(e.target.value)}
+                      placeholder="e.g. Papa's Drive"
+                      required
+                      maxLength={50}
+                      autoFocus
+                    />
+                  </div>
                 </div>
-              </div>
-              <div className="modal-footer">
-                <button type="button" className="btn btn-secondary" onClick={() => setEditingAccount(null)}>
-                  Cancel
-                </button>
-                <button type="submit" className="btn btn-primary">
-                  Save Label
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+                <div className="modal-footer">
+                  <button type="button" className="btn btn-secondary" onClick={() => setEditingAccount(null)}>
+                    Cancel
+                  </button>
+                  <button type="submit" className="btn btn-primary">
+                    Save Label
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Assign Member Modal */}
-      {assigningAccount && (
-        <div className="modal-overlay show" onClick={() => setAssigningAccount(null)}>
-          <div className="famdoc-modal fd-pop-in" style={{ maxWidth: '440px' }} onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3 className="modal-title">Assign to Family Member</h3>
-              <button type="button" className="modal-close" onClick={() => setAssigningAccount(null)}>
-                <i className="fas fa-times" aria-hidden="true" />
-              </button>
-            </div>
-            <form onSubmit={handleSaveAssignment}>
-              <div className="modal-body" style={{ padding: '1.25rem' }}>
-                <p style={{ fontSize: '0.82rem', color: 'var(--text-ink-muted)', marginBottom: '1rem' }}>
-                  Select which household member contributed <strong>{assigningAccount.email}</strong>:
-                </p>
-                <div className="form-group">
-                  <label className="form-label" htmlFor="assign-member-select">Household Member</label>
-                  <select
-                    id="assign-member-select"
-                    className="form-control"
-                    value={selectedAssignUserId || ''}
-                    onChange={(e) => setSelectedAssignUserId(e.target.value ? Number(e.target.value) : null)}
-                  >
-                    <option value="">Shared Family Pool (Unassigned)</option>
-                    {members.map((m) => (
-                      <option key={m.user_id} value={m.user_id}>
-                        {m.username} ({m.email})
-                      </option>
-                    ))}
-                  </select>
+      <AnimatePresence>
+        {assigningAccount && (
+          <motion.div
+            className="modal-overlay show"
+            variants={modalBackdropVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            onClick={() => setAssigningAccount(null)}
+          >
+            <motion.div
+              className="famdoc-modal"
+              variants={modalDialogVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              style={{ maxWidth: '440px' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="modal-header">
+                <h3 className="modal-title">Assign to Family Member</h3>
+                <button type="button" className="modal-close" onClick={() => setAssigningAccount(null)}>
+                  <i className="fas fa-times" aria-hidden="true" />
+                </button>
+              </div>
+              <form onSubmit={handleSaveAssignment}>
+                <div className="modal-body" style={{ padding: '1.25rem' }}>
+                  <p style={{ fontSize: '0.82rem', color: 'var(--text-ink-muted)', marginBottom: '1rem' }}>
+                    Select which household member contributed <strong>{assigningAccount.email}</strong>:
+                  </p>
+                  <div className="form-group">
+                    <label className="form-label" htmlFor="assign-member-select">Household Member</label>
+                    <select
+                      id="assign-member-select"
+                      className="form-control"
+                      value={selectedAssignUserId || ''}
+                      onChange={(e) => setSelectedAssignUserId(e.target.value ? Number(e.target.value) : null)}
+                    >
+                      <option value="">Shared Family Pool (Unassigned)</option>
+                      {members.map((m) => (
+                        <option key={m.user_id} value={m.user_id}>
+                          {m.username} ({m.email})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
-              </div>
-              <div className="modal-footer">
-                <button type="button" className="btn btn-secondary" onClick={() => setAssigningAccount(null)}>
-                  Cancel
-                </button>
-                <button type="submit" className="btn btn-primary">
-                  Save Assignment
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+                <div className="modal-footer">
+                  <button type="button" className="btn btn-secondary" onClick={() => setAssigningAccount(null)}>
+                    Cancel
+                  </button>
+                  <button type="submit" className="btn btn-primary">
+                    Save Assignment
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

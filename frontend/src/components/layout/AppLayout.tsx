@@ -1,14 +1,17 @@
 import { useState, useEffect } from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
+import { motion, AnimatePresence } from 'motion/react';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useCurrentUser } from '../../api/hooks';
 import { useThemeStore } from '../../stores/useThemeStore';
 import { SegmentedThemeSelector } from '../common/SegmentedThemeSelector';
 import { ConnectionPill } from '../common/ConnectionPill';
 import { UploadCard } from '../common/UploadCard';
+import { pageTransitionVariants, springs } from '../../lib/motion';
 
 export function AppLayout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     return typeof window !== 'undefined' ? localStorage.getItem('famdoc_sidebar_collapsed') === 'true' : false;
   });
@@ -16,6 +19,15 @@ export function AppLayout() {
   const { data: user } = useCurrentUser();
   const { theme, toggleTheme } = useThemeStore();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 10);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   useEffect(() => {
     document.body.classList.toggle('sidebar-collapsed', sidebarCollapsed);
@@ -55,7 +67,11 @@ export function AppLayout() {
     <div className={`layout-wrapper ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
       {/* Floating Desktop Menu Toggle (re-opens sidebar when collapsed on desktop) */}
       {sidebarCollapsed && (
-        <button
+        <motion.button
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.9 }}
+          whileTap={{ scale: 0.96 }}
           className="desktop-menu-toggle"
           id="desktopMenuToggle"
           type="button"
@@ -65,11 +81,11 @@ export function AppLayout() {
         >
           <i className="fas fa-bars" aria-hidden="true" />
           <span>Menu</span>
-        </button>
+        </motion.button>
       )}
 
       {/* Mobile Top Header (Matches Android App & Old Web UI) */}
-      <header className="mobile-header">
+      <header className={`mobile-header ${isScrolled ? 'scrolled shadow-md' : ''}`}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
           <button
             type="button"
@@ -111,13 +127,19 @@ export function AppLayout() {
       </header>
 
       {/* Sidebar Drawer Backdrop (Mobile) */}
-      {mobileMenuOpen && (
-        <div
-          className="drawer-backdrop show"
-          id="drawerBackdrop"
-          onClick={() => setMobileMenuOpen(false)}
-        />
-      )}
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <motion.div
+            className="drawer-backdrop show"
+            id="drawerBackdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={springs.gentle}
+            onClick={() => setMobileMenuOpen(false)}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Sidebar Drawer (Matches FamDocDrawer.kt & Old Web UI exactly) */}
       <nav
@@ -244,7 +266,18 @@ export function AppLayout() {
         </div>
 
         <div id="view-mount-point" style={{ width: '100%', flex: 1, display: 'flex', flexDirection: 'column' }}>
-          <Outlet />
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={location.pathname}
+              variants={pageTransitionVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              style={{ width: '100%', flex: 1, display: 'flex', flexDirection: 'column' }}
+            >
+              <Outlet />
+            </motion.div>
+          </AnimatePresence>
         </div>
       </main>
 

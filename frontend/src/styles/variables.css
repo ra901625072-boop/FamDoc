@@ -5,77 +5,79 @@
 
 :root {
   /* ------------------------------------------------------------------------
-     LIGHT THEME: Dignified Royal Blue & Archival Slate Palette
-     (Aligned with official FamDoc Crest #0066FF / #0038B8 and Android tokens)
+     LIGHT THEME (HERO DEFAULT): Soft, Airy, Apple-Calibrated Minimal Palette
+     Follows 60/30/10 Rule: 60% Warm Neutral Canvas, 30% Surface/Text, 10% Accent
      ------------------------------------------------------------------------ */
-  --color-primary: #1D4ED8;          /* Royal Blue 700 (High Contrast AAA) */
-  --color-primary-hover: #1E40AF;    /* Royal Blue 800 */
-  --color-primary-light: #3B82F6;    /* Vibrant Blue 500 */
-  --color-primary-dark: #1E3A8A;     /* Deep Navy 900 */
-  --color-secondary: #334155;        /* Slate 700 */
-  --color-primary-container: #DBEAFE;/* Soft Blue 100 Highlight */
-  --color-on-primary-container: #1E3A8A; /* High Contrast Deep Navy */
+  --color-primary: #2563EB;          /* Apple Refined Royal Blue (AAA Contrast) */
+  --color-primary-hover: #1D4ED8;    /* Blue 700 */
+  --color-primary-light: #3B82F6;    /* Blue 500 */
+  --color-primary-dark: #1E40AF;     /* Blue 800 */
+  --color-secondary: #4B5563;        /* Gray 600 */
+  --color-primary-container: #EFF6FF;/* 8-12% Opacity Soft Blue Tint */
+  --color-on-primary-container: #1D4ED8; /* High Contrast Deep Blue */
 
-  /* Canvas & Surfaces (Clean Neutral Slate) */
-  --bg-linen: #F8FAFC;               /* Slate 50 Neutral Clean Canvas */
+  /* Canvas & Surfaces (Soft Off-White Warmth, Never Pure #FFF) */
+  --bg-linen: #FAFAFB;               /* Warm Off-White Canvas */
   --surface-card: #FFFFFF;           /* Crisp Pure White Surface */
-  --surface-paper-tint: #F1F5F9;     /* Slate 100 Subtle Component Fill */
-  --surface-paper-hover: #E2E8F0;    /* Slate 200 Interactive Card Hover */
-  --surface-alert-info: #EFF6FF;     /* Soft Blue Alert */
-  --surface-nav-glass: rgba(255, 255, 255, 0.94);
-  --overlay-bg: rgba(15, 23, 42, 0.65); /* Elegant neutral focus overlay */
+  --surface-paper-tint: #F4F4F6;     /* Subtle Neutral Component Fill */
+  --surface-paper-hover: #EFEFF2;    /* Interactive Card Hover */
+  --surface-alert-info: #EFF6FF;     /* Soft Blue Alert Container */
+  --surface-nav-glass: rgba(250, 250, 251, 0.88);
+  --overlay-bg: rgba(17, 24, 39, 0.45); /* Calm backdrop blur */
 
-  /* Typography */
-  --text-ink: #0F172A;               /* Slate 900 High-Contrast Primary Ink */
-  --text-ink-muted: #475569;         /* Slate 600 Balanced Muted Text (AAA) */
+  /* Typography (Apple Hierarchy) */
+  --text-ink: #111827;               /* Near-Black Primary Ink (Never Pure #000) */
+  --text-ink-muted: #6B7280;         /* Slate/Gray 500 Secondary (Ratio >= 4.5:1) */
+  --text-ink-tertiary: #9CA3AF;      /* Muted Meta Text */
 
-  /* Borders & Glows */
-  --border-paper: #E2E8F0;           /* Slate 200 Clean Border */
-  --border-paper-dark: #CBD5E1;      /* Slate 300 Structured Border */
-  --card-glow-border: rgba(29, 78, 216, 0.16); /* Royal Blue 16% alpha glow */
+  /* Borders & Specular Highlights */
+  --border-paper: rgba(0, 0, 0, 0.06); /* Hairline Border */
+  --border-paper-dark: rgba(0, 0, 0, 0.12);
+  --card-inner-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  --card-glow-border: rgba(37, 99, 235, 0.12);
 
   /* Legacy & Bridge Variables */
   --accent-brand: var(--color-primary);
   --accent-brand-hover: var(--color-primary-hover);
   --accent-brand-light: var(--color-primary-container);
-  --accent-gradient: linear-gradient(135deg, #1D4ED8 0%, #2563EB 100%);
-  --accent-gradient-hover: linear-gradient(135deg, #1E40AF 0%, #1D4ED8 100%);
-  --accent-shadow: 0 4px 14px rgba(29, 78, 216, 0.20);
-  --accent-brand-rgb: 29, 78, 216;
+  --accent-gradient: linear-gradient(135deg, #2563EB 0%, #3B82F6 100%);
+  --accent-gradient-hover: linear-gradient(135deg, #1D4ED8 0%, #2563EB 100%);
+  --accent-shadow: 0 4px 14px rgba(37, 99, 235, 0.20);
+  --accent-brand-rgb: 37, 99, 235;
 
-  /* App Bar & Drawer Clean Backgrounds (Replaces Dark Green Block) */
+  /* App Bar & Drawer Clean Backgrounds */
   --appbar-bg: #FFFFFF;
-  --appbar-text: #0F172A;
+  --appbar-text: #111827;
   --drawer-header-bg: #FFFFFF;
-  --drawer-header-text: #0F172A;
+  --drawer-header-text: #111827;
 
   /* Keepsake Warm Amber & Status Accents */
-  --brand-accent: #F59E0B;           /* Keepsake Warm Amber */
-  --brand-accent-light: #FBBF24;     /* Radiant Gold */
-  --brand-accent-glow: rgba(245, 158, 11, 0.35);
+  --brand-accent: #F59E0B;           /* Warm Amber */
+  --brand-accent-light: #FFFBEB;     /* Amber 50 Container */
+  --brand-accent-glow: rgba(245, 158, 11, 0.25);
 
-  /* Semantic Status Tokens (Strictly separated from Brand Identity) */
-  --success-sage: #10B981;           /* Emerald 500 (Status Only) */
-  --success-sage-light: #D1FAE5;     /* Emerald 100 Container */
+  /* Semantic Status Tokens (Muted, Not Neon) */
+  --success-sage: #22C55E;           /* Muted Emerald Green */
+  --success-sage-light: #ECFDF5;     /* Emerald Container */
   --success-sage-border: #A7F3D0;
-  --success-sage-dark: #065F46;
+  --success-sage-dark: #15803D;
 
-  --warning-red: #EF4444;            /* Crimson Alert 500 */
+  --warning-red: #EF4444;            /* Muted Crimson */
   --warning-red-hover: #DC2626;
-  --warning-red-light: #FEE2E2;
+  --warning-red-light: #FEF2F2;      /* Crimson Container */
   --warning-red-border: #FECACA;
-  --warning-red-dark: #7F1D1D;
+  --warning-red-dark: #991B1B;
 
-  /* Category Distribution Colors (Anti-Collision: Images is Cyan, Sheets is Teal) */
-  --cat-video: #EC4899;             /* Vibrant Pink/Rose */
-  --cat-images: #0EA5E9;            /* Vibrant Cyan (Replaces Blue to prevent collision) */
-  --cat-pdfs: #EF4444;              /* Crimson Red */
-  --cat-docs: #8B5CF6;              /* Vault Violet */
-  --cat-sheets: #0D9488;            /* Teal / Jade (Replaces Emerald to prevent semantic collision) */
-  --cat-text: #F59E0B;              /* Warm Amber */
-  --cat-other: #64748B;             /* Neutral Slate */
+  /* Category Distribution Colors */
+  --cat-video: #EC4899;
+  --cat-images: #0EA5E9;
+  --cat-pdfs: #EF4444;
+  --cat-docs: #8B5CF6;
+  --cat-sheets: #0D9488;
+  --cat-text: #F59E0B;
+  --cat-other: #64748B;
 
-  --folder-color: #D97706;          /* Warm Keepsake Folder Amber */
+  --folder-color: #D97706;
   --video-color: #EC4899;
   --pdf-color: #EF4444;
   --image-color: #0EA5E9;
@@ -84,86 +86,102 @@
   --text-color: #F59E0B;
   --generic-color: #64748B;
 
-  --syncing-bg: #E0F2FE;            /* Sky 100 Info */
-  --syncing-text: #0369A1;          /* Sky 700 */
-  --syncing-border: #BAE6FD;
+  --syncing-bg: #EFF6FF;
+  --syncing-text: #1D4ED8;
+  --syncing-border: #BFDBFE;
 
   /* Shimmer Tokens */
-  --shimmer-base: #F1F5F9;
+  --shimmer-base: #F4F4F6;
   --shimmer-highlight: #FFFFFF;
 
-  /* Radii Scale (Matching Android Dimens.kt) */
+  /* Radii Scale (Strict Apple Scale) */
   --radius-xs: 4px;
   --radius-sm: 8px;                  /* 8px */
-  --radius-md: 12px;                 /* 12px */
-  --radius-lg: 16px;                 /* 16px */
-  --radius-xl: 20px;                 /* 20px */
-  --radius-pill: 28px;               /* 28px */
+  --radius-md: 12px;                 /* 12px: Inputs, buttons */
+  --radius-lg: 16px;                 /* 16px: Cards, containers */
+  --radius-xl: 20px;                 /* 20px: Large cards */
+  --radius-2xl: 24px;                /* 24px: Sheets, modals */
+  --radius-pill: 28px;               /* 28px: Capsules, tabs */
   --radius-full: 9999px;
 
   /* Component Dimensions */
-  --btn-height-lg: 52px;             /* Standard Touch Target: 52px */
-  --btn-height-md: 44px;
-  --btn-height-sm: 38px;
-  --appbar-height: 64px;
-  --bottom-nav-height: 72px;
-  --sidebar-width: 260px;
+  --btn-height-lg: 48px;
+  --btn-height-md: 42px;
+  --btn-height-sm: 36px;
+  --appbar-height: 60px;
+  --bottom-nav-height: 68px;
+  --sidebar-width: 250px;
 
-  /* Shadows (Neutral Slate / Subtle Blue Tint) */
-  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.05), 0 1px 2px rgba(15, 23, 42, 0.03);
-  --shadow-md: 0 6px 18px -2px rgba(15, 23, 42, 0.07), 0 2px 6px -1px rgba(15, 23, 42, 0.04);
-  --shadow-lg: 0 16px 32px -6px rgba(15, 23, 42, 0.10), 0 4px 12px -2px rgba(15, 23, 42, 0.05);
-  --shadow-fab: 0 8px 24px rgba(29, 78, 216, 0.30);
+  /* Soft Layered Shadows (Apple Depth) */
+  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.04);
+  --shadow-md: 0 4px 12px rgba(16, 24, 40, 0.06), 0 1px 3px rgba(16, 24, 40, 0.04);
+  --shadow-lg: 0 12px 32px rgba(16, 24, 40, 0.10), 0 2px 6px rgba(16, 24, 40, 0.05);
+  --shadow-fab: 0 8px 24px rgba(37, 99, 235, 0.25);
 
   /* Typography Fonts */
   --font-serif: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
 
-  /* Modern Motion & Transition Tokens */
-  --motion-duration-quick: 150ms;
-  --motion-duration-standard: 250ms;
-  --motion-duration-emphasized: 400ms;
-  --motion-easing-emphasized: cubic-bezier(0.2, 0.0, 0.0, 1.0);
-  --motion-easing-decelerate: cubic-bezier(0.0, 0.0, 0.2, 1.0);
-  --motion-easing-accelerate: cubic-bezier(0.4, 0.0, 1.0, 1.0);
-  --motion-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  /* Modern Motion & Transition Tokens (Apple iOS Design System) */
+  --motion-duration-instant: 100ms;
+  --motion-duration-fast: 180ms;
+  --motion-duration-base: 280ms;
+  --motion-duration-slow: 420ms;
+  --motion-duration-quick: 180ms;
+  --motion-duration-standard: 280ms;
+  --motion-duration-emphasized: 420ms;
 
-  /* Scoped Transitions */
-  --transition-smooth: transform var(--motion-duration-standard) var(--motion-easing-emphasized), opacity var(--motion-duration-standard) ease, box-shadow var(--motion-duration-standard) ease;
-  --transition-spring: transform var(--motion-duration-standard) var(--motion-spring);
-  --transition-colors: background-color var(--motion-duration-quick) ease, border-color var(--motion-duration-quick) ease, color var(--motion-duration-quick) ease;
+  --motion-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --motion-ease-in-out: cubic-bezier(0.45, 0, 0.55, 1);
+  --motion-easing-emphasized: cubic-bezier(0.22, 1, 0.36, 1);
+  --motion-easing-decelerate: cubic-bezier(0.0, 0.0, 0.22, 1.0);
+  --motion-easing-accelerate: cubic-bezier(0.4, 0.0, 1.0, 1.0);
+  --motion-spring: cubic-bezier(0.22, 1, 0.36, 1);
+  --motion-spring-snappy: cubic-bezier(0.18, 0.9, 0.32, 1.04);
+
+  --motion-press-scale: 0.97;
+  --motion-hover-lift: translateY(-2px);
+  --motion-entry-translate: 10px;
+
+  /* Scoped Transitions (Smooth color transition 200-300ms) */
+  --transition-smooth: transform var(--motion-duration-base) var(--motion-ease-out), opacity var(--motion-duration-base) var(--motion-ease-out), box-shadow var(--motion-duration-base) var(--motion-ease-out);
+  --transition-spring: transform var(--motion-duration-base) var(--motion-spring);
+  --transition-press: transform var(--motion-duration-instant) var(--motion-ease-out);
+  --transition-colors: background-color 250ms cubic-bezier(0.22, 1, 0.36, 1), border-color 250ms cubic-bezier(0.22, 1, 0.36, 1), color 250ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 250ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 /* --------------------------------------------------------------------------
-   DARK THEME: Deep Navy Obsidian & Luminous Royal Blue Accents
+   DARK THEME: Deep Neutral Charcoal (#0B0B0F / #121214) & Crisp Surfaces (#1C1C1E)
    (No Pure Pitch Black #000000; Surface Elevation Ratio >= 3.0:1)
    -------------------------------------------------------------------------- */
 [data-theme="dark"] {
-  --color-primary: #60A5FA;          /* Electric Blue 400 (High Visibility) */
-  --color-primary-hover: #93C5FD;    /* Blue 300 */
+  --color-primary: #3B82F6;          /* Refined Blue 500 */
+  --color-primary-hover: #60A5FA;    /* Blue 400 */
   --color-primary-dark: #2563EB;     /* Blue 600 */
-  --color-secondary: #94A3B8;        /* Slate 400 */
-  --color-primary-container: #1E293B;/* Slate 800 Deep Pill */
+  --color-secondary: #9CA3AF;        /* Gray 400 */
+  --color-primary-container: #1E293B;/* Slate 800 Deep Container */
   --color-on-primary-container: #93C5FD; /* Light Blue Text */
 
-  /* Canvas & Elevated Obsidian Surfaces */
-  --bg-linen: #0B0F17;               /* Deep Navy Obsidian Canvas (Replaces #000000) */
-  --surface-card: #151C2C;           /* Elevated Dark Card Surface (Replaces #111113) */
-  --surface-paper-tint: #1E293B;     /* Slate 800 Tint Surface */
-  --surface-paper-hover: #232F42;    /* Elevated Interactive Card Hover */
-  --surface-alert-info: #0F1B2D;
-  --surface-nav-glass: rgba(21, 28, 44, 0.88);
-  --overlay-bg: rgba(5, 8, 15, 0.78);
+  /* Canvas & Elevated Surfaces (Deep Neutral, Never Pure Pitch Black) */
+  --bg-linen: #0B0B0F;               /* Deep Neutral Background */
+  --surface-card: #141419;           /* Elevated Surface Card */
+  --surface-paper-tint: #1C1C22;     /* Component Surface Fill */
+  --surface-paper-hover: #24242C;    /* Interactive Card Hover */
+  --surface-alert-info: #0F172A;
+  --surface-nav-glass: rgba(20, 20, 25, 0.88);
+  --overlay-bg: rgba(0, 0, 0, 0.70);
 
   /* Typography (Dark) */
-  --text-ink: #F8FAFC;               /* Slate 50 Pure Crisp White Text */
-  --text-ink-muted: #94A3B8;         /* Slate 400 Balanced Cool Slate */
+  --text-ink: #F5F5F7;               /* Softened White Primary Ink */
+  --text-ink-muted: #9CA3AF;         /* Slate/Gray 400 Muted Text */
+  --text-ink-tertiary: #6B7280;
 
-  /* Borders & Glows (Discernible Elevation) */
-  --border-paper: #283548;           /* Visible Navy Border (Ratio >= 3.0:1) */
-  --border-paper-dark: #37465D;      /* Distinct Boundary */
-  --card-glow-border: rgba(96, 165, 250, 0.22); /* Blue 400 Glow */
+  /* Borders & Specular Highlights */
+  --border-paper: #23232A;           /* Subtle Dark Border */
+  --border-paper-dark: #2F2F38;
+  --card-inner-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  --card-glow-border: rgba(59, 130, 246, 0.20);
 
   /* Legacy & Bridge Variables */
   --accent-brand: var(--color-primary);

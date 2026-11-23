@@ -36,6 +36,7 @@ export default defineConfig({
           vendor: ['react', 'react-dom', 'react-router-dom'],
           query: ['@tanstack/react-query'],
           icons: ['lucide-react'],
+          motion: ['motion'],
         },
       },
     },

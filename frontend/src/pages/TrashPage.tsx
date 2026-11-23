@@ -1,6 +1,8 @@
 import { useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { useTrashItems, useRestoreTrash, usePurgeTrash, useCurrentUser } from '../api/hooks';
 import { api } from '../api/client';
+import { emptyStateFloatVariants, springs } from '../lib/motion';
 
 export function TrashPage() {
   const { data: user } = useCurrentUser();
@@ -139,7 +141,9 @@ export function TrashPage() {
           </div>
         ) : items.length === 0 ? (
           <div id="recycle-empty" className="empty-state" style={{ display: 'flex', padding: '4rem 0' }}>
-            <i className="fas fa-trash-restore empty-state-icon" aria-hidden="true" />
+            <motion.div variants={emptyStateFloatVariants} animate="animate">
+              <i className="fas fa-trash-restore empty-state-icon" aria-hidden="true" />
+            </motion.div>
             <h3 className="empty-state-title">Recycle bin is empty</h3>
             <p className="empty-state-text">No folders or files have been deleted recently.</p>
           </div>
@@ -219,32 +223,43 @@ export function TrashPage() {
       </div>
 
       {/* Bulk Actions Bar */}
-      <div id="bulk-actions-bar" className={`bulk-actions-bar ${selectedKeys.length > 0 ? 'show' : ''}`}>
-        <div className="bulk-selected-count">
-          <span id="bulk-selected-text">
-            {selectedKeys.length} item{selectedKeys.length !== 1 ? 's' : ''} selected
-          </span>
-        </div>
-        <div className="bulk-action-buttons">
-          <button type="button" className="btn btn-secondary" id="bulk-clear-btn" onClick={handleClearSelection}>
-            <i className="fas fa-times" aria-hidden="true" /> Cancel
-          </button>
-          <button type="button" className="btn btn-secondary" id="bulk-restore-btn" onClick={handleBulkRestore}>
-            <i className="fas fa-undo" aria-hidden="true" /> Restore
-          </button>
-          {isAdmin && (
-            <button
-              type="button"
-              className="btn btn-danger"
-              id="bulk-purge-btn"
-              style={{ backgroundColor: 'var(--warning-red)', color: 'white', borderColor: 'var(--warning-red)' }}
-              onClick={handleBulkPurge}
-            >
-              <i className="fas fa-trash-alt" aria-hidden="true" /> Purge
-            </button>
-          )}
-        </div>
-      </div>
+      <AnimatePresence>
+        {selectedKeys.length > 0 && (
+          <motion.div
+            id="bulk-actions-bar"
+            className="bulk-actions-bar show"
+            initial={{ opacity: 0, y: 30, x: '-50%' }}
+            animate={{ opacity: 1, y: 0, x: '-50%' }}
+            exit={{ opacity: 0, y: 30, x: '-50%' }}
+            transition={springs.gentle}
+          >
+            <div className="bulk-selected-count">
+              <span id="bulk-selected-text">
+                {selectedKeys.length} item{selectedKeys.length !== 1 ? 's' : ''} selected
+              </span>
+            </div>
+            <div className="bulk-action-buttons">
+              <button type="button" className="btn btn-secondary" id="bulk-clear-btn" onClick={handleClearSelection}>
+                <i className="fas fa-times" aria-hidden="true" /> Cancel
+              </button>
+              <button type="button" className="btn btn-secondary" id="bulk-restore-btn" onClick={handleBulkRestore}>
+                <i className="fas fa-undo" aria-hidden="true" /> Restore
+              </button>
+              {isAdmin && (
+                <button
+                  type="button"
+                  className="btn btn-danger"
+                  id="bulk-purge-btn"
+                  style={{ backgroundColor: 'var(--warning-red)', color: 'white', borderColor: 'var(--warning-red)' }}
+                  onClick={handleBulkPurge}
+                >
+                  <i className="fas fa-trash-alt" aria-hidden="true" /> Purge
+                </button>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

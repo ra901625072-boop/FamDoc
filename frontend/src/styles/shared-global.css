@@ -367,23 +367,23 @@
 }
 
 .fd-page-enter, .fd-fade-up {
-  animation: fdFadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: fdFadeInUp var(--motion-duration-slow) var(--motion-ease-out) forwards;
 }
 
 .fd-fade-in {
-  animation: fdFadeIn 0.4s ease forwards;
+  animation: fdFadeIn var(--motion-duration-fast) var(--motion-ease-out) forwards;
 }
 
 .fd-pop-in {
-  animation: fdPopIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.1) forwards;
+  animation: fdPopIn var(--motion-duration-base) var(--motion-ease-out) forwards;
 }
 
 .fd-shake {
-  animation: fdShake 0.4s ease-in-out;
+  animation: fdShake 0.35s var(--motion-ease-in-out);
 }
 
 .fd-success-pop {
-  animation: fdSuccessPop 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.25);
+  animation: fdSuccessPop var(--motion-duration-base) var(--motion-ease-out);
 }
 
 @keyframes fdFadeIn {
@@ -394,7 +394,7 @@
 @keyframes fdFadeInUp {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(10px);
   }
   to {
     opacity: 1;
@@ -415,18 +415,19 @@
 
 @keyframes fdShake {
   0%, 100% { transform: translateX(0); }
-  20%, 60% { transform: translateX(-6px); }
-  40%, 80% { transform: translateX(6px); }
+  20%, 60% { transform: translateX(-4px); }
+  40%, 80% { transform: translateX(4px); }
 }
 
 @keyframes fdSuccessPop {
   0% { transform: scale(1); }
-  50% { transform: scale(1.15); }
+  50% { transform: scale(1.05); }
   100% { transform: scale(1); }
 }
 
 .fab-btn:active, .fab-btn:not(.active):active, .fab-menu-item:active {
-  transform: scale(0.92) !important;
+  transform: scale(0.96) !important;
+  transition-duration: var(--motion-duration-instant) !important;
 }
 
 /* Password Visibility Toggles */

@@ -20,10 +20,10 @@
 
 @keyframes fdShake {
   0%, 100% { transform: translateX(0); }
-  20%, 60% { transform: translateX(-6px); }
-  40%, 80% { transform: translateX(6px); }
+  20%, 60% { transform: translateX(-4px); }
+  40%, 80% { transform: translateX(4px); }
 }
 
 .fd-shake {
-  animation: fdShake 0.4s ease-in-out;
+  animation: fdShake 0.35s var(--motion-ease-in-out, ease-in-out);
 }

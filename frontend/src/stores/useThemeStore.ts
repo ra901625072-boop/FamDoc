@@ -11,18 +11,18 @@ interface ThemeState {
 }
 
 function getStoredMode(): ThemeMode {
-  if (typeof window === 'undefined') return 'system';
+  if (typeof window === 'undefined') return 'light';
   const stored = (localStorage.getItem('famdoc-theme-mode') ||
     localStorage.getItem('famdoc_theme') ||
     localStorage.getItem('famdoc-theme')) as ThemeMode | null;
   if (stored === 'dark' || stored === 'light' || stored === 'system') return stored;
-  return 'system';
+  return 'light';
 }
 
 function resolveEffectiveTheme(mode: ThemeMode): Theme {
   if (mode === 'dark') return 'dark';
   if (mode === 'light') return 'light';
-  if (typeof window !== 'undefined' && window.matchMedia) {
+  if (mode === 'system' && typeof window !== 'undefined' && window.matchMedia) {
     return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   }
   return 'light';
